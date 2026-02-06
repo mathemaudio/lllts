@@ -16,7 +16,8 @@
 		"lll-example-check-quick": "lllts --project tsconfig.json --entry src/examples/TodoExample.lll.ts",
 		"lll-example-bad-many-functions": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
 		"dev": "tsc --watch",
-		"i": "pnpm i"
+		"i": "pnpm i",
+		"install-lllts-global": "pnpm link --global"
 	},
 	"keywords": [
 		"typescript",
