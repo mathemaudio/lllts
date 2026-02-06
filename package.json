@@ -1,0 +1,41 @@
+{
+	"name": "lllts",
+	"version": "0.1.0",
+	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
+	"main": "dist/LllTsc.lll.js",
+	"bin": {
+		"lllts": "./bin/lllts"
+	},
+	"type": "commonjs",
+	"scripts": {
+		"watch": "TSC_NONPOLLING_WATCHER=1 tsc --watch",
+		"build": "tsc",
+		"ts-check": "tsc --noEmit",
+		"lll-check": "lllts --project tsconfig.json --entry src/LllTsc.lll.ts",
+		"lll-check-verbose": "lllts --project tsconfig.json --entry src/LllTsc.lll.ts --verbose",
+		"lll-example-check-quick": "lllts --project tsconfig.json --entry src/examples/TodoExample.lll.ts",
+		"lll-example-bad-many-functions": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
+		"dev": "tsc --watch",
+		"i": "pnpm i"
+	},
+	"keywords": [
+		"typescript",
+		"compiler",
+		"testing",
+		"llm"
+	],
+	"author": "",
+	"license": "MIT",
+	"dependencies": {
+		"ts-morph": "^21.0.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20.10.6",
+		"ts-node": "^10.9.2",
+		"tsconfig-paths": "^4.2.0",
+		"typescript": "^5.3.3"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}
