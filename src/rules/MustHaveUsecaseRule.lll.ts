@@ -3,7 +3,8 @@ import * as fs from "fs"
 import { Rule } from "../core/Rule"
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { BaseRule } from "../core/BaseRule.lll"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
 
 const FILE_VARIANTS = [

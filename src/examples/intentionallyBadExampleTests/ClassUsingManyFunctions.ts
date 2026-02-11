@@ -1,4 +1,5 @@
-import { Out, Spec } from "../../public/decorators.js"
+import { Out } from "../../public/lll.js"
+import { Spec } from "../../public/lll.js"
 import { firstFunction, secondFunction, thirdFunction } from "./manyFunctions"
 
 @Spec("Class using many functions.")

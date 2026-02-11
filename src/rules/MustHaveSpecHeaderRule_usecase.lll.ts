@@ -1,5 +1,6 @@
-import { AssertFn } from "../public/AssertFn.lll"
-import { Spec, Scenario } from "../public/decorators.js"
+import { AssertFn } from "../public/lll"
+import { Scenario } from "../public/lll"
+import { Spec } from "../public/lll"
 import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 
 @Spec("Ensures @Spec decorators exist on classes and methods.")

@@ -1,6 +1,7 @@
 import { DiagnosticObject } from "./DiagnosticObject"
-import { Spec, Scenario } from "../public/decorators.js"
-import { AssertFn } from "../public/AssertFn.lll"
+import { Scenario } from "../public/lll"
+import { Spec } from "../public/lll"
+import { AssertFn } from "../public/lll"
 import { ResultReporter } from "./ResultReporter.lll"
 
 @Spec("Verifies formatting of diagnostics.")

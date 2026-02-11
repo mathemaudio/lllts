@@ -1,7 +1,8 @@
 
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 
 @Spec("Ensures each .lll.ts file exports exactly lll item, which can be either a class or a type alias.")
 
@@ -42,7 +43,7 @@ export class OneClassPerFileRule {
 					return [
 						BaseRule.createError(
 							sourceFile.getFilePath(),
-							`Expected exactly lll export (class or type), found 0. File exports functions: ${functionsList}. ${old_tsNote}`,
+							`Expected exactly one export (class or type), found 0. File exports functions: ${functionsList}. ${old_tsNote}`,
 							"no-export"
 						)
 					]
@@ -53,7 +54,7 @@ export class OneClassPerFileRule {
 					return [
 						BaseRule.createError(
 							sourceFile.getFilePath(),
-							`Expected exactly lll export (class or type), found ${totalExports}. ${exportedInterfaces.length === 1 ? "You export an interface, it's not allowed. Convert your interface to a type. " : old_tsNote
+							`Expected exactly one export (class or type), found ${totalExports}. ${exportedInterfaces.length === 1 ? "You export an interface, it's not allowed. Convert your interface to a type. " : old_tsNote
 							}`,
 							"no-export"
 						)

@@ -1,5 +1,6 @@
-import { Spec, Scenario } from "../public/decorators.js"
-import { AssertFn } from "../public/AssertFn.lll"
+import { Scenario } from "../public/lll.js"
+import { Spec } from "../public/lll.js"
+import { AssertFn } from "../public/lll.js"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 import { RulesEngine } from "./RulesEngine.lll"
 

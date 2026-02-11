@@ -2,7 +2,8 @@
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { DiagnosticObject } from "../core/DiagnosticObject"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 
 @Spec("Verifies that each class and method has a @Spec decorator.")
 

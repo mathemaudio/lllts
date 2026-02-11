@@ -1,6 +1,7 @@
 
 import { Project, SourceFile } from "ts-morph"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll.js"
+import { Spec } from "../public/lll.js"
 import * as fs from "fs"
 import * as path from "path"
 import { LoadStrategy } from "../LoadStrategy"

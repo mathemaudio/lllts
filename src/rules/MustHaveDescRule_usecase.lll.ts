@@ -1,4 +1,5 @@
-import { Spec, Scenario } from "../public/decorators.js"
+import { Scenario } from "../public/lll.js"
+import { Spec } from "../public/lll.js"
 import { MustHaveDescRule } from "./MustHaveDescRule.lll"
 
 @Spec("Validates description enforcement for @Spec decorators.")

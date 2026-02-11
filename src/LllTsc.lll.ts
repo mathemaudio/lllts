@@ -3,7 +3,8 @@ import { ProjectInitiator } from "./core/ProjectInitiator.lll"
 import { ResultReporter } from "./core/ResultReporter.lll"
 import { RulesEngine } from "./core/RulesEngine.lll"
 import { LoadStrategy } from "./LoadStrategy"
-import { Spec, Out } from "./public/decorators.js"
+import { Out } from "./public/lll"
+import { Spec } from "./public/lll"
 import { UseCaseRunner } from "./core/UseCaseRunner.lll"
 
 type UseCaseRunnerReports = Awaited<ReturnType<UseCaseRunner["runAll"]>>["reports"]
@@ -100,7 +101,6 @@ export class LllTsc {
 				console.log(`   ${icon} ${scenario.name}`)
 			}
 		}
-		console.log()
 	}
 }
 

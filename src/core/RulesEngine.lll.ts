@@ -8,7 +8,8 @@ import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
 import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 import { BaseRule } from "./BaseRule.lll"
 
 @Spec("Loads and executes all rules against project files.")

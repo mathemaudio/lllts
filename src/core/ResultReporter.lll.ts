@@ -2,7 +2,8 @@
 import { DiagnosticObject } from "./DiagnosticObject"
 import { RuleCode } from "./RuleCode"
 import { Severity } from "./Severity"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 import * as path from "path"
 
 @Spec("Formats and prints diagnostics to the console.")

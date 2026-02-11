@@ -1,6 +1,7 @@
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 import { DiagnosticObject } from "./DiagnosticObject"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 import { BaseRule } from "./BaseRule.lll"
 import { RuleCode } from "./RuleCode"
 import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"

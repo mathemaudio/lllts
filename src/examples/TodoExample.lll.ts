@@ -1,4 +1,5 @@
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll.js";
+import { Spec } from "../public/lll.js";
 
 @Spec("Simple example for LLLTS demonstrating a basic todo list service.")
 export class TodoExample {

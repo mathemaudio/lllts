@@ -2,7 +2,8 @@
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
-import { Spec, Out } from "../public/decorators.js"
+import { Out } from "../public/lll"
+import { Spec } from "../public/lll"
 import { SyntaxKind } from "ts-morph"
 import type { MethodDeclaration } from "ts-morph"
 
