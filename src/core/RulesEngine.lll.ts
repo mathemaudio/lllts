@@ -1,15 +1,14 @@
 import * as fs from "fs"
 import * as path from "path"
-import { ProjectInitiator } from "./ProjectInitiator.lll"
-import { DiagnosticObject } from "./DiagnosticObject"
-import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
-import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
+import { Out, Spec } from "../public/lll.lll"
 import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
-import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
+import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
+import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { BaseRule } from "./BaseRule.lll"
+import { DiagnosticObject } from "./DiagnosticObject"
+import { ProjectInitiator } from "./ProjectInitiator.lll"
 
 @Spec("Loads and executes all rules against project files.")
 export class RulesEngine {
