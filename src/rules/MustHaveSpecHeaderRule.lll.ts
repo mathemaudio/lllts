@@ -2,8 +2,8 @@
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { DiagnosticObject } from "../core/DiagnosticObject"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 
 @Spec("Verifies that each class and method has a @Spec decorator.")
 
@@ -35,14 +35,13 @@ export class MustHaveSpecHeaderRule {
 
 				// Check method-level @Spec decorators
 				const methods = exportedClass.getMethods()
-				const className = exportedClass.getName()
-				const isUsecaseClass = !!className && className.endsWith("_usecase")
+				const isTestFile = sourceFile.getFilePath().endsWith(".test.lll.ts")
 
 				for (const method of methods) {
 					const methodName = method.getName()
 					const isRenderMethod = typeof method.isStatic === "function" && !method.isStatic() && methodName === "render"
 
-					if (isUsecaseClass && isRenderMethod) {
+					if (isTestFile && isRenderMethod) {
 						continue
 					}
 

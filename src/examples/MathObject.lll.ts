@@ -1,5 +1,5 @@
-import { Out } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
+import { Out } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
 
 @Spec("Simple calculator demonstrating server-side LLLTS components.")
 export class MathObject {

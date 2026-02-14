@@ -1,11 +1,11 @@
-import { Scenario } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
-import { AssertFn } from "../public/lll.js"
+import { Scenario } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
+import { AssertFn } from "../public/lll.lll.js"
 import { BaseRule } from "./BaseRule.lll"
 
 @Spec("Exercises diagnostic helper utilities.")
-export class BaseRule_usecase {
-	environment = "api"
+export class BaseRuleTest {
+	testType = "unit"
 
 	@Scenario("Create and filter diagnostics")
 	static async createAndFilter(input = {}, assert: AssertFn) {

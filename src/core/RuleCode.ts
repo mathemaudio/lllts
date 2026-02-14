@@ -11,15 +11,16 @@ export type RuleCode =
 	// MustHaveDescRule
 	| "missing-desc-class"   // No description in class @Spec
 	| "missing-desc-method"  // No description in method @Spec
-	// MustHaveUsecaseRule
-	| "missing-usecase"      // Usecase companion missing browser render contract or scenarios
-	| "missing-environment"  // Usecase companion missing environment flag
-	| "bad-environment"      // Environment flag not set to allowed literal
+	// MustHaveTestRule
+	| "missing-test"         // Test companion missing structure, naming, imports, or scenarios
+	| "missing-test-type"    // Test companion missing testType flag
+	| "bad-test-type"        // testType flag not set to allowed literal
+	| "test-import-boundary" // Production code imported a test file
 	// MustHaveOutRule
 	| "missing-out"          // Missing @Out when returning value
 	| "extra-out"            // Extra @Out when not returning value
 	| "bad-out"              // Bad @Out parameters
-	// Use-case coverage
-	| "usecase-coverage"     // Project-wide use-case coverage debt
-	// Use case runner
-	| "usecase-failure"      // Scenario or expect failed during execution
+	// Test coverage
+	| "test-coverage"        // Project-wide test coverage debt
+	// Test runner
+	| "test-failure"         // Scenario or expect failed during execution

@@ -1,10 +1,10 @@
-import { Scenario } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
+import { Scenario } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
 import { MustHaveDescRule } from "./MustHaveDescRule.lll"
 
 @Spec("Validates description enforcement for @Spec decorators.")
-export class MustHaveDescRule_usecase {
-	environment = "api"
+export class MustHaveDescRuleTest {
+	testType = "unit"
 
 	@Scenario("Check for desc field")
 	static async checkDescription(input: object = {}, assert: (condition: boolean, message?: string) => void) {

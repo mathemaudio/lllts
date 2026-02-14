@@ -1,12 +1,12 @@
-import { Scenario } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
-import { AssertFn } from "../public/lll.js"
+import { Scenario } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
+import { AssertFn } from "../public/lll.lll.js"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 import { RulesEngine } from "./RulesEngine.lll"
 
 @Spec("Runs registered rules over the project graph.")
-export class RulesEngine_usecase {
-	environment = "api"
+export class RulesEngineTestosterone {
+	testType = "unit"
 
 	@Scenario("Run rules on project")
 	static async runRules(input: object = {}, assert: AssertFn) {

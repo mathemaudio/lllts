@@ -1,7 +1,7 @@
 
 import { Project, SourceFile } from "ts-morph"
-import { Out } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
+import { Out } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
 import * as fs from "fs"
 import * as path from "path"
 import { LoadStrategy } from "../LoadStrategy"
@@ -123,7 +123,7 @@ export class ProjectInitiator {
 		}
 	}
 
-	@Spec("Ensures every .lll.ts file brings along its *_usecase counterpart (and vice versa).")
+	@Spec("Ensures every primary .lll.ts file brings along its .test.lll.ts counterpart (and vice versa).")
 	private enqueueCompanionFile(filePath: string, visited: Set<string>) {
 		const companionPath = this.getCompanionPath(filePath)
 		if (!companionPath) {
@@ -136,15 +136,15 @@ export class ProjectInitiator {
 		this.followImportsRecursively(companionPath, visited)
 	}
 
-	@Spec("Derives the paired *_usecase or primary .lll.ts file path.")
+	@Spec("Derives the paired .test.lll.ts or primary .lll.ts file path.")
 
 	@Out("path", "string | null")
 	private getCompanionPath(filePath: string): string | null {
-		if (filePath.endsWith("_usecase.lll.ts")) {
-			return filePath.replace(/_usecase\.lll\.ts$/, ".lll.ts")
+		if (filePath.endsWith(".test.lll.ts")) {
+			return filePath.replace(/\.test\.lll\.ts$/, ".lll.ts")
 		}
-		if (filePath.endsWith(".lll.ts")) {
-			return filePath.replace(/\.lll\.ts$/, "_usecase.lll.ts")
+		if (filePath.endsWith(".lll.ts") && !filePath.endsWith(".test.lll.ts")) {
+			return filePath.replace(/\.lll\.ts$/, ".test.lll.ts")
 		}
 		return null
 	}

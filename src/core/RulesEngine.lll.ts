@@ -1,39 +1,36 @@
-
 import * as fs from "fs"
 import * as path from "path"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 import { DiagnosticObject } from "./DiagnosticObject"
-import { MustHaveUsecaseRule } from "../rules/MustHaveUsecaseRule.lll"
+import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
 import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
 import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 import { BaseRule } from "./BaseRule.lll"
 
 @Spec("Loads and executes all rules against project files.")
-
 export class RulesEngine {
 	constructor(private loader: ProjectInitiator) { }
 
 	@Spec("Executes all registered rules and returns diagnostics.")
 	@Out("diagnostics", "Diagnostic[]")
-
 	public runAll() {
 		const files = this.loader.getFiles()
 		const rules = [
 			OneClassPerFileRule.getRule(),
 			MustHaveSpecHeaderRule.getRule(),
 			MustHaveDescRule.getRule(),
-			MustHaveUsecaseRule.getRule(),
+			MustHaveTestRule.getRule(),
 			MustHaveOutRule.getRule(),
 		]
 
 		const all: DiagnosticObject[] = []
 		for (const file of files) {
 			const filePath = file.getFilePath()
-			if (filePath.endsWith(".old.ts") || filePath.endsWith(".d.old.ts") || filePath.endsWith("decorators.ts")) {
+			if (filePath.endsWith(".old.ts") || filePath.endsWith(".d.old.ts") || filePath.endsWith("/lll.lll.ts")) {
 				continue
 			}
 			for (const rule of rules) {
@@ -44,18 +41,18 @@ export class RulesEngine {
 						file: file.getBaseName(),
 						message: `Rule ${rule.id} crashed: ${String(err)}`,
 						severity: "error",
-						ruleCode: "no-export" as any // Fallback for crashed rules
+						ruleCode: "no-export" as any
 					})
 				}
 			}
 		}
-		all.push(...this.computeUsecaseCoverage())
+		all.push(...this.computeTestCoverage())
 		return all
 	}
 
-	@Spec("Calculates project-wide use-case coverage debt and emits warning/error diagnostics.")
+	@Spec("Calculates project-wide test coverage debt and emits warning/error diagnostics.")
 	@Out("diagnostics", "DiagnosticObject[]")
-	private computeUsecaseCoverage(): DiagnosticObject[] {
+	private computeTestCoverage(): DiagnosticObject[] {
 		const files = this.loader.getFiles()
 		const fileByPath = new Map<string, import("ts-morph").SourceFile>()
 		for (const f of files) {
@@ -70,23 +67,23 @@ export class RulesEngine {
 			if (this.shouldIgnore(filePath)) continue
 
 			const variant = getVariantForFile(filePath)
-			if (!variant || variant.isUsecase) continue
+			if (!variant || variant.isTest) continue
 
 			const exportedClass = BaseRule.getExportedClass(file)
 			if (!exportedClass) continue
 
 			totalClasses++
 
-			const companionPath = getCompanionFilePath(filePath, exportedClass.getName())
-			if (!companionPath || !fs.existsSync(companionPath)) continue
+			const testPath = getTestFilePath(filePath, exportedClass.getName())
+			if (!testPath || !fs.existsSync(testPath)) continue
 
-			const companionFile = fileByPath.get(companionPath)
-			if (!companionFile) continue
+			const testFile = fileByPath.get(testPath)
+			if (!testFile) continue
 
-			const companionClass = BaseRule.getExportedClass(companionFile)
-			if (!companionClass) continue
+			const testClass = BaseRule.getExportedClass(testFile)
+			if (!testClass) continue
 
-			const hasScenario = companionClass
+			const hasScenario = testClass
 				.getMethods()
 				.some(method => method.isStatic() && BaseRule.hasDecorator(method, "Scenario"))
 
@@ -107,17 +104,17 @@ export class RulesEngine {
 		const currentCoverage = round(coveredClasses / totalClasses * 100)
 		const currentTarget = round(status.requiredCoveragePercent)
 		const isBelow = currentCoverage < currentTarget
-		const message = status.requiredMissingUseCases > 0
-			? `use-case technical debt ${status.debtPercent}% ${status.severity === "error" ? "exceeds safe limit" : "(warning)"}: ${coveredClasses}/${totalClasses} primary classes have companions with scenarios (counted primaries only; project has ${files.length} source files); required ${status.requiredUseCases}. Add ${status.requiredMissingUseCases} more to meet the target.`
-			: `use-case coverage is ${currentCoverage}%, ${isBelow ? "below" : "above"} current target of ${currentTarget}%. ${isBelow ? `I recommend adding ${status.idealMissingUseCases} more use cases to reach full coverage.` : `No action required yet.`}`
+		const message = status.requiredMissingTests > 0
+			? `test technical debt ${status.debtPercent}% ${status.severity === "error" ? "exceeds safe limit" : "(warning)"}: ${coveredClasses}/${totalClasses} primary classes have tests with scenarios (counted primaries only; project has ${files.length} source files); required ${status.requiredTests}. Add ${status.requiredMissingTests} more to meet the target.`
+			: `test coverage is ${currentCoverage}%, ${isBelow ? "below" : "above"} current target of ${currentTarget}%. ${isBelow ? `I recommend adding ${status.idealMissingTests} more tests to reach full coverage.` : `No action required yet.`}`
 
 		if (status.severity === "error") {
-			return [BaseRule.createError("project", message, "usecase-coverage")]
+			return [BaseRule.createError("project", message, "test-coverage")]
 		}
 		if (status.severity === "notice") {
-			return [BaseRule.createNotice("project", message, "usecase-coverage")]
+			return [BaseRule.createNotice("project", message, "test-coverage")]
 		}
-		return [BaseRule.createWarning("project", message, "usecase-coverage")]
+		return [BaseRule.createWarning("project", message, "test-coverage")]
 	}
 
 	@Spec("Determines whether a file should be skipped from coverage calculations.")
@@ -128,16 +125,15 @@ export class RulesEngine {
 }
 
 const FILE_VARIANTS = [
-	{ primarySuffix: ".lll.ts", usecaseSuffix: "_usecase.lll.ts" },
-	{ primarySuffix: ".ts", usecaseSuffix: "_usecase.ts" }
+	{ primarySuffix: ".lll.ts", testSuffix: ".test.lll.ts" }
 ] as const
 
 type FileVariant = (typeof FILE_VARIANTS)[number]
-type VariantMatch = { variant: FileVariant; isUsecase: boolean }
+type VariantMatch = { variant: FileVariant; isTest: boolean }
 
-function getCompanionFilePath(filePath: string, className?: string) {
+function getTestFilePath(filePath: string, className?: string) {
 	const variantMatch = getVariantForFile(filePath)
-	if (!variantMatch || variantMatch.isUsecase) {
+	if (!variantMatch || variantMatch.isTest) {
 		return null
 	}
 	const parsed = path.parse(filePath)
@@ -145,21 +141,17 @@ function getCompanionFilePath(filePath: string, className?: string) {
 		className ??
 		(parsed.name.endsWith(".lll") ? parsed.name.slice(0, -".lll".length) : parsed.name)
 
-	return path.join(parsed.dir, `${baseName}_usecase${variantMatch.variant.primarySuffix}`)
+	return path.join(parsed.dir, `${baseName}.test${variantMatch.variant.primarySuffix}`)
 }
 
 function getVariantForFile(filePath: string): VariantMatch | null {
 	for (const variant of FILE_VARIANTS) {
-		if (filePath.endsWith(variant.usecaseSuffix)) {
-			return { variant, isUsecase: true }
+		if (filePath.endsWith(variant.testSuffix)) {
+			return { variant, isTest: true }
 		}
 
 		if (filePath.endsWith(variant.primarySuffix)) {
-			if (variant.primarySuffix === ".ts" && filePath.endsWith(".d.ts")) {
-				continue
-			}
-
-			return { variant, isUsecase: false }
+			return { variant, isTest: false }
 		}
 	}
 
@@ -168,28 +160,27 @@ function getVariantForFile(filePath: string): VariantMatch | null {
 
 function requiredCoverage(C: number) {
 	if (C <= 10) return 0;
-	if (C <= 100) return 0.09 + 0.41 * (C - 11) / 89;   // 9% at 11 → 50% at 100
-	if (C <= 500) return 0.50 + 0.50 * (C - 100) / 400; // 50% → 100% at 500
-	return 1;
+	if (C <= 100) return 0.09 + 0.41 * (C - 11) / 89
+	if (C <= 500) return 0.50 + 0.50 * (C - 100) / 400
+	return 1
 }
 
-// C = total classes, covered = classes with use cases/tests
 function coverageStatus(C: number, covered = 0) {
-	const classes = Math.max(0, C);
-	const effectiveCovered = Math.min(Math.max(0, covered), classes); // cap over-reporting
-	const reqRatio = requiredCoverage(classes);
-	const required = Math.ceil(reqRatio * classes);
-	const idealMissing = Math.max(0, classes - effectiveCovered);     // ideal = 100% coverage
-	const requiredMissing = Math.max(0, required - effectiveCovered); // debt relative to required target
-	const debtRequired = required === 0 ? 0 : (requiredMissing / required) * 100; // capped at 100
-	const debtIdeal = classes === 0 ? 0 : (idealMissing / classes) * 100; // 0–100, always warning if >0
+	const classes = Math.max(0, C)
+	const effectiveCovered = Math.min(Math.max(0, covered), classes)
+	const reqRatio = requiredCoverage(classes)
+	const required = Math.ceil(reqRatio * classes)
+	const idealMissing = Math.max(0, classes - effectiveCovered)
+	const requiredMissing = Math.max(0, required - effectiveCovered)
+	const debtRequired = required === 0 ? 0 : (requiredMissing / required) * 100
+	const debtIdeal = classes === 0 ? 0 : (idealMissing / classes) * 100
 	return {
 		totalClasses: classes,
 		coveredClasses: effectiveCovered,
 		requiredCoveragePercent: +(reqRatio * 100).toFixed(2),
-		requiredUseCases: required,
-		idealMissingUseCases: idealMissing,
-		requiredMissingUseCases: requiredMissing,
+		requiredTests: required,
+		idealMissingTests: idealMissing,
+		requiredMissingTests: requiredMissing,
 		debtPercent: +debtRequired.toFixed(2),
 		idealDebtPercent: +debtIdeal.toFixed(2),
 		severity:
@@ -200,5 +191,5 @@ function coverageStatus(C: number, covered = 0) {
 					: idealMissing > 0
 						? "notice"
 						: "ok"
-	};
+	}
 }

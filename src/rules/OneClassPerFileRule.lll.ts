@@ -1,8 +1,8 @@
 
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 
 @Spec("Ensures each .lll.ts file exports exactly lll item, which can be either a class or a type alias.")
 
@@ -63,11 +63,12 @@ export class OneClassPerFileRule {
 
 				// Check if the exported class or type name matches the filename
 				const fileName = sourceFile.getBaseName().replace('.lll.ts', '').replace('.ts', '')
+				const isTestFile = sourceFile.getBaseName().endsWith(".test.lll.ts")
 				const exportedName = exportedClasses.length === 1
 					? exportedClasses[0].getName()
 					: exportedTypes[0].getName()
 
-				if (exportedName !== fileName) {
+				if (!isTestFile && exportedName !== fileName) {
 					return [
 						BaseRule.createError(
 							sourceFile.getFilePath(),

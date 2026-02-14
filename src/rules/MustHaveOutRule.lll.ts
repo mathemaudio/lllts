@@ -2,8 +2,8 @@
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { MethodDeclaration } from "ts-morph"
 
@@ -23,13 +23,12 @@ export class MustHaveOutRule {
 
 				const diagnostics: DiagnosticObject[] = []
 				const methods = exportedClass.getMethods()
-				const className = exportedClass.getName()
-				const isUsecaseClass = !!className && className.endsWith("_usecase")
+				const isTestFile = sourceFile.getFilePath().endsWith(".test.lll.ts")
 
 				for (const method of methods) {
 					const methodName = method.getName()
 					const isRenderMethod = typeof method.isStatic === "function" && !method.isStatic() && methodName === "render"
-					if (isUsecaseClass && isRenderMethod) {
+					if (isTestFile && isRenderMethod) {
 						continue
 					}
 

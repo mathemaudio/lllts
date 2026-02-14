@@ -3,11 +3,11 @@ import { ProjectInitiator } from "./core/ProjectInitiator.lll"
 import { ResultReporter } from "./core/ResultReporter.lll"
 import { RulesEngine } from "./core/RulesEngine.lll"
 import { LoadStrategy } from "./LoadStrategy"
-import { Out } from "./public/lll"
-import { Spec } from "./public/lll"
-import { UseCaseRunner } from "./core/UseCaseRunner.lll"
+import { Out } from "./public/lll.lll"
+import { Spec } from "./public/lll.lll"
+import { TestRunner } from "./core/TestRunner.lll"
 
-type UseCaseRunnerReports = Awaited<ReturnType<UseCaseRunner["runAll"]>>["reports"]
+type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
@@ -38,16 +38,16 @@ export class LllTsc {
 		const ruleEngine = new RulesEngine(loader)
 		const results = ruleEngine.runAll()
 
-		const useCaseRunner = new UseCaseRunner(loader, projectPath)
-		const { diagnostics: scenarioDiagnostics, reports } = await useCaseRunner.runAll()
+		const testRunner = new TestRunner(loader, projectPath)
+		const { diagnostics: scenarioDiagnostics, reports } = await testRunner.runAll()
 
 		const allDiagnostics = [...results, ...scenarioDiagnostics]
 		// const bad = new BadExample2()
-		// console.log("Bad usecase 1: ", typeof bad)
+		// console.log("Bad test 1: ", typeof bad)
 
 		const reporter = new ResultReporter(projectPath)
 		if (verbose) {
-			this.printUseCaseSummary(reports)
+			this.printTestSummary(reports)
 		}
 		reporter.print(allDiagnostics)
 
@@ -79,17 +79,17 @@ export class LllTsc {
 		return args.includes(flag)
 	}
 
-	@Spec("Logs use case and scenario details when --verbose is provided.")
-	private static printUseCaseSummary(reports: UseCaseRunnerReports) {
-		console.log("\n🧪 Use Case Execution Details")
+	@Spec("Logs test and scenario details when --verbose is provided.")
+	private static printTestSummary(reports: TestRunnerReports) {
+		console.log("\n🧪 Test Execution Details")
 		if (reports.length === 0) {
-			console.log("  (no use cases were executed)")
+			console.log("  (no tests were executed)")
 			return
 		}
 
 		for (const report of reports) {
 			const label = report.className
-			console.log(`\n📘 Use case ${label}`)
+			console.log(`\n📘 Test ${label}`)
 			console.log(`   ${report.filePath}:${report.line}`)
 			if (report.scenarios.length === 0) {
 				console.log("   (no scenarios defined)")

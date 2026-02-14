@@ -1,12 +1,12 @@
 import { DiagnosticObject } from "./DiagnosticObject"
-import { Scenario } from "../public/lll"
-import { Spec } from "../public/lll"
-import { AssertFn } from "../public/lll"
+import { Scenario } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
+import { AssertFn } from "../public/lll.lll"
 import { ResultReporter } from "./ResultReporter.lll"
 
 @Spec("Verifies formatting of diagnostics.")
-export class ResultReporter_usecase {
-	environment = "api"
+export class ResultReporterTest {
+	testType = "unit"
 
 	@Scenario("Print errors")
 	static async printErrors(input = {}, assert: AssertFn) {

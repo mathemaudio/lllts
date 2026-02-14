@@ -2,8 +2,8 @@
 import { Severity } from "./Severity"
 import { DiagnosticObject } from "./DiagnosticObject"
 import { RuleCode } from "./RuleCode"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 import type { SourceFile, ClassDeclaration, Decorator, Node } from "ts-morph"
 
 @Spec("Defines the Rule interface, Diagnostic structure, and utilities for all rules.")

@@ -1,11 +1,11 @@
-import { Scenario } from "../public/lll.js"
-import { Spec } from "../public/lll.js"
-import { AssertFn } from "../public/lll.js"
+import { Scenario } from "../public/lll.lll.js"
+import { Spec } from "../public/lll.lll.js"
+import { AssertFn } from "../public/lll.lll.js"
 import { MathObject } from "./MathObject.lll"
 
 @Spec("Interactive calculator scenarios for MathObject.")
-export class MathObject_usecase {
-	environment = "api"
+export class MathObjectTest {
+	testType = "unit"
 
 	@Scenario("Default addition (2 + 3)")
 	static async defaultAddition(input = {}, assert: AssertFn) {

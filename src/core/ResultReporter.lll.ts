@@ -2,8 +2,8 @@
 import { DiagnosticObject } from "./DiagnosticObject"
 import { RuleCode } from "./RuleCode"
 import { Severity } from "./Severity"
-import { Out } from "../public/lll"
-import { Spec } from "../public/lll"
+import { Out } from "../public/lll.lll"
+import { Spec } from "../public/lll.lll"
 import * as path from "path"
 
 @Spec("Formats and prints diagnostics to the console.")
@@ -18,14 +18,15 @@ export class ResultReporter {
 		"missing-spec-method": "Missing @Spec on method",
 		"missing-desc-class": "Missing description in class @Spec",
 		"missing-desc-method": "Missing description in method @Spec",
-		"missing-usecase": "Companion render/scenario structure missing",
-		"missing-environment": "Companion usecase must declare environment = 'api' | 'browser'",
-		"bad-environment": "Companion environment must be a literal 'api' or 'browser'",
+		"missing-test": "Test companion structure missing",
+		"missing-test-type": "Test must declare testType = 'unit' | 'behavioral'",
+		"bad-test-type": "Test testType must be literal 'unit' or 'behavioral'",
+		"test-import-boundary": "Production code cannot import test modules",
 		"missing-out": "Missing @Out when returning value",
 		"extra-out": "Has @Out but doesn't return value",
 		"bad-out": "Invalid @Out parameters",
-		"usecase-coverage": "Use-case coverage",
-		"usecase-failure": "Use case scenario failed"
+		"test-coverage": "Test coverage",
+		"test-failure": "Test scenario failed"
 	}
 
 	constructor(tsconfigPath: string) {
