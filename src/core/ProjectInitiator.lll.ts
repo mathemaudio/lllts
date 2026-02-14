@@ -104,6 +104,8 @@ export class ProjectInitiator {
 
 		// Get all import declarations
 		const importDeclarations = sourceFile.getImportDeclarations()
+		const exportDeclarations = sourceFile.getExportDeclarations()
+		const sourceDir = path.dirname(normalizedPath)
 
 		for (const importDecl of importDeclarations) {
 			const moduleSpecifier = importDecl.getModuleSpecifierValue()
@@ -114,9 +116,25 @@ export class ProjectInitiator {
 			}
 
 			// Resolve the import path
-			const sourceDir = path.dirname(normalizedPath)
 			const resolvedPath = this.resolveImportPath(sourceDir, moduleSpecifier)
 
+			if (resolvedPath) {
+				this.followImportsRecursively(resolvedPath, visited)
+			}
+		}
+
+		for (const exportDecl of exportDeclarations) {
+			const moduleSpecifier = exportDecl.getModuleSpecifierValue()
+			if (!moduleSpecifier) {
+				continue
+			}
+
+			// Skip node_modules exports
+			if (!moduleSpecifier.startsWith(".") && !moduleSpecifier.startsWith("/")) {
+				continue
+			}
+
+			const resolvedPath = this.resolveImportPath(sourceDir, moduleSpecifier)
 			if (resolvedPath) {
 				this.followImportsRecursively(resolvedPath, visited)
 			}

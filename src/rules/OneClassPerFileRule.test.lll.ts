@@ -35,4 +35,15 @@ export class OneClassPerFileRuleTest {
 		)
 		assert(diagnostics.some(d => d.ruleCode === "name-mismatch"), "Expected classic name-mismatch on non-test files")
 	}
+
+	@Scenario("Allow pure re-export barrel files")
+	static async allowPureReExportBarrels(input: object = {}, assert: AssertFn) {
+		const diagnostics = OneClassPerFileRuleTest.runRuleOn(
+			"/src/public/index.ts",
+			`export * from './api'
+export * from './types/ApiEndpoints'
+export * from './types/EndpointMethod'`
+		)
+		assert(diagnostics.length === 0, "Expected pure re-export barrel to skip one-export checks")
+	}
 }

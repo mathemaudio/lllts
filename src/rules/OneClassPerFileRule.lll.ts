@@ -3,6 +3,7 @@ import { Rule } from "../core/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
+import { SyntaxKind } from "ts-morph"
 
 @Spec("Ensures each .lll.ts file exports exactly lll item, which can be either a class or a type alias.")
 
@@ -20,6 +21,10 @@ export class OneClassPerFileRule {
 				const filePath = sourceFile.getFilePath()
 				const validExtensions = ['.ts',]
 				if (!validExtensions.some(ext => filePath.endsWith(ext))) {
+					return []
+				}
+
+				if (OneClassPerFileRule.isPureReExportBarrel(sourceFile)) {
 					return []
 				}
 
@@ -129,5 +134,19 @@ export class OneClassPerFileRule {
 				return []
 			}
 		}
+	}
+
+	@Spec("Detects files that only re-export from other modules (barrel files).")
+	@Out("barrelOnly", "boolean")
+	private static isPureReExportBarrel(sourceFile: import("ts-morph").SourceFile) {
+		const statements = sourceFile.getStatements()
+		if (statements.length === 0) {
+			return false
+		}
+
+		return statements.every(statement => {
+			const exportDeclaration = statement.asKind(SyntaxKind.ExportDeclaration)
+			return !!exportDeclaration?.getModuleSpecifier()
+		})
 	}
 }
