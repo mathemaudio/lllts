@@ -2,17 +2,12 @@ import * as path from "path"
 import { Rule } from "../core/Rule"
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { BaseRule } from "../core/BaseRule.lll"
+import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
 
-const FILE_VARIANTS = [
-	{ primarySuffix: ".lll.ts", testSuffix: ".test.lll.ts" }
-] as const
-
-type FileVariant = (typeof FILE_VARIANTS)[number]
-type VariantMatch = { variant: FileVariant; isTest: boolean }
 type TestType = "unit" | "behavioral"
 
 @Spec("Enforces dedicated '.test.lll.ts' test classes with valid test structure and boundaries.")
@@ -381,19 +376,9 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Determines if a file is a supported primary or test variant.")
-	@Out("variantMatch", "VariantMatch | null")
-	private static getVariantForFile(filePath: string): VariantMatch | null {
-		for (const variant of FILE_VARIANTS) {
-			if (filePath.endsWith(variant.testSuffix)) {
-				return { variant, isTest: true }
-			}
-
-			if (filePath.endsWith(variant.primarySuffix)) {
-				return { variant, isTest: false }
-			}
-		}
-
-		return null
+	@Out("variantMatch", "{ variant: { primarySuffix: string; testSuffix: string }; isTest: boolean } | null")
+	private static getVariantForFile(filePath: string) {
+		return FileVariantSupport.getVariantForFile(filePath)
 	}
 
 	@Spec("Returns static methods decorated with @Scenario.")

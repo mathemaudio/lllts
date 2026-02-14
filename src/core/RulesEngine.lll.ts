@@ -1,13 +1,14 @@
 import * as fs from "fs"
-import * as path from "path"
 import { Out, Spec } from "../public/lll.lll"
 import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
 import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
 import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
+import { NoRogueTopLevelRule } from "../rules/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { BaseRule } from "./BaseRule.lll"
 import { DiagnosticObject } from "./DiagnosticObject"
+import { FileVariantSupport } from "./FileVariantSupport.lll"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 
 @Spec("Loads and executes all rules against project files.")
@@ -20,6 +21,7 @@ export class RulesEngine {
 		const files = this.loader.getFiles()
 		const rules = [
 			OneClassPerFileRule.getRule(),
+			NoRogueTopLevelRule.getRule(),
 			MustHaveSpecHeaderRule.getRule(),
 			MustHaveDescRule.getRule(),
 			MustHaveTestRule.getRule(),
@@ -65,7 +67,7 @@ export class RulesEngine {
 			const filePath = file.getFilePath()
 			if (this.shouldIgnore(filePath)) continue
 
-			const variant = getVariantForFile(filePath)
+			const variant = FileVariantSupport.getVariantForFile(filePath)
 			if (!variant || variant.isTest) continue
 
 			const exportedClass = BaseRule.getExportedClass(file)
@@ -73,7 +75,7 @@ export class RulesEngine {
 
 			totalClasses++
 
-			const testPath = getTestFilePath(filePath, exportedClass.getName())
+			const testPath = FileVariantSupport.getTestFilePath(filePath, exportedClass.getName())
 			if (!testPath || !fs.existsSync(testPath)) continue
 
 			const testFile = fileByPath.get(testPath)
@@ -95,7 +97,7 @@ export class RulesEngine {
 			return []
 		}
 
-		const status = coverageStatus(totalClasses, coveredClasses)
+		const status = this.coverageStatus(totalClasses, coveredClasses)
 		if (status.severity === "ok") {
 			return []
 		}
@@ -121,74 +123,44 @@ export class RulesEngine {
 	private shouldIgnore(filePath: string) {
 		return filePath.endsWith(".old.ts") || filePath.endsWith(".d.old.ts") || filePath.endsWith("decorators.ts")
 	}
-}
 
-const FILE_VARIANTS = [
-	{ primarySuffix: ".lll.ts", testSuffix: ".test.lll.ts" }
-] as const
-
-type FileVariant = (typeof FILE_VARIANTS)[number]
-type VariantMatch = { variant: FileVariant; isTest: boolean }
-
-function getTestFilePath(filePath: string, className?: string) {
-	const variantMatch = getVariantForFile(filePath)
-	if (!variantMatch || variantMatch.isTest) {
-		return null
-	}
-	const parsed = path.parse(filePath)
-	const baseName =
-		className ??
-		(parsed.name.endsWith(".lll") ? parsed.name.slice(0, -".lll".length) : parsed.name)
-
-	return path.join(parsed.dir, `${baseName}.test${variantMatch.variant.primarySuffix}`)
-}
-
-function getVariantForFile(filePath: string): VariantMatch | null {
-	for (const variant of FILE_VARIANTS) {
-		if (filePath.endsWith(variant.testSuffix)) {
-			return { variant, isTest: true }
-		}
-
-		if (filePath.endsWith(variant.primarySuffix)) {
-			return { variant, isTest: false }
-		}
+	@Spec("Computes required test coverage ratio for class count.")
+	@Out("ratio", "number")
+	private requiredCoverage(classCount: number) {
+		if (classCount <= 10) return 0
+		if (classCount <= 100) return 0.09 + 0.41 * (classCount - 11) / 89
+		if (classCount <= 500) return 0.50 + 0.50 * (classCount - 100) / 400
+		return 1
 	}
 
-	return null
-}
-
-function requiredCoverage(C: number) {
-	if (C <= 10) return 0;
-	if (C <= 100) return 0.09 + 0.41 * (C - 11) / 89
-	if (C <= 500) return 0.50 + 0.50 * (C - 100) / 400
-	return 1
-}
-
-function coverageStatus(C: number, covered = 0) {
-	const classes = Math.max(0, C)
-	const effectiveCovered = Math.min(Math.max(0, covered), classes)
-	const reqRatio = requiredCoverage(classes)
-	const required = Math.ceil(reqRatio * classes)
-	const idealMissing = Math.max(0, classes - effectiveCovered)
-	const requiredMissing = Math.max(0, required - effectiveCovered)
-	const debtRequired = required === 0 ? 0 : (requiredMissing / required) * 100
-	const debtIdeal = classes === 0 ? 0 : (idealMissing / classes) * 100
-	return {
-		totalClasses: classes,
-		coveredClasses: effectiveCovered,
-		requiredCoveragePercent: +(reqRatio * 100).toFixed(2),
-		requiredTests: required,
-		idealMissingTests: idealMissing,
-		requiredMissingTests: requiredMissing,
-		debtPercent: +debtRequired.toFixed(2),
-		idealDebtPercent: +debtIdeal.toFixed(2),
-		severity:
-			debtRequired >= 100
-				? "error"
-				: debtRequired > 0
-					? "warning"
-					: idealMissing > 0
-						? "notice"
-						: "ok"
+	@Spec("Builds test coverage status details from class/test counts.")
+	@Out("status", "object")
+	private coverageStatus(classCount: number, covered = 0) {
+		const classes = Math.max(0, classCount)
+		const effectiveCovered = Math.min(Math.max(0, covered), classes)
+		const reqRatio = this.requiredCoverage(classes)
+		const required = Math.ceil(reqRatio * classes)
+		const idealMissing = Math.max(0, classes - effectiveCovered)
+		const requiredMissing = Math.max(0, required - effectiveCovered)
+		const debtRequired = required === 0 ? 0 : (requiredMissing / required) * 100
+		const debtIdeal = classes === 0 ? 0 : (idealMissing / classes) * 100
+		return {
+			totalClasses: classes,
+			coveredClasses: effectiveCovered,
+			requiredCoveragePercent: +(reqRatio * 100).toFixed(2),
+			requiredTests: required,
+			idealMissingTests: idealMissing,
+			requiredMissingTests: requiredMissing,
+			debtPercent: +debtRequired.toFixed(2),
+			idealDebtPercent: +debtIdeal.toFixed(2),
+			severity:
+				debtRequired >= 100
+					? "error"
+					: debtRequired > 0
+						? "warning"
+						: idealMissing > 0
+							? "notice"
+							: "ok"
+		}
 	}
 }

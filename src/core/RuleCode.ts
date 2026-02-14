@@ -5,6 +5,7 @@ export type RuleCode =
 	| "no-export"        // No export or multiple exports
 	| "name-mismatch"    // Name mismatch with filename
 	| "extra-exports"    // Extra exports beyond main class/type
+	| "rogue-top-level"  // Forbidden top-level declarations/statements
 	// MustHaveSpecHeaderRule
 	| "missing-spec-class"   // No @Spec on class
 	| "missing-spec-method"  // No @Spec on method

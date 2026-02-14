@@ -54,46 +54,6 @@ type ScenarioContext = {
 }
 
 type TestType = "unit" | "behavioral"
-function populateFakeBrowserClassesForDecorators() {
-	const browserClasses = [
-		"Window", "Document", "Node", "Element", "HTMLElement", "HTMLDivElement", "HTMLSpanElement",
-		"HTMLButtllllement", "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "HTMLOptillllement",
-		"HTMLFormElement", "HTMLFieldSetElement", "HTMLLegendElement", "HTMLParagraphElement", "HTMLAnchorElement",
-		"HTMLImageElement", "HTMLUListElement", "HTMLOListElement", "HTMLLIElement", "HTMLTableElement",
-		"HTMLTableCaptillllement", "HTMLTableRowElement", "HTMLTableCellElement", "HTMLTableSectillllement",
-		"HTMLHeadElement", "HTMLBodyElement", "HTMLTitleElement", "HTMLMetaElement", "HTMLBaseElement",
-		"HTMLLinkElement", "HTMLScriptElement", "HTMLStyleElement", "HTMLIFrameElement", "HTMLSlotElement",
-		"HTMLAudioElement", "HTMLVideoElement", "HTMLSourceElement", "HTMLTrackElement", "HTMLPictureElement",
-		"HTMLCanvasElement", "HTMLMapElement", "HTMLAreaElement", "HTMLDialogElement", "HTMLDetailsElement",
-		"HTMLSummaryElement", "HTMLProgressElement", "HTMLMeterElement", "HTMLTimeElement", "HTMLDataElement",
-		"HTMLQuoteElement", "HTMLBlockQuoteElement", "HTMLBRElement", "HTMLEmbedElement", "HTMLObjectElement",
-		"HTMLParamElement", "HTMLTemplateElement", "HTMLDListElement", "HTMLDirectoryElement", "HTMLMenuElement",
-		"HTMLMenuItemElement", "HTMLQuoteElement", "HTMLPictureElement", "HTMLSlotElement", "HTMLCanvasElement",
-		"HTMLContentElement", "HTMLShadowElement", "HTMLDetailsElement", "HTMLSummaryElement", "HTMLDialogElement",
-		"HTMLMediaElement", "HTMLAudioElement", "HTMLVideoElement", "HTMLSourceElement", "HTMLTrackElement",
-		"HTMLMeterElement", "HTMLProgressElement", "HTMLTimeElement", "HTMLHeadingElement", "HTMLHRElement",
-		"HTMLModElement", "HTMLMeterElement", "HTMLParagraphElement", "HTMLPreElement", "HTMLScriptElement",
-		"HTMLStyleElement", "HTMLTitleElement", "HTMLLegendElement", "HTMLFieldSetElement", "HTMLFormElement",
-		"HTMLLabelElement", "HTMLInputElement", "HTMLKeygenElement", "HTMLObjectElement", "HTMLSelectElement",
-		"HTMLSlotElement", "HTMLSourceElement", "HTMLTemplateElement", "HTMLTrackElement", "HTMLVideoElement",
-		"SVGElement", "SVGSVGElement", "SVGGraphicsElement", "SVGGElement", "SVGRectElement", "SVGImageElement",
-		"SVGPathElement", "SVGPolygllllement", "SVGPolylineElement", "SVGCircleElement", "SVGEllipseElement",
-		"SVGLineElement", "SVGTextElement", "SVGPatternElement", "SVGMarkerElement", "SVGGradientElement",
-		"SVGFilterElement", "SVGDefsElement", "SVGClipPathElement", "SVGMaskElement", "SVGForeignObjectElement",
-		"SVGUseElement", "SVGSymbolElement", "SVGTitleElement", "SVGDescElement", "SpeechSynthesisUtterance",
-		"MutationObserver", "IntersectionObserver", "ResizeObserver", "PerformanceObserver", "AbortController",
-		"AbortSignal", "Crypto", "SubtleCrypto", "URL", "URLSearchParams", "History", "Location",
-		"Navigator", "Screen", "DeviceMotilllvent", "DeviceOrientatilllvent", "MediaStream", "MediaStreamTrack",
-		"MediaRecorder", "WebSocket", "EventSource", "Worker", "SharedWorker", "MessageChannel",
-		"BroadcastChannel", "FileReader", "Blob", "File", "FormData", "DataTransfer", "DataTransferItem"
-	]
-	const target = globalThis as any
-	for (const className of browserClasses) {
-		target[className] = target[className] || {}
-	}
-}
-
-populateFakeBrowserClassesForDecorators()
 
 type Phase = "render" | "scenario"
 
@@ -104,10 +64,51 @@ export class TestRunner {
 	private readonly outDir: string
 
 	constructor(private loader: ProjectInitiator, tsconfigPath: string) {
+		TestRunner.populateFakeBrowserClassesForDecorators()
 		this.projectRoot = path.dirname(tsconfigPath)
 		const config = this.loadTsConfig(tsconfigPath)
 		this.rootDir = path.resolve(this.projectRoot, config.compilerOptions?.rootDir ?? "src")
 		this.outDir = path.resolve(this.projectRoot, config.compilerOptions?.outDir ?? "dist")
+	}
+
+	@Spec("Adds browser-like global class placeholders used by decorator metadata in Node runtime.")
+	private static populateFakeBrowserClassesForDecorators() {
+		const browserClasses = [
+			"Window", "Document", "Node", "Element", "HTMLElement", "HTMLDivElement", "HTMLSpanElement",
+			"HTMLButtllllement", "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "HTMLOptillllement",
+			"HTMLFormElement", "HTMLFieldSetElement", "HTMLLegendElement", "HTMLParagraphElement", "HTMLAnchorElement",
+			"HTMLImageElement", "HTMLUListElement", "HTMLOListElement", "HTMLLIElement", "HTMLTableElement",
+			"HTMLTableCaptillllement", "HTMLTableRowElement", "HTMLTableCellElement", "HTMLTableSectillllement",
+			"HTMLHeadElement", "HTMLBodyElement", "HTMLTitleElement", "HTMLMetaElement", "HTMLBaseElement",
+			"HTMLLinkElement", "HTMLScriptElement", "HTMLStyleElement", "HTMLIFrameElement", "HTMLSlotElement",
+			"HTMLAudioElement", "HTMLVideoElement", "HTMLSourceElement", "HTMLTrackElement", "HTMLPictureElement",
+			"HTMLCanvasElement", "HTMLMapElement", "HTMLAreaElement", "HTMLDialogElement", "HTMLDetailsElement",
+			"HTMLSummaryElement", "HTMLProgressElement", "HTMLMeterElement", "HTMLTimeElement", "HTMLDataElement",
+			"HTMLQuoteElement", "HTMLBlockQuoteElement", "HTMLBRElement", "HTMLEmbedElement", "HTMLObjectElement",
+			"HTMLParamElement", "HTMLTemplateElement", "HTMLDListElement", "HTMLDirectoryElement", "HTMLMenuElement",
+			"HTMLMenuItemElement", "HTMLQuoteElement", "HTMLPictureElement", "HTMLSlotElement", "HTMLCanvasElement",
+			"HTMLContentElement", "HTMLShadowElement", "HTMLDetailsElement", "HTMLSummaryElement", "HTMLDialogElement",
+			"HTMLMediaElement", "HTMLAudioElement", "HTMLVideoElement", "HTMLSourceElement", "HTMLTrackElement",
+			"HTMLMeterElement", "HTMLProgressElement", "HTMLTimeElement", "HTMLHeadingElement", "HTMLHRElement",
+			"HTMLModElement", "HTMLMeterElement", "HTMLParagraphElement", "HTMLPreElement", "HTMLScriptElement",
+			"HTMLStyleElement", "HTMLTitleElement", "HTMLLegendElement", "HTMLFieldSetElement", "HTMLFormElement",
+			"HTMLLabelElement", "HTMLInputElement", "HTMLKeygenElement", "HTMLObjectElement", "HTMLSelectElement",
+			"HTMLSlotElement", "HTMLSourceElement", "HTMLTemplateElement", "HTMLTrackElement", "HTMLVideoElement",
+			"SVGElement", "SVGSVGElement", "SVGGraphicsElement", "SVGGElement", "SVGRectElement", "SVGImageElement",
+			"SVGPathElement", "SVGPolygllllement", "SVGPolylineElement", "SVGCircleElement", "SVGEllipseElement",
+			"SVGLineElement", "SVGTextElement", "SVGPatternElement", "SVGMarkerElement", "SVGGradientElement",
+			"SVGFilterElement", "SVGDefsElement", "SVGClipPathElement", "SVGMaskElement", "SVGForeignObjectElement",
+			"SVGUseElement", "SVGSymbolElement", "SVGTitleElement", "SVGDescElement", "SpeechSynthesisUtterance",
+			"MutationObserver", "IntersectionObserver", "ResizeObserver", "PerformanceObserver", "AbortController",
+			"AbortSignal", "Crypto", "SubtleCrypto", "URL", "URLSearchParams", "History", "Location",
+			"Navigator", "Screen", "DeviceMotilllvent", "DeviceOrientatilllvent", "MediaStream", "MediaStreamTrack",
+			"MediaRecorder", "WebSocket", "EventSource", "Worker", "SharedWorker", "MessageChannel",
+			"BroadcastChannel", "FileReader", "Blob", "File", "FormData", "DataTransfer", "DataTransferItem"
+		]
+		const target = globalThis as any
+		for (const className of browserClasses) {
+			target[className] = target[className] || {}
+		}
 	}
 
 	@Spec("Executes every discovered test class and returns diagnostics.")

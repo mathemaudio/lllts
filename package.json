@@ -15,6 +15,7 @@
 		"lll-check-verbose": "lllts --project tsconfig.json --entry src/LllTsc.lll.ts --verbose",
 		"lll-example-check-quick": "lllts --project tsconfig.json --entry src/examples/MathObject.lll.ts",
 		"lll-example-bad-many-functions": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
+		"lll-example-bad-rogue-top-level": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
 		"dev": "tsc --watch",
 		"i": "pnpm i",
 		"install-lllts-global": "pnpm link --global"
