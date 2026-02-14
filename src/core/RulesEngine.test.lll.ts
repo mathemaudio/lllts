@@ -5,7 +5,7 @@ import { ProjectInitiator } from "./ProjectInitiator.lll"
 import { RulesEngine } from "./RulesEngine.lll"
 
 @Spec("Runs registered rules over the project graph.")
-export class RulesEngineTestosterone {
+export class RulesEngineTest {
 	testType = "unit"
 
 	@Scenario("Run rules on project")
