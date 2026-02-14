@@ -95,7 +95,7 @@ function populateFakeBrowserClassesForDecorators() {
 
 populateFakeBrowserClassesForDecorators()
 
-type Phase = "view" | "scenario"
+type Phase = "render" | "scenario"
 
 @Spec("Executes scenario methods inside `_usecase` companions in deterministic API or (future) browser environments.")
 export class UseCaseRunner {
@@ -150,16 +150,18 @@ export class UseCaseRunner {
 				continue
 			}
 
-			const viewMethod = this.getViewMethod(exportedClass)
-			if (environment === "api" && viewMethod) {
-				diagnostics.push(this.createViewForbiddenDiag(relativeFile, className, viewMethod.getStartLineNumber()))
+			const renderMethod = this.getRenderMethod(exportedClass)
+			const staticRenderMethod = exportedClass.getStaticMethod("render")
+			const forbiddenRender = renderMethod ?? staticRenderMethod
+			if (environment === "api" && forbiddenRender) {
+				diagnostics.push(this.createRenderForbiddenDiag(relativeFile, className, forbiddenRender.getStartLineNumber()))
 				continue
 			}
 
 			const report: UseCaseReport = {
 				className,
 				filePath: relativeFile,
-				line: (viewMethod ?? exportedClass).getStartLineNumber(),
+				line: (renderMethod ?? exportedClass).getStartLineNumber(),
 				scenarios: []
 			}
 
@@ -215,11 +217,10 @@ export class UseCaseRunner {
 			}))
 	}
 
-	@Spec("Returns the static view() renderer if it exists.")
-
-	@Out("view", "MethodDeclaration | undefined")
-	private getViewMethod(classDecl: ClassDeclaration) {
-		return classDecl.getStaticMethod("view")
+	@Spec("Returns the instance render() method if it exists.")
+	@Out("render", "MethodDeclaration | undefined")
+	private getRenderMethod(classDecl: ClassDeclaration) {
+		return classDecl.getInstanceMethod("render")
 	}
 
 	@Spec("Reads environment literal from the source class.")
@@ -367,12 +368,12 @@ export class UseCaseRunner {
 		return BaseRule.createWarning(file, message, this.getRuleCode(), line)
 	}
 
-	@Spec("Reports view forbidden in api environment.")
+	@Spec("Reports render forbidden in api environment.")
 	@Out("diagnostic", "DiagnosticObject")
-	private createViewForbiddenDiag(file: string, className: string, line: number) {
+	private createRenderForbiddenDiag(file: string, className: string, line: number) {
 		return BaseRule.createError(
 			file,
-			`Companion '${className}' must not declare view() when environment is 'api'.`,
+			`Companion '${className}' must not declare render() when environment is 'api'.`,
 			this.getRuleCode(),
 			line
 		)

@@ -14,7 +14,7 @@ const FILE_VARIANTS = [
 type FileVariant = (typeof FILE_VARIANTS)[number]
 type VariantMatch = { variant: FileVariant; isUsecase: boolean }
 
-@Spec("Enforces dedicated `_usecase` companion classes with a single view renderer and @Scenario methods.")
+@Spec("Enforces dedicated `_usecase` companion classes with browser render contract and @Scenario methods.")
 
 export class MustHaveUsecaseRule {
 	@Spec("Returns the rule configuration object.")
@@ -68,7 +68,7 @@ export class MustHaveUsecaseRule {
 		return diagnostics
 	}
 
-	@Spec("Verifies `_usecase` companions expose view() and @Scenario methods.")
+	@Spec("Verifies `_usecase` companions expose browser render() and @Scenario methods.")
 
 	@Out("diagnostics", "DiagnosticObject[]")
 	private static validateUsecaseClass(sourceFile: SourceFile, exportedClass: ClassDeclaration) {
@@ -89,72 +89,111 @@ export class MustHaveUsecaseRule {
 
 		const environment = MustHaveUsecaseRule.validateEnvironment(exportedClass, diagnostics, file, className)
 
-		const viewMethod = exportedClass.getStaticMethod("view")
 		if (environment === "browser") {
-			if (!viewMethod) {
+			const extendsClause = exportedClass.getExtends()
+			const extendsName = extendsClause?.getExpression().getText().trim()
+			if (extendsName !== "LitElement") {
 				diagnostics.push(
 					BaseRule.createError(
 						file,
-						`Companion class '${className}' must declare a static async view(): Promise<string> renderer for browser environment.`,
+						`Browser companion class '${className}' must extend LitElement.`,
+						"missing-usecase",
+						exportedClass.getStartLineNumber()
+					)
+				)
+			}
+
+			const stylesProp = exportedClass.getStaticProperty("styles")
+			if (!stylesProp) {
+				diagnostics.push(
+					BaseRule.createError(
+						file,
+						`Browser companion class '${className}' must declare static styles with string type.`,
 						"missing-usecase",
 						exportedClass.getStartLineNumber()
 					)
 				)
 			} else {
-				if (!viewMethod.isAsync()) {
+				const hasStringType = /:\s*string\b/.test(stylesProp.getText())
+				if (!hasStringType) {
 					diagnostics.push(
 						BaseRule.createError(
 							file,
-							`Method '${className}.view' must be async.`,
+							`Property '${className}.styles' must be typed as string.`,
 							"missing-usecase",
-							viewMethod.getStartLineNumber()
+							stylesProp.getStartLineNumber()
+						)
+					)
+				}
+			}
+
+			const renderMethod = exportedClass.getInstanceMethod("render")
+			const staticRenderMethod = exportedClass.getStaticMethod("render")
+			if (staticRenderMethod) {
+				diagnostics.push(
+					BaseRule.createError(
+						file,
+						`Method '${className}.render' must be an instance method, not static.`,
+						"missing-usecase",
+						staticRenderMethod.getStartLineNumber()
+					)
+				)
+			}
+			if (!renderMethod) {
+				diagnostics.push(
+					BaseRule.createError(
+						file,
+						`Browser companion class '${className}' must declare render(): string.`,
+						"missing-usecase",
+						exportedClass.getStartLineNumber()
+					)
+				)
+			} else {
+				if (renderMethod.isAsync()) {
+					diagnostics.push(
+						BaseRule.createError(
+							file,
+							`Method '${className}.render' must not be async.`,
+							"missing-usecase",
+							renderMethod.getStartLineNumber()
 						)
 					)
 				}
 
-				if (viewMethod.getParameters().length !== 0) {
+				if (renderMethod.getParameters().length !== 0) {
 					diagnostics.push(
 						BaseRule.createError(
 							file,
-							`Method '${className}.view' must not accept parameters.`,
+							`Method '${className}.render' must not accept parameters.`,
 							"missing-usecase",
-							viewMethod.getStartLineNumber()
+							renderMethod.getStartLineNumber()
 						)
 					)
 				}
 
-				const returnType = viewMethod.getReturnType()
+				const returnType = renderMethod.getReturnType()
 				if (!returnType.getText().includes("string")) {
 					diagnostics.push(
 						BaseRule.createError(
 							file,
-							`Method '${className}.view' must return a string or Promise<string>.`,
+							`Method '${className}.render' must return string.`,
 							"missing-usecase",
-							viewMethod.getStartLineNumber()
+							renderMethod.getStartLineNumber()
 						)
 					)
 				}
 			}
 		} else if (environment === "api") {
-			if (viewMethod) {
+			const renderMethod = exportedClass.getInstanceMethod("render")
+			const staticRenderMethod = exportedClass.getStaticMethod("render")
+			const forbiddenMethod = renderMethod ?? staticRenderMethod
+			if (forbiddenMethod) {
 				diagnostics.push(
 					BaseRule.createError(
 						file,
-						`Companion class '${className}' must not declare view() when environment is 'api'.`,
+						`Companion class '${className}' must not declare render() when environment is 'api'.`,
 						"bad-environment",
-						viewMethod.getStartLineNumber()
-					)
-				)
-			}
-		} else {
-			// If environment could not be validated, we still check for a view and warn if missing to keep previous coverage.
-			if (!viewMethod) {
-				diagnostics.push(
-					BaseRule.createError(
-						file,
-						`Companion class '${className}' must declare a static async view(): Promise<string> renderer.`,
-						"missing-usecase",
-						exportedClass.getStartLineNumber()
+						forbiddenMethod.getStartLineNumber()
 					)
 				)
 			}

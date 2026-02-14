@@ -12,7 +12,7 @@ export type RuleCode =
 	| "missing-desc-class"   // No description in class @Spec
 	| "missing-desc-method"  // No description in method @Spec
 	// MustHaveUsecaseRule
-	| "missing-usecase"      // Usecase companion missing view or scenarios
+	| "missing-usecase"      // Usecase companion missing browser render contract or scenarios
 	| "missing-environment"  // Usecase companion missing environment flag
 	| "bad-environment"      // Environment flag not set to allowed literal
 	// MustHaveOutRule

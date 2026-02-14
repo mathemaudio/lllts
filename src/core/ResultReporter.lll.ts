@@ -18,7 +18,7 @@ export class ResultReporter {
 		"missing-spec-method": "Missing @Spec on method",
 		"missing-desc-class": "Missing description in class @Spec",
 		"missing-desc-method": "Missing description in method @Spec",
-		"missing-usecase": "Companion view/scenario structure missing",
+		"missing-usecase": "Companion render/scenario structure missing",
 		"missing-environment": "Companion usecase must declare environment = 'api' | 'browser'",
 		"bad-environment": "Companion environment must be a literal 'api' or 'browser'",
 		"missing-out": "Missing @Out when returning value",

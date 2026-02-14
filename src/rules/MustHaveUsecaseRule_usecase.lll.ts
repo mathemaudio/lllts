@@ -14,10 +14,10 @@ export class MustHaveUsecaseRule_usecase {
 		assert(rule.id === "R4", "Rule id should be R4")
 	}
 
-	@Scenario("Validate usecase type structure including view property")
+	@Scenario("Validate usecase type structure including render property")
 	static async validateTypeStructure(input: object = {}, assert: AssertFn) {
 		const rule = MustHaveUsecaseRule.getRule()
-		console.log(`Rule ${rule.id} validates usecase type structure including view and scenarios`)
+		console.log(`Rule ${rule.id} validates usecase type structure including render and scenarios`)
 		assert(typeof rule.run === "function", "Rule.run should be callable")
 	}
 }

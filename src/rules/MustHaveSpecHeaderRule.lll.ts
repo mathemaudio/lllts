@@ -40,9 +40,9 @@ export class MustHaveSpecHeaderRule {
 
 				for (const method of methods) {
 					const methodName = method.getName()
-					const isStaticViewMethod = typeof method.isStatic === "function" && method.isStatic() && methodName === "view"
+					const isRenderMethod = typeof method.isStatic === "function" && !method.isStatic() && methodName === "render"
 
-					if (isUsecaseClass && isStaticViewMethod) {
+					if (isUsecaseClass && isRenderMethod) {
 						continue
 					}
 

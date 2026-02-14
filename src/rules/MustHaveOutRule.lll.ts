@@ -28,8 +28,8 @@ export class MustHaveOutRule {
 
 				for (const method of methods) {
 					const methodName = method.getName()
-					const isStaticViewMethod = typeof method.isStatic === "function" && method.isStatic() && methodName === "view"
-					if (isUsecaseClass && isStaticViewMethod) {
+					const isRenderMethod = typeof method.isStatic === "function" && !method.isStatic() && methodName === "render"
+					if (isUsecaseClass && isRenderMethod) {
 						continue
 					}
 
