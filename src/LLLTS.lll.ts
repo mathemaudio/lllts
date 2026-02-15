@@ -6,16 +6,23 @@ import { LoadStrategy } from "./LoadStrategy"
 import { Out } from "./public/lll.lll"
 import { Spec } from "./public/lll.lll"
 import { TestRunner } from "./core/TestRunner.lll"
+import { LlltsServer } from "./server/LlltsServer.lll"
 
 type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
+type MainResult = { mode: "compile"; exitCode: number } | { mode: "server"; port: number }
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
 export class LLLTS {
 	@Spec("Reads CLI args and runs LLLTS checks on the target project.")
 
-	@Out("exitCode", "number")
-	public static async main(args: string[]) {
+	@Out("result", "{ mode: 'compile', exitCode: number } | { mode: 'server', port: number }")
+	public static async main(args: string[]): Promise<MainResult> {
+		const serverModeResult = await this.tryRunServerMode(args)
+		if (serverModeResult) {
+			return serverModeResult
+		}
+
 		const projectPath = this.getArg(args, "--project")
 		const entryFile = this.getArg(args, "--entry")
 		const loadStrategy = this.getOptionalArg(args, "--load-strategy", "from_imports") as LoadStrategy
@@ -32,7 +39,7 @@ export class LLLTS {
 			loader = new ProjectInitiator(projectPath, loadStrategy, entryFile)
 		} catch (error) {
 			console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`)
-			return 1
+			return { mode: "compile", exitCode: 1 }
 		}
 
 		const ruleEngine = new RulesEngine(loader)
@@ -51,7 +58,56 @@ export class LLLTS {
 		}
 		reporter.print(allDiagnostics)
 
-		return allDiagnostics.some(r => r.severity === "error") ? 1 : 0
+		return { mode: "compile", exitCode: allDiagnostics.some(r => r.severity === "error") ? 1 : 0 }
+	}
+
+	@Spec("Runs server mode when '--server' is present; returns null for compile mode.")
+	private static async tryRunServerMode(args: string[]): Promise<MainResult | null> {
+		const serverFlagIndex = args.indexOf("--server")
+		if (serverFlagIndex < 0) {
+			return null
+		}
+
+		const action = args[serverFlagIndex + 1]
+		if (action !== "start") {
+			console.error(`\n❌ Unsupported server action: ${action ?? "(missing)"}. Use '--server start'.`)
+			return { mode: "compile", exitCode: 1 }
+		}
+
+		const portResult = this.parseServerPort(args)
+		if (!portResult.valid) {
+			console.error(`\n❌ ${portResult.error}`)
+			return { mode: "compile", exitCode: 1 }
+		}
+
+		const server = new LlltsServer()
+		const port = await server.start(portResult.port)
+		console.log(`LLLTS server listening on http://localhost:${port}`)
+		return { mode: "server", port }
+	}
+
+	@Spec("Parses and validates '--port' for server mode.")
+	private static parseServerPort(args: string[]): { valid: true; port: number } | { valid: false; error: string } {
+		const defaultPort = 54300
+		const i = args.indexOf("--port")
+		if (i < 0) {
+			return { valid: true, port: defaultPort }
+		}
+		if (i + 1 >= args.length) {
+			return { valid: false, error: "Missing value for --port." }
+		}
+
+		const rawPort = args[i + 1].trim()
+		if (!/^\d+$/.test(rawPort)) {
+			return { valid: false, error: `Invalid --port value '${rawPort}'. Expected integer 1..65535.` }
+		}
+
+		const port = Number(rawPort)
+		if (!Number.isInteger(port) || port < 1 || port > 65535) {
+			return { valid: false, error: `Invalid --port value '${rawPort}'. Expected integer 1..65535.` }
+		}
+
+		return { valid: true, port }
 	}
 
 	@Spec("Retrieves a required CLI argument by flag or throws error.")
@@ -107,7 +163,11 @@ export class LLLTS {
 // CLI entry point
 if (require.main === module) {
 	LLLTS.main(process.argv.slice(2))
-		.then(exitCode => process.exit(exitCode))
+		.then(result => {
+			if (result.mode === "compile") {
+				process.exit(result.exitCode)
+			}
+		})
 		.catch(error => {
 			console.error(error instanceof Error ? error.stack ?? error.message : String(error))
 			process.exit(1)
