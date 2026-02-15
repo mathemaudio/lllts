@@ -18,6 +18,8 @@ type ServerConfig = {
 
 @Spec("Hosts the foreground HTTP server mode for lllts.")
 export class LlltsServer {
+	private static readonly testPanelOpenByDefault = !false
+
 	@Spec("Starts an express server that proxies a configured client and overlays discovered project tests.")
 	@Out("port", "number")
 	public async start(port: number, config: ServerConfig): Promise<number> {
@@ -257,6 +259,7 @@ export class LlltsServer {
 	@Out("markup", "string")
 	private buildTestOverlayMarkup(testFiles: string[]): string {
 		const serializedTests = JSON.stringify(testFiles).replace(/</g, "\\u003c")
+		const defaultOpenLiteral = LlltsServer.testPanelOpenByDefault ? "true" : "false"
 		return `
 <!-- LLLTS_TEST_OVERLAY -->
 <style id="lllts-overlay-style">
@@ -290,6 +293,7 @@ export class LlltsServer {
 <script id="lllts-test-data" type="application/json">${serializedTests}</script>
 <script id="lllts-overlay-script">
 (function(){
+  var openByDefault=${defaultOpenLiteral};
   var dataElement=document.getElementById("lllts-test-data");
   if(!dataElement){return;}
   var tests=[];
@@ -302,6 +306,7 @@ export class LlltsServer {
   var popupLink=document.getElementById("lllts-test-popup-link");
   var popupClose=document.getElementById("lllts-test-popup-close");
   if(!toggleButton||!panel||!list||!emptyState||!popup||!popupLink||!popupClose){return;}
+  if(openByDefault){panel.classList.add("lllts-open");}
   toggleButton.addEventListener("click",function(){panel.classList.toggle("lllts-open");});
   popupClose.addEventListener("click",function(){popup.classList.remove("lllts-open");});
   if(!Array.isArray(tests)||tests.length===0){emptyState.hidden=false;return;}
