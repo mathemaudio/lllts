@@ -10,6 +10,7 @@ import { LlltsServer } from "./server/LlltsServer.lll"
 
 type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
 type MainResult = { mode: "compile"; exitCode: number } | { mode: "server"; port: number }
+type ServerModeConfig = { projectPath: string; projectClientLink: string }
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
@@ -62,6 +63,7 @@ export class LLLTS {
 	}
 
 	@Spec("Runs server mode when '--server' is present; returns null for compile mode.")
+	@Out("result", "MainResult | null")
 	private static async tryRunServerMode(args: string[]): Promise<MainResult | null> {
 		const serverFlagIndex = args.indexOf("--server")
 		if (serverFlagIndex < 0) {
@@ -79,14 +81,20 @@ export class LLLTS {
 			console.error(`\n❌ ${portResult.error}`)
 			return { mode: "compile", exitCode: 1 }
 		}
+		const configResult = this.parseServerConfig(args)
+		if (!configResult.valid) {
+			console.error(`\n❌ ${configResult.error}`)
+			return { mode: "compile", exitCode: 1 }
+		}
 
 		const server = new LlltsServer()
-		const port = await server.start(portResult.port)
+		const port = await server.start(portResult.port, configResult.config)
 		console.log(`LLLTS server listening on http://localhost:${port}`)
 		return { mode: "server", port }
 	}
 
 	@Spec("Parses and validates '--port' for server mode.")
+	@Out("portResult", "{ valid: true; port: number } | { valid: false; error: string }")
 	private static parseServerPort(args: string[]): { valid: true; port: number } | { valid: false; error: string } {
 		const defaultPort = 54300
 		const i = args.indexOf("--port")
@@ -108,6 +116,43 @@ export class LLLTS {
 		}
 
 		return { valid: true, port }
+	}
+
+	@Spec("Parses required server runtime config flags.")
+	@Out("configResult", "{ valid: true; config: ServerModeConfig } | { valid: false; error: string }")
+	private static parseServerConfig(args: string[]): { valid: true; config: ServerModeConfig } | { valid: false; error: string } {
+		const projectPathResult = this.parseRequiredServerArg(args, "--projectPath")
+		if (!projectPathResult.valid) {
+			return projectPathResult
+		}
+		const projectClientLinkResult = this.parseRequiredServerArg(args, "--projectClientLink")
+		if (!projectClientLinkResult.valid) {
+			return projectClientLinkResult
+		}
+		return {
+			valid: true,
+			config: {
+				projectPath: projectPathResult.value,
+				projectClientLink: projectClientLinkResult.value
+			}
+		}
+	}
+
+	@Spec("Parses one required server argument and validates that it has a non-empty value.")
+	@Out("argumentResult", "{ valid: true; value: string } | { valid: false; error: string }")
+	private static parseRequiredServerArg(args: string[], flag: string): { valid: true; value: string } | { valid: false; error: string } {
+		const i = args.indexOf(flag)
+		if (i < 0) {
+			return { valid: false, error: `Missing required server argument: ${flag}.` }
+		}
+		if (i + 1 >= args.length) {
+			return { valid: false, error: `Missing value for ${flag}.` }
+		}
+		const value = args[i + 1].trim()
+		if (value.length === 0) {
+			return { valid: false, error: `Missing value for ${flag}.` }
+		}
+		return { valid: true, value }
 	}
 
 	@Spec("Retrieves a required CLI argument by flag or throws error.")

@@ -1,5 +1,5 @@
 import { LLLTS } from "./LLLTS.lll.js";
-import { AssertFn, Scenario, Spec } from "./public/lll.lll.js";
+import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
@@ -24,15 +24,25 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Server start with explicit valid port returns server mode")
+	@Out("result", "void")
 	static async serverStartMode(input: object = {}, assert: AssertFn) {
 		const port = 54397
+		const projectPath = "."
+		const projectClientLink = "http://localhost:3000"
 		const originalStart = LlltsServer.prototype.start
-		LlltsServer.prototype.start = async function mockStart(inputPort: number) {
+		LlltsServer.prototype.start = async function mockStart(inputPort: number, config: { projectPath: string; projectClientLink: string }) {
+			assert(config.projectPath === projectPath, "Server mode should pass --projectPath into server config")
+			assert(config.projectClientLink === projectClientLink, "Server mode should pass --projectClientLink into server config")
 			return inputPort
 		}
 
 		try {
-			const result = await LLLTS.main(["--server", "start", "--port", String(port)])
+			const result = await LLLTS.main([
+				"--server", "start",
+				"--port", String(port),
+				"--projectPath", projectPath,
+				"--projectClientLink", projectClientLink
+			])
 			assert(result.mode === "server", "Server args should execute server mode")
 			assert(result.port === port, "Server mode should return the parsed port")
 		} finally {
@@ -40,9 +50,23 @@ export class LLLTSTest {
 		}
 	}
 
+	@Scenario("Missing --projectPath returns compile failure result")
+	static async missingServerProjectPath(input: object = {}, assert: AssertFn) {
+		const result = await LLLTS.main(["--server", "start", "--port", "54300", "--projectClientLink", "http://localhost:3000"])
+		assert(result.mode === "compile", "Missing --projectPath should return compile failure result")
+		assert(result.exitCode === 1, "Missing --projectPath should return non-zero exit code")
+	}
+
+	@Scenario("Missing --projectClientLink returns compile failure result")
+	static async missingServerProjectClientLink(input: object = {}, assert: AssertFn) {
+		const result = await LLLTS.main(["--server", "start", "--port", "54300", "--projectPath", "."])
+		assert(result.mode === "compile", "Missing --projectClientLink should return compile failure result")
+		assert(result.exitCode === 1, "Missing --projectClientLink should return non-zero exit code")
+	}
+
 	@Scenario("Invalid server port returns compile failure result")
 	static async invalidServerPort(input: object = {}, assert: AssertFn) {
-		const result = await LLLTS.main(["--server", "start", "--port", "abc"])
+		const result = await LLLTS.main(["--server", "start", "--port", "abc", "--projectPath", ".", "--projectClientLink", "http://localhost:3000"])
 		assert(result.mode === "compile", "Invalid server args should return compile failure result")
 		assert(result.exitCode === 1, "Invalid server args should return non-zero exit code")
 	}
