@@ -1,9 +1,6 @@
-import { AssertFn } from "../public/lll.lll"
-import { Out } from "../public/lll.lll"
-import { Scenario } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
-import { NoRogueTopLevelRule } from "./NoRogueTopLevelRule.lll"
 import { Project } from "ts-morph"
+import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll"
+import { NoRogueTopLevelRule } from "./NoRogueTopLevelRule.lll"
 
 @Spec("Validates no-rogue-top-level constraints.")
 export class NoRogueTopLevelRuleTest {
