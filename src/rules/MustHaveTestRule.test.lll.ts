@@ -107,4 +107,60 @@ export class MathObjectTest {
 		)
 		assert(diagnostics.some(d => d.ruleCode === "bad-test-type"), "Expected bad-test-type diagnostic")
 	}
+
+	@Scenario("Accept behavioral tests with CSSResult styles and TemplateResult render")
+	static async acceptsBehavioralLitTypes(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/App.test.lll.ts",
+			`
+import { App } from "./App.lll"
+export class AppTest extends LitElement {
+	testType = "behavioral"
+	static styles: CSSResult = {} as CSSResult
+	render(): TemplateResult<{ label: string }> {
+		return {} as TemplateResult<{ label: string }>
+	}
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(!!App, "host class should be available")
+	}
+}
+`,
+			{
+				"/src/App.lll.ts": `export class App {}`
+			}
+		)
+		assert(
+			diagnostics.length === 0,
+			"Expected behavioral companion to accept CSSResult styles and TemplateResult render type"
+		)
+	}
+
+	@Scenario("Reject behavioral render return type outside string or TemplateResult")
+	static async rejectsUnsupportedBehavioralRenderType(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/App.test.lll.ts",
+			`
+import { App } from "./App.lll"
+export class AppTest extends LitElement {
+	testType = "behavioral"
+	static styles: CSSResult = {} as CSSResult
+	render(): number {
+		return 1
+	}
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(!!App, "host class should be available")
+	}
+}
+`,
+			{
+				"/src/App.lll.ts": `export class App {}`
+			}
+		)
+		assert(
+			diagnostics.some(d => d.message.includes("must return string or TemplateResult")),
+			"Expected unsupported render return type to be rejected"
+		)
+	}
 }

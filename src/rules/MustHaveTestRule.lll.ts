@@ -175,18 +175,23 @@ export class MustHaveTestRule {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Behavioral test class '${className}' must declare static styles with string type.`,
+					`Behavioral test class '${className}' must declare static styles with string or CSSResult type.`,
 					"missing-test",
 					exportedClass.getStartLineNumber()
 				)
 			)
 		} else {
-			const hasStringType = /:\s*string\b/.test(stylesProp.getText())
-			if (!hasStringType) {
+			const declaredTypeText =
+				"getTypeNode" in stylesProp ? (stylesProp.getTypeNode()?.getText() ?? "") : ""
+			const resolvedTypeText = stylesProp.getType().getText(stylesProp)
+			const hasAllowedType =
+				MustHaveTestRule.isAllowedStylesType(declaredTypeText) ||
+				MustHaveTestRule.isAllowedStylesType(resolvedTypeText)
+			if (!hasAllowedType) {
 				diagnostics.push(
 					BaseRule.createError(
 						file,
-						`Property '${className}.styles' must be typed as string.`,
+						`Property '${className}.styles' must be typed as string or CSSResult.`,
 						"missing-test",
 						stylesProp.getStartLineNumber()
 					)
@@ -210,7 +215,7 @@ export class MustHaveTestRule {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Behavioral test class '${className}' must declare render(): string.`,
+					`Behavioral test class '${className}' must declare render(): string or TemplateResult.`,
 					"missing-test",
 					exportedClass.getStartLineNumber()
 				)
@@ -240,17 +245,33 @@ export class MustHaveTestRule {
 			)
 		}
 
-		const returnType = renderMethod.getReturnType()
-		if (!returnType.getText().includes("string")) {
+		const declaredReturnTypeText = renderMethod.getReturnTypeNode()?.getText() ?? ""
+		const resolvedReturnTypeText = renderMethod.getReturnType().getText(renderMethod)
+		const hasAllowedReturnType =
+			MustHaveTestRule.isAllowedRenderType(declaredReturnTypeText) ||
+			MustHaveTestRule.isAllowedRenderType(resolvedReturnTypeText)
+		if (!hasAllowedReturnType) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Method '${className}.render' must return string.`,
+					`Method '${className}.render' must return string or TemplateResult.`,
 					"missing-test",
 					renderMethod.getStartLineNumber()
 				)
 			)
 		}
+	}
+
+	@Spec("Returns true when a styles type matches the supported behavioral contract.")
+	@Out("allowed", "boolean")
+	private static isAllowedStylesType(typeText: string) {
+		return /\bstring\b/.test(typeText) || /\bCSSResult\b/.test(typeText)
+	}
+
+	@Spec("Returns true when a render return type matches the supported behavioral contract.")
+	@Out("allowed", "boolean")
+	private static isAllowedRenderType(typeText: string) {
+		return /\bstring\b/.test(typeText) || /\bTemplateResult\b/.test(typeText)
 	}
 
 	@Spec("Ensures testType literal is present on test classes.")
