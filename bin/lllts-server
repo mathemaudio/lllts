@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+
+const fs = require('fs')
+const path = require('path')
+const { spawn } = require('child_process')
+
+const scriptPath = path.join(__dirname, '..', 'dist', 'LLLTS.lll.js')
+const defaultArgs = ['--server', 'start', '--port', '54300']
+const extraArgs = process.argv.slice(2)
+
+if (!fs.existsSync(scriptPath)) {
+	console.error(
+		`lll-ts: expected compiled entry at ${scriptPath}, but it was not found. ` +
+		'Run `npm run build` (or equivalent) to generate dist/LLLTS.lll.js before using this command.'
+	)
+	process.exit(1)
+}
+
+const child = spawn('node', [scriptPath, ...defaultArgs, ...extraArgs], {
+	stdio: 'inherit',
+	cwd: process.cwd()
+})
+
+child.on('error', (err) => {
+	console.error(`lll-ts: failed to start ${scriptPath}: ${err.message}`)
+	process.exit(1)
+})
+
+child.on('exit', (code) => {
+	process.exit(code || 0)
+})

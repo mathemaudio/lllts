@@ -4,19 +4,20 @@
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
 	"main": "dist/LLLTS.lll.js",
 	"bin": {
-		"lllts": "./bin/lllts"
+		"lllts": "./bin/lllts",
+		"lllts-server": "./bin/lllts-server"
 	},
 	"type": "commonjs",
 	"scripts": {
 		"watch": "TSC_NONPOLLING_WATCHER=1 tsc --watch",
-		"build": "tsc",
-		"ts-check": "tsc --noEmit",
+		"server:start": "lllts --server start --port 54300",
 		"lll-check": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-verbose": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
 		"lll-example-check-quick": "lllts --project tsconfig.json --entry src/examples/MathObject.lll.ts",
 		"lll-example-bad-many-functions": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
 		"lll-example-bad-rogue-top-level": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
-		"dev": "tsc --watch",
+		"build": "tsc",
+		"ts-check": "tsc --noEmit",
 		"i": "pnpm i",
 		"install-lllts-global": "pnpm link --global"
 	},
