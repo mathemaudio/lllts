@@ -13,12 +13,12 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"program": "${workspaceFolder}/src/LllTsc.lll.ts",
+			"program": "${workspaceFolder}/src/LLLTS.lll.ts",
 			"args": [
 				"--project",
 				"${workspaceFolder}/tsconfig.json",
 				"--entry",
-				"${workspaceFolder}/src/LllTsc.lll.ts"
+				"${workspaceFolder}/src/LLLTS.lll.ts"
 			],
 			"runtimeArgs": ["-r", "ts-node/register", "-r", "tsconfig-paths/register"],
 			"console": "integratedTerminal",

@@ -8,7 +8,7 @@ export class RulesEngineTest {
 
 	@Scenario("Run rules on project")
 	static async runRules(input: object = {}, assert: AssertFn) {
-		const loader = new ProjectInitiator("./tsconfig.json", "from_imports", "src/LllTsc.lll.ts")
+		const loader = new ProjectInitiator("./tsconfig.json", "from_imports", "src/LLLTS.lll.ts")
 		const engine = new RulesEngine(loader)
 		const results = engine.runAll()
 		assert(Array.isArray(results), "Results should be an array")

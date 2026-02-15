@@ -100,8 +100,8 @@ export { A } from "./A"`
 	@Scenario("Allows one final top-level if")
 	static async allowsOneFinalTopLevelIf(input: object = {}, assert: AssertFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
-			"/src/LllTsc.lll.ts",
-			`export class LllTsc {}
+			"/src/LLLTS.lll.ts",
+			`export class LLLTS {}
 if (true) { console.log("x") }`
 		)
 		assert(diagnostics.length === 0, "Expected single final top-level if to pass")
@@ -130,8 +130,8 @@ new StartTest()`
 	@Scenario("Rejects multiple top-level if statements")
 	static async rejectsMultipleTopLevelIf(input: object = {}, assert: AssertFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
-			"/src/LllTsc.lll.ts",
-			`export class LllTsc {}
+			"/src/LLLTS.lll.ts",
+			`export class LLLTS {}
 if (true) {}
 if (false) {}`
 		)
@@ -141,9 +141,9 @@ if (false) {}`
 	@Scenario("Rejects non-final top-level if")
 	static async rejectsNonFinalTopLevelIf(input: object = {}, assert: AssertFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
-			"/src/LllTsc.lll.ts",
+			"/src/LLLTS.lll.ts",
 			`if (true) {}
-export class LllTsc {}`
+export class LLLTS {}`
 		)
 		assert(diagnostics.some(d => d.message.includes("must be the last")), "Expected final-if placement diagnostic")
 	}

@@ -1,10 +1,8 @@
-import { Scenario } from "./public/lll.lll.js";
-import { Spec } from "./public/lll.lll.js";
-import { AssertFn } from "./public/lll.lll.js";
-import { LllTsc } from "./LllTsc.lll"
+import { LLLTS } from "./LLLTS.lll.js";
+import { AssertFn, Scenario, Spec } from "./public/lll.lll.js";
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
-export class LllTscTest {
+export class LLLTSTest {
 	testType = "unit"
 
 	@Scenario("Compile MathObject example using the playground inputs")
@@ -18,7 +16,7 @@ export class LllTscTest {
 			args.push("--verbose")
 		}
 
-		const exitCode = await LllTsc.main(args)
+		const exitCode = await LLLTS.main(args)
 		assert(typeof exitCode === "number", "Compiler should return an exit code")
 		console.log("Playground run", { project, entry, verbose, exitCode })
 	}

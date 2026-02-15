@@ -11,7 +11,7 @@ type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
-export class LllTsc {
+export class LLLTS {
 	@Spec("Reads CLI args and runs LLLTS checks on the target project.")
 
 	@Out("exitCode", "number")
@@ -23,9 +23,9 @@ export class LllTsc {
 
 
 
-		console.log(`🔍 LLLTS Compiler v0.1.1`)
-		console.log(`📁 Project: ${projectPath}`)
-		console.log(`📄 Entry: ${entryFile}`)
+		console.log(`LLLTS Compiler v0.1.2`)
+		// console.log(`Project: ${projectPath}`)
+		console.log(`Entry: ${entryFile}`)
 
 		let loader: ProjectInitiator
 		try {
@@ -106,7 +106,7 @@ export class LllTsc {
 
 // CLI entry point
 if (require.main === module) {
-	LllTsc.main(process.argv.slice(2))
+	LLLTS.main(process.argv.slice(2))
 		.then(exitCode => process.exit(exitCode))
 		.catch(error => {
 			console.error(error instanceof Error ? error.stack ?? error.message : String(error))
