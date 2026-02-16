@@ -19,6 +19,10 @@ type ServerConfig = {
 @Spec("Hosts the foreground HTTP server mode for lllts.")
 export class LlltsServer {
 	private static readonly testPanelOpenByDefault = !false
+	private static readonly overlayAssetsBasePath = "/__lllts-overlay"
+	private static readonly overlayIndexAssetPath = "index.html"
+	private static readonly overlayScriptAssetPath = "js/script.js"
+	private static readonly overlayStyleAssetPath = "css/style.css"
 
 	@Spec("Starts an express server that proxies a configured client and overlays discovered project tests.")
 	@Out("port", "number")
@@ -34,11 +38,60 @@ export class LlltsServer {
 	@Out("app", "Express")
 	public createApp(config: ServerConfig): Express {
 		const app = express()
+		this.registerOverlayAssetRoutes(app)
 		app.use(async (req: Request, res: Response) => {
 			await this.handleProxyRequest(req, res, config)
 		})
 
 		return app
+	}
+
+	@Spec("Registers static overlay asset routes served from local CDN files.")
+	private registerOverlayAssetRoutes(app: Express): void {
+		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayIndexAssetPath}`, (_req: Request, res: Response) => {
+			this.serveOverlayAsset(res, LlltsServer.overlayIndexAssetPath, "text/html; charset=utf-8")
+		})
+		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayScriptAssetPath}`, (_req: Request, res: Response) => {
+			this.serveOverlayAsset(res, LlltsServer.overlayScriptAssetPath, "application/javascript; charset=utf-8")
+		})
+		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayStyleAssetPath}`, (_req: Request, res: Response) => {
+			this.serveOverlayAsset(res, LlltsServer.overlayStyleAssetPath, "text/css; charset=utf-8")
+		})
+	}
+
+	@Spec("Serves one overlay asset file from the server-side CDN directory.")
+	private serveOverlayAsset(res: Response, relativeAssetPath: string, contentType: string): void {
+		const overlayRoot = this.resolveOverlayAssetsRootPath()
+		if (!overlayRoot) {
+			res.status(500).type("text/plain").send("Overlay assets directory is unavailable.")
+			return
+		}
+		const absoluteAssetPath = path.join(overlayRoot, relativeAssetPath)
+		try {
+			const body = fs.readFileSync(absoluteAssetPath)
+			res.status(200).type(contentType).send(body)
+		} catch {
+			res.status(404).type("text/plain").send("Overlay asset not found.")
+		}
+	}
+
+	@Spec("Resolves CDN root for overlay assets in both ts-source and built-dist executions.")
+	@Out("rootPath", "string | null")
+	private resolveOverlayAssetsRootPath(): string | null {
+		const candidatePaths = [
+			path.resolve(__dirname, "cdn"),
+			path.resolve(__dirname, "../../src/server/cdn")
+		]
+		for (const candidatePath of candidatePaths) {
+			if (!fs.existsSync(candidatePath)) {
+				continue
+			}
+			if (!fs.statSync(candidatePath).isDirectory()) {
+				continue
+			}
+			return candidatePath
+		}
+		return null
 	}
 
 	@Spec("Handles one incoming request by validating project path and proxying to the configured client.")
@@ -255,222 +308,33 @@ export class LlltsServer {
 		return `${html}${overlayMarkup}`
 	}
 
-	@Spec("Builds inline HTML/CSS/JS overlay for discovered test files.")
+	@Spec("Builds minimal inline overlay config plus loader that pulls CDN-hosted UI assets.")
 	@Out("markup", "string")
 	private buildTestOverlayMarkup(testFiles: string[]): string {
-		const serializedTests = JSON.stringify(testFiles).replace(/</g, "\\u003c")
-		const defaultOpenLiteral = LlltsServer.testPanelOpenByDefault ? "true" : "false"
+		const serializedConfig = JSON.stringify({
+			tests: testFiles,
+			openByDefault: LlltsServer.testPanelOpenByDefault,
+			assetsBasePath: LlltsServer.overlayAssetsBasePath
+		}).replace(/</g, "\\u003c")
 		return /*html*/`
 <!-- LLLTS_TEST_OVERLAY -->
-<style id="lllts-overlay-style">
-#lllts-test-toggle{position:fixed;left:16px;bottom:16px;z-index:2147483640;padding:10px 14px;border:none;border-radius:10px;background:#0f4c5c;color:#fff;font:600 13px/1.2 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}
-#lllts-test-panel{position:fixed;left:16px;bottom:68px;z-index:2147483640;width:min(50vw,560px);max-height:70vh;overflow:auto;background:#ffffff;border:1px solid #d9e1e7;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.28);padding:14px;display:none}
-#lllts-test-panel.lllts-open{display:block}
-#lllts-test-panel h3{margin:0 0 8px 0;font:700 14px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#102a43}
-#lllts-test-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
-#lllts-test-list button{width:100%;text-align:left;border:1px solid #d9e1e7;border-radius:8px;background:#f7fafc;color:#1f2933;padding:8px 10px;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;cursor:pointer}
-#lllts-test-list button:hover{background:#eef4f8}
-#lllts-test-empty{font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#52606d}
-#lllts-test-popup{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483641;min-width:min(90vw,520px);max-width:min(90vw,620px);background:#fff;border:1px solid #d9e1e7;border-radius:12px;padding:16px;box-shadow:0 20px 44px rgba(0,0,0,.32);display:none}
-#lllts-test-popup.lllts-open{display:block}
-#lllts-test-popup-title{margin:0 0 8px 0;font:700 14px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#102a43}
-#lllts-test-popup-body{margin:0 0 8px 0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#1f2933}
-#lllts-test-popup-link{margin:0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#334e68;word-break:break-all}
-#lllts-test-popup-status{margin:8px 0 0 0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#486581}
-#lllts-test-popup-status[data-state="error"]{color:#9b1c1c}
-#lllts-test-popup-render{margin-top:10px;border:1px solid #d9e1e7;border-radius:8px;padding:10px;min-height:56px;background:#f7fafc;overflow:auto}
-#lllts-test-popup-close{margin-top:12px;padding:7px 10px;border:1px solid #d9e1e7;border-radius:8px;background:#f7fafc;cursor:pointer}
-</style>
-<button id="lllts-test-toggle" type="button">LLLTS Tests</button>
-<aside id="lllts-test-panel" aria-label="LLLTS tests panel">
-  <h3>Project Tests</h3>
-  <p id="lllts-test-empty" hidden>No .test.lll.ts files found.</p>
-  <ul id="lllts-test-list"></ul>
-</aside>
-<div id="lllts-test-popup" role="dialog" aria-modal="false">
-  <h4 id="lllts-test-popup-title">Test Preview</h4>
-  <p id="lllts-test-popup-body">Select a test to preview.</p>
-  <p id="lllts-test-popup-link"></p>
-  <p id="lllts-test-popup-status"></p>
-  <div id="lllts-test-popup-render"></div>
-  <button id="lllts-test-popup-close" type="button">Close</button>
-</div>
-<script id="lllts-test-data" type="application/json">${serializedTests}</script>
-<script id="lllts-overlay-script">
+<script id="lllts-overlay-config" type="application/json">${serializedConfig}</script>
+<script id="lllts-overlay-loader">
 (function(){
-  var openByDefault=${defaultOpenLiteral};
-  var dataElement=document.getElementById("lllts-test-data");
-  if(!dataElement){return;}
-  var tests=[];
-  try{tests=JSON.parse(dataElement.textContent||"[]");}catch(_error){tests=[];}
-  var toggleButton=document.getElementById("lllts-test-toggle");
-  var panel=document.getElementById("lllts-test-panel");
-  var list=document.getElementById("lllts-test-list");
-  var emptyState=document.getElementById("lllts-test-empty");
-  var popup=document.getElementById("lllts-test-popup");
-  var popupBody=document.getElementById("lllts-test-popup-body");
-  var popupLink=document.getElementById("lllts-test-popup-link");
-  var popupStatus=document.getElementById("lllts-test-popup-status");
-  var popupRenderHost=document.getElementById("lllts-test-popup-render");
-  var popupClose=document.getElementById("lllts-test-popup-close");
-  if(!toggleButton||!panel||!list||!emptyState||!popup||!popupBody||!popupLink||!popupStatus||!popupRenderHost||!popupClose){return;}
-  function clearRenderHost(){
-    while(popupRenderHost.firstChild){
-      popupRenderHost.removeChild(popupRenderHost.firstChild);
-    }
+  var assetsBasePath="${LlltsServer.overlayAssetsBasePath}";
+  if(!document.getElementById("lllts-overlay-runtime-style")){
+    var style=document.createElement("link");
+    style.id="lllts-overlay-runtime-style";
+    style.rel="stylesheet";
+    style.href=assetsBasePath+"/${LlltsServer.overlayStyleAssetPath}";
+    document.head.appendChild(style);
   }
-  function setStatus(message,isError){
-    popupStatus.textContent=message||"";
-    if(isError){
-      popupStatus.setAttribute("data-state","error");
-      return;
-    }
-    popupStatus.removeAttribute("data-state");
-  }
-  function errorMessage(error){
-    if(error&&typeof error==="object"&&"message" in error){
-      var message=String(error.message||"");
-      if(message.length>0){return message;}
-    }
-    return String(error||"Unknown error");
-  }
-  function detectPageModuleTParam(){
-    var moduleScripts=document.querySelectorAll("script[type=\\"module\\"][src]");
-    for(var i=0;i<moduleScripts.length;i+=1){
-      var script=moduleScripts[i];
-      var src=script.getAttribute("src");
-      if(!src){continue;}
-      try{
-        var srcUrl=new URL(src,window.location.href);
-        var tValue=srcUrl.searchParams.get("t");
-        if(tValue){return tValue;}
-      }catch(_error){}
-    }
-    return "";
-  }
-  function buildImportUrl(testPath,tParam){
-    var normalizedPath=String(testPath||"").replace(/^\\/+/, "");
-    var basePath="/"+normalizedPath;
-    if(!tParam){return basePath;}
-    var separator=basePath.indexOf("?")===-1?"?":"&";
-    return basePath+separator+"t="+encodeURIComponent(tParam);
-  }
-  function isFunction(value){
-    return typeof value==="function";
-  }
-  function resolveTestClass(moduleObject){
-    if(!moduleObject||typeof moduleObject!=="object"){return null;}
-    var exportKeys=Object.keys(moduleObject);
-    for(var i=0;i<exportKeys.length;i+=1){
-      var candidate=moduleObject[exportKeys[i]];
-      if(!isFunction(candidate)){continue;}
-      var candidateName=String(candidate.name||"");
-      if(candidateName.endsWith("Test")){
-        return candidate;
-      }
-    }
-    var defaultExport=moduleObject.default;
-    if(isFunction(defaultExport)){
-      return defaultExport;
-    }
-    return null;
-  }
-  function hashPath(value){
-    var hash=2166136261>>>0;
-    for(var i=0;i<value.length;i+=1){
-      hash^=value.charCodeAt(i);
-      hash=Math.imul(hash,16777619);
-    }
-    return (hash>>>0).toString(16);
-  }
-  function buildPreviewTagName(testPath){
-    var rawPath=String(testPath||"");
-    var slug=rawPath.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,24);
-    if(!slug){slug="test";}
-    return "lllts-preview-"+slug+"-"+hashPath(rawPath);
-  }
-  function isHTMLElementSubclass(TestClass){
-    return typeof HTMLElement!=="undefined"&&!!TestClass&&!!TestClass.prototype&&TestClass.prototype instanceof HTMLElement;
-  }
-  function createPreviewElementClass(TestClass){
-    return class extends TestClass{};
-  }
-  function ensurePreviewTagDefined(tagName,TestClass){
-    var existingDefinition=customElements.get(tagName);
-    if(existingDefinition){
-      return tagName;
-    }
-    var PreviewElementClass=createPreviewElementClass(TestClass);
-    customElements.define(tagName,PreviewElementClass);
-    return tagName;
-  }
-  function resolveUsableTagName(TestClass,testPath){
-    var preferredTag=buildPreviewTagName(testPath);
-    return ensurePreviewTagDefined(preferredTag,TestClass);
-  }
-  function mountBehavioralPreview(TestClass,testPath){
-    var tagName=resolveUsableTagName(TestClass,testPath);
-    var element=document.createElement(tagName);
-    popupRenderHost.appendChild(element);
-    return tagName;
-  }
-  if(openByDefault){panel.classList.add("lllts-open");}
-  toggleButton.addEventListener("click",function(){panel.classList.toggle("lllts-open");});
-  popupClose.addEventListener("click",function(){popup.classList.remove("lllts-open");});
-  if(!Array.isArray(tests)||tests.length===0){emptyState.hidden=false;return;}
-  emptyState.hidden=true;
-  tests.forEach(function(testPath){
-    var item=document.createElement("li");
-    var button=document.createElement("button");
-    button.type="button";
-    button.textContent=String(testPath);
-    button.addEventListener("click",async function(){
-      var selectedPath=String(testPath||"");
-      popup.classList.add("lllts-open");
-      popupBody.textContent="Loading test preview...";
-      popupLink.textContent=selectedPath;
-      setStatus("",false);
-      clearRenderHost();
-      try{
-        var detectedT=detectPageModuleTParam();
-        var moduleUrl=buildImportUrl(selectedPath,detectedT);
-        setStatus("Importing "+moduleUrl,false);
-        var moduleObject=await import(moduleUrl);
-        var TestClass=resolveTestClass(moduleObject);
-        if(!TestClass){
-          throw new Error("No exported '*Test' class (or default class/function) was found.");
-        }
-        var testInstance;
-        try{
-          testInstance=new TestClass();
-        }catch(instantiateError){
-          if(!isHTMLElementSubclass(TestClass)){
-            throw instantiateError;
-          }
-          var fallbackTagName=resolveUsableTagName(TestClass,selectedPath);
-          testInstance=document.createElement(fallbackTagName);
-        }
-        var testType=testInstance?testInstance.testType:undefined;
-        if(testType==="unit"){
-          popupBody.textContent="This is a server unit test.";
-          setStatus("Unit tests are informational in overlay preview mode.",false);
-          return;
-        }
-        if(testType==="behavioral"){
-          popupBody.textContent="Behavioral component preview:";
-          var mountedTag=mountBehavioralPreview(TestClass,selectedPath);
-          setStatus("Behavioral preview mounted ("+mountedTag+").",false);
-          return;
-        }
-        throw new Error("Unsupported testType '"+String(testType)+"'. Expected 'unit' or 'behavioral'.");
-      }catch(error){
-        popupBody.textContent="Unable to preview this test.";
-        setStatus(errorMessage(error),true);
-      }
-    });
-    item.appendChild(button);
-    list.appendChild(item);
-  });
+  if(document.getElementById("lllts-overlay-runtime-script")){return;}
+  var runtimeScript=document.createElement("script");
+  runtimeScript.id="lllts-overlay-runtime-script";
+  runtimeScript.src=assetsBasePath+"/${LlltsServer.overlayScriptAssetPath}";
+  runtimeScript.defer=true;
+  document.body.appendChild(runtimeScript);
 })();
 </script>`
 	}

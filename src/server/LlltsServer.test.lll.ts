@@ -170,17 +170,52 @@ export class LlltsServerTest {
 			assert(response.status === 200, "Successful upstream HTML should return HTTP 200")
 			assert(response.body.includes("Client App"), "Response should include upstream HTML")
 			assert(response.body.includes("LLLTS_TEST_OVERLAY"), "Response should include overlay marker")
-			assert(response.body.includes("LLLTS Tests"), "Response should include test toggle button")
-			assert(response.body.includes("Select a test to preview."), "Response should include popup preview placeholder text")
+			assert(response.body.includes("lllts-overlay-config"), "Response should include serialized overlay config element")
+			assert(response.body.includes("lllts-overlay-loader"), "Response should include runtime loader script")
+			assert(response.body.includes("runtimeScript.src=assetsBasePath+\"/js/script.js\""), "Loader should reference external overlay runtime script")
+			assert(response.body.includes("style.href=assetsBasePath+\"/css/style.css\""), "Loader should reference external overlay stylesheet")
+			assert(response.body.includes("\"assetsBasePath\":\"/__lllts-overlay\""), "Overlay config should include CDN base path")
 			assert(response.body.includes("tests/Alpha.test.lll.ts"), "Overlay should include top-level test path")
 			assert(response.body.includes("tests/nested/Beta.test.lll.ts"), "Overlay should include nested test path")
-			assert(response.body.includes("await import(moduleUrl)"), "Overlay script should dynamically import the clicked test module")
-			assert(response.body.includes("testType===\"unit\""), "Overlay script should branch on unit testType")
-			assert(response.body.includes("testType===\"behavioral\""), "Overlay script should branch on behavioral testType")
-			assert(response.body.includes("customElements.define(tagName,PreviewElementClass)"), "Overlay script should define temporary custom elements for behavioral previews")
-			assert(response.body.includes("document.createElement(tagName)"), "Overlay script should create a preview element for behavioral tests")
-			assert(response.body.includes("detectPageModuleTParam"), "Overlay script should include page-module t extraction helper")
-			assert(response.body.includes("searchParams.get(\"t\")"), "Overlay script should extract t from module script URL query")
+		} finally {
+			await upstream.close()
+			fs.rmSync(tempRoot, { recursive: true, force: true })
+		}
+	}
+
+	@Scenario("Overlay CDN assets are served by local server routes")
+	static async overlayAssetsAreServed(input: object = {}, assert: AssertFn) {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-overlay-assets-"))
+		const upstream = await this.startUpstreamServer((_req, res) => {
+			res.statusCode = 200
+			res.setHeader("content-type", "text/plain; charset=utf-8")
+			res.end("upstream")
+		})
+
+		try {
+			const server = new LlltsServer()
+			const config: ServerConfig = {
+				projectPath: tempRoot,
+				projectClientLink: upstream.url
+			}
+			const app = server.createApp(config)
+
+			const templateResponse = await this.request(app, "/__lllts-overlay/index.html")
+			assert(templateResponse.status === 200, "Overlay template route should return HTTP 200")
+			assert(templateResponse.contentType.includes("text/html"), "Overlay template route should return text/html")
+			assert(templateResponse.body.includes("LLLTS Tests"), "Overlay template should include toggle markup")
+
+			const scriptResponse = await this.request(app, "/__lllts-overlay/js/script.js")
+			assert(scriptResponse.status === 200, "Overlay script route should return HTTP 200")
+			assert(scriptResponse.contentType.includes("application/javascript"), "Overlay script route should return javascript content-type")
+			assert(scriptResponse.body.includes("await import(moduleUrl)"), "Overlay script should include dynamic module import logic")
+			assert(scriptResponse.body.includes("testType === \"behavioral\""), "Overlay script should include behavioral branching logic")
+			assert(scriptResponse.body.includes("customElements.define(tagName, PreviewElementClass)"), "Overlay script should define preview custom elements")
+
+			const styleResponse = await this.request(app, "/__lllts-overlay/css/style.css")
+			assert(styleResponse.status === 200, "Overlay style route should return HTTP 200")
+			assert(styleResponse.contentType.includes("text/css"), "Overlay style route should return text/css")
+			assert(styleResponse.body.includes("#lllts-test-toggle"), "Overlay stylesheet should include toggle styles")
 		} finally {
 			await upstream.close()
 			fs.rmSync(tempRoot, { recursive: true, force: true })
