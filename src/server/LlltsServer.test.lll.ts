@@ -150,8 +150,22 @@ export class LlltsServerTest {
 		const testFileA = path.join(tempRoot, "tests", "Alpha.test.lll.ts")
 		const testFileB = path.join(tempRoot, "tests", "nested", "Beta.test.lll.ts")
 		fs.mkdirSync(path.dirname(testFileB), { recursive: true })
-		fs.writeFileSync(testFileA, "export class AlphaTest {}\n")
-		fs.writeFileSync(testFileB, "export class BetaTest {}\n")
+		fs.writeFileSync(
+			testFileA,
+			`export class AlphaTest {
+	@Scenario("Alpha first scenario")
+	static async alphaFirst() {}
+}
+`
+		)
+		fs.writeFileSync(
+			testFileB,
+			`export class BetaTest {
+	@Scenario("Beta scenario")
+	static async betaScenario() {}
+}
+`
+		)
 
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 200
@@ -172,11 +186,15 @@ export class LlltsServerTest {
 			assert(response.body.includes("LLLTS_TEST_OVERLAY"), "Response should include overlay marker")
 			assert(response.body.includes("lllts-overlay-config"), "Response should include serialized overlay config element")
 			assert(response.body.includes("lllts-overlay-loader"), "Response should include runtime loader script")
+			assert(response.body.includes("scenariosScript.src=assetsBasePath+\"/js/scenarios.js\""), "Loader should reference external scenario helper script")
 			assert(response.body.includes("runtimeScript.src=assetsBasePath+\"/js/script.js\""), "Loader should reference external overlay runtime script")
 			assert(response.body.includes("style.href=assetsBasePath+\"/css/style.css\""), "Loader should reference external overlay stylesheet")
 			assert(response.body.includes("\"assetsBasePath\":\"/__lllts-overlay\""), "Overlay config should include CDN base path")
 			assert(response.body.includes("tests/Alpha.test.lll.ts"), "Overlay should include top-level test path")
 			assert(response.body.includes("tests/nested/Beta.test.lll.ts"), "Overlay should include nested test path")
+			assert(response.body.includes("\"testScenarios\""), "Overlay config should include test scenario metadata map")
+			assert(response.body.includes("\"methodName\":\"alphaFirst\""), "Overlay config should include discovered scenario method name")
+			assert(response.body.includes("\"title\":\"Alpha first scenario\""), "Overlay config should include discovered scenario title")
 		} finally {
 			await upstream.close()
 			fs.rmSync(tempRoot, { recursive: true, force: true })
@@ -211,6 +229,13 @@ export class LlltsServerTest {
 			assert(scriptResponse.body.includes("await import(moduleUrl)"), "Overlay script should include dynamic module import logic")
 			assert(scriptResponse.body.includes("testType === \"behavioral\""), "Overlay script should include behavioral branching logic")
 			assert(scriptResponse.body.includes("customElements.define(tagName, PreviewElementClass)"), "Overlay script should define preview custom elements")
+			assert(scriptResponse.body.includes("scenarioApi.runScenarioMethod"), "Overlay script should execute scenario methods via helper API")
+
+			const scenariosScriptResponse = await this.request(app, "/__lllts-overlay/js/scenarios.js")
+			assert(scenariosScriptResponse.status === 200, "Overlay scenarios helper route should return HTTP 200")
+			assert(scenariosScriptResponse.contentType.includes("application/javascript"), "Overlay scenarios helper route should return javascript content-type")
+			assert(scenariosScriptResponse.body.includes("globalScope.llltsOverlayScenarios"), "Scenarios helper should expose global scenario API")
+			assert(scenariosScriptResponse.body.includes("function runScenarioMethod"), "Scenarios helper should include runtime scenario invocation function")
 
 			const styleResponse = await this.request(app, "/__lllts-overlay/css/style.css")
 			assert(styleResponse.status === 200, "Overlay style route should return HTTP 200")

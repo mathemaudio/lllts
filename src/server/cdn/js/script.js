@@ -22,6 +22,29 @@
 		return trimmed.length > 0 ? trimmed : FALLBACK_ASSETS_BASE_PATH;
 	}
 
+	function getScenarioApi() {
+		if (typeof window !== "undefined" && window.llltsOverlayScenarios) {
+			return window.llltsOverlayScenarios;
+		}
+		return {
+			getScenariosForTest: function () {
+				return [];
+			},
+			renderScenarioButtons: function (listElement, emptyElement) {
+				if (!listElement || !emptyElement) {
+					return;
+				}
+				listElement.textContent = "";
+				emptyElement.hidden = false;
+			},
+			markScenarioSelection: function () {
+			},
+			runScenarioMethod: async function () {
+				throw new Error("Scenario helper script is unavailable.");
+			}
+		};
+	}
+
 	async function loadOverlayTemplate(assetsBasePath) {
 		var templateResponse = await fetch(assetsBasePath + "/index.html", { credentials: "same-origin" });
 		if (!templateResponse.ok) {
@@ -166,12 +189,17 @@
 		var tagName = resolveUsableTagName(TestClass, testPath);
 		var element = document.createElement(tagName);
 		popupRenderHost.appendChild(element);
-		return tagName;
+		return {
+			tagName: tagName,
+			element: element
+		};
 	}
 
 	function wireOverlay(config) {
 		var tests = Array.isArray(config.tests) ? config.tests : [];
 		var openByDefault = !!config.openByDefault;
+		var scenarioApi = getScenarioApi();
+		var loadTokenCounter = 0;
 		var toggleButton = document.getElementById("lllts-test-toggle");
 		var panel = document.getElementById("lllts-test-panel");
 		var list = document.getElementById("lllts-test-list");
@@ -182,8 +210,23 @@
 		var popupStatus = document.getElementById("lllts-test-popup-status");
 		var popupRenderHost = document.getElementById("lllts-test-popup-render");
 		var popupClose = document.getElementById("lllts-test-popup-close");
+		var popupScenariosList = document.getElementById("lllts-test-popup-scenarios-list");
+		var popupScenariosEmpty = document.getElementById("lllts-test-popup-scenarios-empty");
 
-		if (!toggleButton || !panel || !list || !emptyState || !popup || !popupBody || !popupLink || !popupStatus || !popupRenderHost || !popupClose) {
+		if (
+			!toggleButton ||
+			!panel ||
+			!list ||
+			!emptyState ||
+			!popup ||
+			!popupBody ||
+			!popupLink ||
+			!popupStatus ||
+			!popupRenderHost ||
+			!popupClose ||
+			!popupScenariosList ||
+			!popupScenariosEmpty
+		) {
 			return;
 		}
 		if (toggleButton.getAttribute("data-lllts-wired") === "true") {
@@ -221,6 +264,37 @@
 			button.textContent = String(testPath);
 			button.addEventListener("click", async function () {
 				var selectedPath = String(testPath || "");
+				var selectedScenarios = scenarioApi.getScenariosForTest(config, selectedPath);
+				loadTokenCounter += 1;
+				var loadToken = loadTokenCounter;
+				var activeTestClass = null;
+				var activePreviewElement = null;
+
+				scenarioApi.renderScenarioButtons(popupScenariosList, popupScenariosEmpty, selectedScenarios, async function (scenario) {
+					if (loadToken !== loadTokenCounter) {
+						return;
+					}
+					if (!activeTestClass) {
+						setStatus(popupStatus, "Test is still loading. Please wait.", false);
+						return;
+					}
+					scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
+					setStatus(popupStatus, "Running scenario: " + scenario.title, false);
+					try {
+						await scenarioApi.runScenarioMethod(activeTestClass, scenario.methodName, {
+							testPath: selectedPath,
+							previewElement: activePreviewElement,
+							renderHost: popupRenderHost,
+							document: document,
+							window: window
+						});
+						setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
+					} catch (scenarioError) {
+						setStatus(popupStatus, errorMessage(scenarioError), true);
+					}
+				});
+				scenarioApi.markScenarioSelection(popupScenariosList, "");
+
 				openPopup();
 				popupBody.textContent = "Loading test preview...";
 				popupLink.textContent = selectedPath;
@@ -231,10 +305,14 @@
 					var moduleUrl = buildImportUrl(selectedPath, detectedT);
 					setStatus(popupStatus, "Importing " + moduleUrl, false);
 					var moduleObject = await import(moduleUrl);
+					if (loadToken !== loadTokenCounter) {
+						return;
+					}
 					var TestClass = resolveTestClass(moduleObject);
 					if (!TestClass) {
 						throw new Error("No exported '*Test' class (or default class/function) was found.");
 					}
+					activeTestClass = TestClass;
 					var testInstance;
 					try {
 						testInstance = new TestClass();
@@ -247,18 +325,30 @@
 					}
 					var testType = testInstance ? testInstance.testType : undefined;
 					if (testType === "unit") {
-						popupBody.textContent = "This is a server unit test.";
-						setStatus(popupStatus, "Unit tests are informational in overlay preview mode.", false);
+						popupBody.textContent = "Please choose a scenario to run this unit test.";
+						if (selectedScenarios.length > 0) {
+							setStatus(popupStatus, "Choose a scenario from the left panel.", false);
+						} else {
+							setStatus(popupStatus, "No scenarios were discovered for this unit test.", false);
+						}
 						return;
 					}
 					if (testType === "behavioral") {
-						popupBody.textContent = "Behavioral component preview:";
-						var mountedTag = mountBehavioralPreview(popupRenderHost, TestClass, selectedPath);
-						setStatus(popupStatus, "", false);
+						popupBody.textContent = "Please choose a scenario or play with this behavioral test component yourself.";
+						var preview = mountBehavioralPreview(popupRenderHost, TestClass, selectedPath);
+						activePreviewElement = preview.element;
+						if (selectedScenarios.length > 0) {
+							setStatus(popupStatus, "Choose a scenario from the left panel.", false);
+						} else {
+							setStatus(popupStatus, "Behavioral preview is ready. No scenarios were discovered.", false);
+						}
 						return;
 					}
 					throw new Error("Unsupported testType '" + String(testType) + "'. Expected 'unit' or 'behavioral'.");
 				} catch (error) {
+					if (loadToken !== loadTokenCounter) {
+						return;
+					}
 					popupBody.textContent = "Unable to preview this test.";
 					setStatus(popupStatus, errorMessage(error), true);
 				}

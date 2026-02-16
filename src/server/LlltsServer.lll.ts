@@ -1,7 +1,19 @@
 import express, { Express, Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
+import { Project } from "ts-morph"
+import type { MethodDeclaration } from "ts-morph"
 import { Out, Spec } from "../public/lll.lll"
+
+type ScenarioDescriptor = {
+	methodName: string
+	title: string
+}
+
+type TestDescriptor = {
+	path: string
+	scenarios: ScenarioDescriptor[]
+}
 
 type ProjectReport = {
 	projectName: string
@@ -9,6 +21,7 @@ type ProjectReport = {
 	exists: boolean
 	isDirectory: boolean
 	testFiles: string[]
+	testScenarios: Record<string, ScenarioDescriptor[]>
 }
 
 type ServerConfig = {
@@ -21,6 +34,7 @@ export class LlltsServer {
 	private static readonly testPanelOpenByDefault = !false
 	private static readonly overlayAssetsBasePath = "/__lllts-overlay"
 	private static readonly overlayIndexAssetPath = "index.html"
+	private static readonly overlayScenarioScriptAssetPath = "js/scenarios.js"
 	private static readonly overlayScriptAssetPath = "js/script.js"
 	private static readonly overlayStyleAssetPath = "css/style.css"
 
@@ -50,6 +64,9 @@ export class LlltsServer {
 	private registerOverlayAssetRoutes(app: Express): void {
 		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayIndexAssetPath}`, (_req: Request, res: Response) => {
 			this.serveOverlayAsset(res, LlltsServer.overlayIndexAssetPath, "text/html; charset=utf-8")
+		})
+		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayScenarioScriptAssetPath}`, (_req: Request, res: Response) => {
+			this.serveOverlayAsset(res, LlltsServer.overlayScenarioScriptAssetPath, "application/javascript; charset=utf-8")
 		})
 		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayScriptAssetPath}`, (_req: Request, res: Response) => {
 			this.serveOverlayAsset(res, LlltsServer.overlayScriptAssetPath, "application/javascript; charset=utf-8")
@@ -141,14 +158,17 @@ export class LlltsServer {
 		const exists = fs.existsSync(resolvedPath)
 		const isDirectory = exists && fs.statSync(resolvedPath).isDirectory()
 		const projectName = path.basename(resolvedPath)
-		const testFiles = isDirectory ? this.findTestFiles(resolvedPath) : []
+		const tests = isDirectory ? this.findTestsWithScenarios(resolvedPath) : []
+		const testFiles = tests.map(test => test.path)
+		const testScenarios = this.mapScenariosByTest(tests)
 
 		return {
 			projectName,
 			projectPath: resolvedPath,
 			exists,
 			isDirectory,
-			testFiles
+			testFiles,
+			testScenarios
 		}
 	}
 
@@ -264,7 +284,7 @@ export class LlltsServer {
 
 		if (isHtml) {
 			const upstreamHtml = bodyBuffer.toString("utf8")
-			const htmlWithOverlay = this.injectOverlayIntoHtml(upstreamHtml, report.testFiles)
+			const htmlWithOverlay = this.injectOverlayIntoHtml(upstreamHtml, report)
 			this.copyUpstreamResponseHeaders(res, upstreamResponse, true)
 			res.status(upstreamResponse.status)
 			res.send(htmlWithOverlay)
@@ -300,8 +320,8 @@ export class LlltsServer {
 
 	@Spec("Injects overlay UI into HTML by inserting before closing body tag when present.")
 	@Out("html", "string")
-	private injectOverlayIntoHtml(html: string, testFiles: string[]): string {
-		const overlayMarkup = this.buildTestOverlayMarkup(testFiles)
+	private injectOverlayIntoHtml(html: string, report: ProjectReport): string {
+		const overlayMarkup = this.buildTestOverlayMarkup(report.testFiles, report.testScenarios)
 		if (/<\/body>/i.test(html)) {
 			return html.replace(/<\/body>/i, `${overlayMarkup}</body>`)
 		}
@@ -310,9 +330,10 @@ export class LlltsServer {
 
 	@Spec("Builds minimal inline overlay config plus loader that pulls CDN-hosted UI assets.")
 	@Out("markup", "string")
-	private buildTestOverlayMarkup(testFiles: string[]): string {
+	private buildTestOverlayMarkup(testFiles: string[], testScenarios: Record<string, ScenarioDescriptor[]>): string {
 		const serializedConfig = JSON.stringify({
 			tests: testFiles,
+			testScenarios,
 			openByDefault: LlltsServer.testPanelOpenByDefault,
 			assetsBasePath: LlltsServer.overlayAssetsBasePath
 		}).replace(/</g, "\\u003c")
@@ -329,20 +350,32 @@ export class LlltsServer {
     style.href=assetsBasePath+"/${LlltsServer.overlayStyleAssetPath}";
     document.head.appendChild(style);
   }
-  if(document.getElementById("lllts-overlay-runtime-script")){return;}
-  var runtimeScript=document.createElement("script");
-  runtimeScript.id="lllts-overlay-runtime-script";
-  runtimeScript.src=assetsBasePath+"/${LlltsServer.overlayScriptAssetPath}";
-  runtimeScript.defer=true;
-  document.body.appendChild(runtimeScript);
+  function loadRuntimeScript(){
+    if(document.getElementById("lllts-overlay-runtime-script")){return;}
+    var runtimeScript=document.createElement("script");
+    runtimeScript.id="lllts-overlay-runtime-script";
+    runtimeScript.src=assetsBasePath+"/${LlltsServer.overlayScriptAssetPath}";
+    runtimeScript.async=false;
+    document.body.appendChild(runtimeScript);
+  }
+  if(document.getElementById("lllts-overlay-scenarios-script")){
+    loadRuntimeScript();
+    return;
+  }
+  var scenariosScript=document.createElement("script");
+  scenariosScript.id="lllts-overlay-scenarios-script";
+  scenariosScript.src=assetsBasePath+"/${LlltsServer.overlayScenarioScriptAssetPath}";
+  scenariosScript.async=false;
+  scenariosScript.onload=loadRuntimeScript;
+  document.body.appendChild(scenariosScript);
 })();
 </script>`
-	}
+		}
 
-	@Spec("Recursively scans for '.test.lll.ts' files under the project folder.")
-	@Out("testFiles", "string[]")
-	private findTestFiles(projectPath: string): string[] {
-		const matches: string[] = []
+	@Spec("Recursively scans for '.test.lll.ts' files and extracts static @Scenario metadata.")
+	@Out("tests", "TestDescriptor[]")
+	private findTestsWithScenarios(projectPath: string): TestDescriptor[] {
+		const relativeToAbsolute = new Map<string, string>()
 		const stack: string[] = [projectPath]
 
 		while (stack.length > 0) {
@@ -357,14 +390,103 @@ export class LlltsServer {
 					stack.push(fullPath)
 					continue
 				}
-				if (entry.isFile() && fullPath.endsWith(".test.lll.ts")) {
-					matches.push(this.toPosixPath(path.relative(projectPath, fullPath)))
+				if (!entry.isFile() || !fullPath.endsWith(".test.lll.ts")) {
+					continue
 				}
+				const relativePath = this.toPosixPath(path.relative(projectPath, fullPath))
+				relativeToAbsolute.set(relativePath, fullPath)
 			}
 		}
 
-		matches.sort((a, b) => a.localeCompare(b))
-		return matches
+		const sortedPaths = Array.from(relativeToAbsolute.keys()).sort((a, b) => a.localeCompare(b))
+		const project = new Project({ skipAddingFilesFromTsConfig: true })
+		return sortedPaths.map(testPath => ({
+			path: testPath,
+			scenarios: this.findScenariosInTestFile(project, relativeToAbsolute.get(testPath) ?? "")
+		}))
+	}
+
+	@Spec("Builds a path-keyed map of scenario metadata for overlay config delivery.")
+	@Out("map", "Record<string, ScenarioDescriptor[]>")
+	private mapScenariosByTest(tests: TestDescriptor[]): Record<string, ScenarioDescriptor[]> {
+		const map: Record<string, ScenarioDescriptor[]> = {}
+		for (const test of tests) {
+			map[test.path] = test.scenarios.map(scenario => ({
+				methodName: scenario.methodName,
+				title: scenario.title
+			}))
+		}
+		return map
+	}
+
+	@Spec("Parses one test source file and returns static methods decorated with @Scenario.")
+	@Out("scenarios", "ScenarioDescriptor[]")
+	private findScenariosInTestFile(project: Project, absoluteTestFilePath: string): ScenarioDescriptor[] {
+		if (absoluteTestFilePath.trim().length === 0) {
+			return []
+		}
+		try {
+			const sourceFile = project.addSourceFileAtPathIfExists(absoluteTestFilePath)
+			if (!sourceFile) {
+				return []
+			}
+			const classes = sourceFile.getClasses()
+			if (classes.length === 0) {
+				return []
+			}
+			const exportedClasses = classes.filter(classDecl => classDecl.isExported())
+			const preferredClass = exportedClasses.find(classDecl => String(classDecl.getName() ?? "").endsWith("Test"))
+			const testClass = preferredClass ?? exportedClasses[0] ?? classes[0]
+			if (!testClass) {
+				return []
+			}
+
+			const scenarios: ScenarioDescriptor[] = []
+			for (const method of testClass.getMethods()) {
+				if (!method.isStatic()) {
+					continue
+				}
+				if (!method.getDecorators().some(decorator => decorator.getName() === "Scenario")) {
+					continue
+				}
+				scenarios.push({
+					methodName: method.getName(),
+					title: this.getScenarioTitle(method)
+				})
+			}
+			return scenarios
+		} catch {
+			return []
+		}
+	}
+
+	@Spec("Reads display title from @Scenario decorator or falls back to method name.")
+	@Out("title", "string")
+	private getScenarioTitle(method: MethodDeclaration): string {
+		const decorator = method.getDecorators().find(candidate => candidate.getName() === "Scenario")
+		if (!decorator) {
+			return method.getName()
+		}
+		const title = this.normalizeDecoratorString(decorator.getArguments()[0]?.getText())
+		return title.length > 0 ? title : method.getName()
+	}
+
+	@Spec("Converts decorator argument text into an end-user string.")
+	@Out("text", "string")
+	private normalizeDecoratorString(rawText?: string): string {
+		if (!rawText) {
+			return ""
+		}
+		const trimmed = rawText.trim()
+		if (trimmed.length === 0) {
+			return ""
+		}
+		const first = trimmed[0]
+		const last = trimmed[trimmed.length - 1]
+		if ((first === "\"" || first === "'" || first === "`") && last === first) {
+			return trimmed.slice(1, -1)
+		}
+		return trimmed
 	}
 
 	@Spec("Normalizes path separators for stable plain-text output across platforms.")
