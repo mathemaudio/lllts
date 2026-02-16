@@ -61,6 +61,7 @@
 			button.type = "button";
 			button.textContent = scenario.title;
 			button.setAttribute("data-scenario-method", scenario.methodName);
+			button.setAttribute("data-scenario-state", "idle");
 			button.addEventListener("click", (function (entry) {
 				return function () {
 					if (typeof onScenarioClick === "function") {
@@ -71,6 +72,19 @@
 			item.appendChild(button);
 			listElement.appendChild(item);
 		}
+	}
+
+	function setScenarioState(listElement, methodName, state) {
+		if (!listElement) {
+			return;
+		}
+		var normalizedMethodName = String(methodName || "");
+		var targetState = String(state || "idle");
+		var targetButton = listElement.querySelector('button[data-scenario-method="' + normalizedMethodName + '"]');
+		if (!targetButton) {
+			return;
+		}
+		targetButton.setAttribute("data-scenario-state", targetState);
 	}
 
 	function markScenarioSelection(listElement, methodName) {
@@ -114,6 +128,7 @@
 	globalScope.llltsOverlayScenarios = {
 		getScenariosForTest: getScenariosForTest,
 		renderScenarioButtons: renderScenarioButtons,
+		setScenarioState: setScenarioState,
 		markScenarioSelection: markScenarioSelection,
 		runScenarioMethod: runScenarioMethod
 	};

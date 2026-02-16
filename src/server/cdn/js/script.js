@@ -37,11 +37,13 @@
 				listElement.textContent = "";
 				emptyElement.hidden = false;
 			},
-			markScenarioSelection: function () {
-			},
-			runScenarioMethod: async function () {
-				throw new Error("Scenario helper script is unavailable.");
-			}
+				markScenarioSelection: function () {
+				},
+				setScenarioState: function () {
+				},
+				runScenarioMethod: async function () {
+					throw new Error("Scenario helper script is unavailable.");
+				}
 		};
 	}
 
@@ -277,22 +279,25 @@
 					if (!activeTestClass) {
 						setStatus(popupStatus, "Test is still loading. Please wait.", false);
 						return;
-					}
-					scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
-					setStatus(popupStatus, "Running scenario: " + scenario.title, false);
-					try {
-						await scenarioApi.runScenarioMethod(activeTestClass, scenario.methodName, {
+						}
+						scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
+						scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
+						setStatus(popupStatus, "Running scenario: " + scenario.title, false);
+						try {
+							await scenarioApi.runScenarioMethod(activeTestClass, scenario.methodName, {
 							testPath: selectedPath,
 							previewElement: activePreviewElement,
 							renderHost: popupRenderHost,
 							document: document,
-							window: window
-						});
-						setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
-					} catch (scenarioError) {
-						setStatus(popupStatus, errorMessage(scenarioError), true);
-					}
-				});
+								window: window
+							});
+							scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
+							setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
+						} catch (scenarioError) {
+							scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "error");
+							setStatus(popupStatus, errorMessage(scenarioError), true);
+						}
+					});
 				scenarioApi.markScenarioSelection(popupScenariosList, "");
 
 				openPopup();
