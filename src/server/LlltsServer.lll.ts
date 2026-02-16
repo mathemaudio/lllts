@@ -260,7 +260,7 @@ export class LlltsServer {
 	private buildTestOverlayMarkup(testFiles: string[]): string {
 		const serializedTests = JSON.stringify(testFiles).replace(/</g, "\\u003c")
 		const defaultOpenLiteral = LlltsServer.testPanelOpenByDefault ? "true" : "false"
-		return `
+		return /*html*/`
 <!-- LLLTS_TEST_OVERLAY -->
 <style id="lllts-overlay-style">
 #lllts-test-toggle{position:fixed;left:16px;bottom:16px;z-index:2147483640;padding:10px 14px;border:none;border-radius:10px;background:#0f4c5c;color:#fff;font:600 13px/1.2 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}
@@ -276,6 +276,9 @@ export class LlltsServer {
 #lllts-test-popup-title{margin:0 0 8px 0;font:700 14px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#102a43}
 #lllts-test-popup-body{margin:0 0 8px 0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#1f2933}
 #lllts-test-popup-link{margin:0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#334e68;word-break:break-all}
+#lllts-test-popup-status{margin:8px 0 0 0;font:500 12px/1.3 ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#486581}
+#lllts-test-popup-status[data-state="error"]{color:#9b1c1c}
+#lllts-test-popup-render{margin-top:10px;border:1px solid #d9e1e7;border-radius:8px;padding:10px;min-height:56px;background:#f7fafc;overflow:auto}
 #lllts-test-popup-close{margin-top:12px;padding:7px 10px;border:1px solid #d9e1e7;border-radius:8px;background:#f7fafc;cursor:pointer}
 </style>
 <button id="lllts-test-toggle" type="button">LLLTS Tests</button>
@@ -286,8 +289,10 @@ export class LlltsServer {
 </aside>
 <div id="lllts-test-popup" role="dialog" aria-modal="false">
   <h4 id="lllts-test-popup-title">Test Preview</h4>
-  <p id="lllts-test-popup-body">We will show the test here</p>
+  <p id="lllts-test-popup-body">Select a test to preview.</p>
   <p id="lllts-test-popup-link"></p>
+  <p id="lllts-test-popup-status"></p>
+  <div id="lllts-test-popup-render"></div>
   <button id="lllts-test-popup-close" type="button">Close</button>
 </div>
 <script id="lllts-test-data" type="application/json">${serializedTests}</script>
@@ -303,9 +308,112 @@ export class LlltsServer {
   var list=document.getElementById("lllts-test-list");
   var emptyState=document.getElementById("lllts-test-empty");
   var popup=document.getElementById("lllts-test-popup");
+  var popupBody=document.getElementById("lllts-test-popup-body");
   var popupLink=document.getElementById("lllts-test-popup-link");
+  var popupStatus=document.getElementById("lllts-test-popup-status");
+  var popupRenderHost=document.getElementById("lllts-test-popup-render");
   var popupClose=document.getElementById("lllts-test-popup-close");
-  if(!toggleButton||!panel||!list||!emptyState||!popup||!popupLink||!popupClose){return;}
+  if(!toggleButton||!panel||!list||!emptyState||!popup||!popupBody||!popupLink||!popupStatus||!popupRenderHost||!popupClose){return;}
+  function clearRenderHost(){
+    while(popupRenderHost.firstChild){
+      popupRenderHost.removeChild(popupRenderHost.firstChild);
+    }
+  }
+  function setStatus(message,isError){
+    popupStatus.textContent=message||"";
+    if(isError){
+      popupStatus.setAttribute("data-state","error");
+      return;
+    }
+    popupStatus.removeAttribute("data-state");
+  }
+  function errorMessage(error){
+    if(error&&typeof error==="object"&&"message" in error){
+      var message=String(error.message||"");
+      if(message.length>0){return message;}
+    }
+    return String(error||"Unknown error");
+  }
+  function detectPageModuleTParam(){
+    var moduleScripts=document.querySelectorAll("script[type=\\"module\\"][src]");
+    for(var i=0;i<moduleScripts.length;i+=1){
+      var script=moduleScripts[i];
+      var src=script.getAttribute("src");
+      if(!src){continue;}
+      try{
+        var srcUrl=new URL(src,window.location.href);
+        var tValue=srcUrl.searchParams.get("t");
+        if(tValue){return tValue;}
+      }catch(_error){}
+    }
+    return "";
+  }
+  function buildImportUrl(testPath,tParam){
+    var normalizedPath=String(testPath||"").replace(/^\\/+/, "");
+    var basePath="/"+normalizedPath;
+    if(!tParam){return basePath;}
+    var separator=basePath.indexOf("?")===-1?"?":"&";
+    return basePath+separator+"t="+encodeURIComponent(tParam);
+  }
+  function isFunction(value){
+    return typeof value==="function";
+  }
+  function resolveTestClass(moduleObject){
+    if(!moduleObject||typeof moduleObject!=="object"){return null;}
+    var exportKeys=Object.keys(moduleObject);
+    for(var i=0;i<exportKeys.length;i+=1){
+      var candidate=moduleObject[exportKeys[i]];
+      if(!isFunction(candidate)){continue;}
+      var candidateName=String(candidate.name||"");
+      if(candidateName.endsWith("Test")){
+        return candidate;
+      }
+    }
+    var defaultExport=moduleObject.default;
+    if(isFunction(defaultExport)){
+      return defaultExport;
+    }
+    return null;
+  }
+  function hashPath(value){
+    var hash=2166136261>>>0;
+    for(var i=0;i<value.length;i+=1){
+      hash^=value.charCodeAt(i);
+      hash=Math.imul(hash,16777619);
+    }
+    return (hash>>>0).toString(16);
+  }
+  function buildPreviewTagName(testPath){
+    var rawPath=String(testPath||"");
+    var slug=rawPath.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,24);
+    if(!slug){slug="test";}
+    return "lllts-preview-"+slug+"-"+hashPath(rawPath);
+  }
+  function isHTMLElementSubclass(TestClass){
+    return typeof HTMLElement!=="undefined"&&!!TestClass&&!!TestClass.prototype&&TestClass.prototype instanceof HTMLElement;
+  }
+  function createPreviewElementClass(TestClass){
+    return class extends TestClass{};
+  }
+  function ensurePreviewTagDefined(tagName,TestClass){
+    var existingDefinition=customElements.get(tagName);
+    if(existingDefinition){
+      return tagName;
+    }
+    var PreviewElementClass=createPreviewElementClass(TestClass);
+    customElements.define(tagName,PreviewElementClass);
+    return tagName;
+  }
+  function resolveUsableTagName(TestClass,testPath){
+    var preferredTag=buildPreviewTagName(testPath);
+    return ensurePreviewTagDefined(preferredTag,TestClass);
+  }
+  function mountBehavioralPreview(TestClass,testPath){
+    var tagName=resolveUsableTagName(TestClass,testPath);
+    var element=document.createElement(tagName);
+    popupRenderHost.appendChild(element);
+    return tagName;
+  }
   if(openByDefault){panel.classList.add("lllts-open");}
   toggleButton.addEventListener("click",function(){panel.classList.toggle("lllts-open");});
   popupClose.addEventListener("click",function(){popup.classList.remove("lllts-open");});
@@ -316,9 +424,49 @@ export class LlltsServer {
     var button=document.createElement("button");
     button.type="button";
     button.textContent=String(testPath);
-    button.addEventListener("click",function(){
-      popupLink.textContent=String(testPath);
+    button.addEventListener("click",async function(){
+      var selectedPath=String(testPath||"");
       popup.classList.add("lllts-open");
+      popupBody.textContent="Loading test preview...";
+      popupLink.textContent=selectedPath;
+      setStatus("",false);
+      clearRenderHost();
+      try{
+        var detectedT=detectPageModuleTParam();
+        var moduleUrl=buildImportUrl(selectedPath,detectedT);
+        setStatus("Importing "+moduleUrl,false);
+        var moduleObject=await import(moduleUrl);
+        var TestClass=resolveTestClass(moduleObject);
+        if(!TestClass){
+          throw new Error("No exported '*Test' class (or default class/function) was found.");
+        }
+        var testInstance;
+        try{
+          testInstance=new TestClass();
+        }catch(instantiateError){
+          if(!isHTMLElementSubclass(TestClass)){
+            throw instantiateError;
+          }
+          var fallbackTagName=resolveUsableTagName(TestClass,selectedPath);
+          testInstance=document.createElement(fallbackTagName);
+        }
+        var testType=testInstance?testInstance.testType:undefined;
+        if(testType==="unit"){
+          popupBody.textContent="This is a server unit test.";
+          setStatus("Unit tests are informational in overlay preview mode.",false);
+          return;
+        }
+        if(testType==="behavioral"){
+          popupBody.textContent="Behavioral component preview:";
+          var mountedTag=mountBehavioralPreview(TestClass,selectedPath);
+          setStatus("Behavioral preview mounted ("+mountedTag+").",false);
+          return;
+        }
+        throw new Error("Unsupported testType '"+String(testType)+"'. Expected 'unit' or 'behavioral'.");
+      }catch(error){
+        popupBody.textContent="Unable to preview this test.";
+        setStatus(errorMessage(error),true);
+      }
     });
     item.appendChild(button);
     list.appendChild(item);
