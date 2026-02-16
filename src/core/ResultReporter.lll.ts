@@ -50,9 +50,12 @@ export class ResultReporter {
 	}
 
 	@Spec("Pretty prints results with colors in grouped format.")
-	public print(results: DiagnosticObject[]) {
+	public print(results: DiagnosticObject[], options: { suppressSuccessMessage?: boolean } = {}) {
+		const suppressSuccessMessage = options.suppressSuccessMessage === true
 		if (results.length === 0) {
-			console.log("✅ No issues found.")
+			if (!suppressSuccessMessage) {
+				console.log("✅ No issues found.")
+			}
 			return
 		}
 
@@ -70,7 +73,7 @@ export class ResultReporter {
 		}
 
 		// If only notices were present, still affirm OK status
-		if (issues.length === 0) {
+		if (issues.length === 0 && !suppressSuccessMessage) {
 			console.log("\n✅ No issues found.")
 		}
 	}

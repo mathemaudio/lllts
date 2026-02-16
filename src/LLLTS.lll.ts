@@ -81,12 +81,17 @@ export class LLLTS {
 		// console.log("Bad test 1: ", typeof bad)
 
 		const reporter = new ResultReporter(projectPath)
+		const tunnelFailed = clientTunnelResult?.status === "failed"
 		if (verbose) {
-			this.printTestSummary(reports)
+			this.printTestSummary(reports, inventory.hasBehavioralTests)
 		}
-		reporter.print(allDiagnostics)
+		reporter.print(allDiagnostics, { suppressSuccessMessage: tunnelFailed })
+		if (tunnelFailed) {
+			console.error("\n❌ Behavioral tests failed.")
+		}
 
-		return { mode: "compile", exitCode: allDiagnostics.some(r => r.severity === "error") ? 1 : 0 }
+		const diagnosticsFailed = allDiagnostics.some(r => r.severity === "error")
+		return { mode: "compile", exitCode: diagnosticsFailed || tunnelFailed ? 1 : 0 }
 	}
 
 	@Spec("Runs server mode when '--server' is present; returns null for compile mode.")
@@ -279,19 +284,13 @@ export class LLLTS {
 			return []
 		}
 
+		if (result.status === "failed") {
+			return []
+		}
+
 		const anchor = inventory.behavioralTests[0]
 		const file = anchor?.filePath ?? "(behavioral-tests)"
 		const line = anchor?.line
-		if (result.status === "failed") {
-			return [
-				BaseRule.createError(
-					file,
-					"Behavioral scenarios failed in client tunnel execution.",
-					"test-failure",
-					line
-				)
-			]
-		}
 
 		if (result.status === "timeout") {
 			return [
@@ -340,13 +339,17 @@ export class LLLTS {
 	}
 
 	@Spec("Logs test and scenario details when --verbose is provided.")
-	private static printTestSummary(reports: TestRunnerReports) {
-		console.log("\n🧪 Test Execution Details")
+	private static printTestSummary(reports: TestRunnerReports, hasBehavioralTests: boolean) {
 		if (reports.length === 0) {
+			if (hasBehavioralTests) {
+				return
+			}
+			console.log("\n🧪 Test Execution Details")
 			console.log("  (no tests were executed)")
 			return
 		}
 
+		console.log("\n🧪 Test Execution Details")
 		for (const report of reports) {
 			const label = report.className
 			console.log(`\n📘 Test ${label}`)

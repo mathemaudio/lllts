@@ -34,7 +34,7 @@ export class ProjectInitiator {
 			this.project = new Project({ tsConfigFilePath: tsconfigPath })
 			this.addSourceFilesFromFolder()
 		}
-		console.log(`Verifying ${this.project.getSourceFiles().length} source files`)//, strategy: ${strategy}`)
+		console.log(`Verifying ${this.project.getSourceFiles().length} source files...`)//, strategy: ${strategy}`)
 	}
 
 	@Spec("Reads and parses the tsconfig.json file to get include/exclude patterns.")

@@ -182,6 +182,90 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("Behavioral tunnel failure does not print duplicate test-failure diagnostic block")
+	static async behavioralTunnelFailureHasNoDuplicateDiagnostic(input: object = {}, assert: AssertFn) {
+		const originalLog = console.log
+		const originalError = console.error
+		const logLines: string[] = []
+		const errorLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+		console.error = (...args: unknown[]) => {
+			errorLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "failed",
+						reportText: "## src/BehavioralSuite.test.lll.ts\n⛔️ Scenario A: failed: boom\n\nsome failed"
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Failing tunnel run should still fail compile mode")
+				}
+				)
+		} finally {
+			console.log = originalLog
+			console.error = originalError
+		}
+
+		assert(
+			!logLines.some(line => line.includes("ERROR: Test scenario failed")),
+			"Behavioral tunnel failure should not print duplicate grouped test-failure diagnostic"
+		)
+		assert(
+			!logLines.some(line => line.includes("No issues found")),
+			"Behavioral tunnel failure should not print a success footer"
+		)
+		assert(
+			errorLines.some(line => line.includes("Behavioral tests failed")),
+			"Behavioral tunnel failure should print a clear final failure line"
+		)
+	}
+
+	@Scenario("Verbose tunnel-only run does not print no-tests-executed placeholder")
+	static async verboseBehavioralOnlyRunSkipsNoTestsPlaceholder(input: object = {}, assert: AssertFn) {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "passed",
+						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll passed"
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([
+						...this.baseCompileArgs(),
+						"--clientTunnel", "http://localhost:3000",
+						"--verbose"
+					])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 0, "Passing tunnel run should keep compile successful")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			!logLines.some(line => line.includes("(no tests were executed)")),
+			"Verbose tunnel-only runs should not print a no-tests-executed placeholder"
+		)
+	}
+
 	@Scenario("--clientTunnelHeaded and --clientTunnelTimeoutMs are forwarded to tunnel runner")
 	@Out("result", "void")
 	static async tunnelFlagsAreForwarded(input: object = {}, assert: AssertFn) {
