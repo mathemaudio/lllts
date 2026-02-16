@@ -120,9 +120,47 @@
 }
 
 #lllts-test-popup-scenarios-title {
-	margin: 0 0 8px 0;
+	margin: 0;
 	font: 700 12px/1.3 ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 	color: rgb(227, 227, 227)
+}
+
+#lllts-test-popup-scenarios-header {
+	margin: 0 0 8px 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px
+}
+
+#lllts-test-popup-scenarios-play-all {
+	border: 1px solid #7f7f7f;
+	border-radius: 8px;
+	background: #5d5d5d;
+	color: rgb(235, 235, 235);
+	padding: 6px 9px;
+	font: 600 11px/1.2 ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px
+}
+
+#lllts-test-popup-scenarios-play-all::before {
+	content: "👉"
+}
+
+#lllts-test-popup-scenarios-play-all[data-state="success"]::before {
+	content: "✅"
+}
+
+#lllts-test-popup-scenarios-play-all[data-state="error"]::before {
+	content: "❌"
+}
+
+#lllts-test-popup-scenarios-play-all:disabled {
+	opacity: .6;
+	cursor: default
 }
 
 #lllts-test-popup-scenarios-empty {

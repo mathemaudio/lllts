@@ -37,13 +37,14 @@
 				listElement.textContent = "";
 				emptyElement.hidden = false;
 			},
-				markScenarioSelection: function () {
-				},
-				setScenarioState: function () {
-				},
-				runScenarioMethod: async function () {
-					throw new Error("Scenario helper script is unavailable.");
-				}
+			markScenarioSelection: function () {},
+			setScenarioState: function () {},
+			setAllScenarioStates: function () {},
+			setPlayAllState: function () {},
+			setPlayAllEnabled: function () {},
+			runScenarioMethod: async function () {
+				throw new Error("Scenario helper script is unavailable.");
+			}
 		};
 	}
 
@@ -105,7 +106,7 @@
 				if (tValue) {
 					return tValue;
 				}
-			} catch (_error) { }
+			} catch (_error) {}
 		}
 		return "";
 	}
@@ -169,7 +170,7 @@
 	}
 
 	function createPreviewElementClass(TestClass) {
-		return class extends TestClass { };
+		return class extends TestClass {};
 	}
 
 	function ensurePreviewTagDefined(tagName, TestClass) {
@@ -214,6 +215,7 @@
 		var popupClose = document.getElementById("lllts-test-popup-close");
 		var popupScenariosList = document.getElementById("lllts-test-popup-scenarios-list");
 		var popupScenariosEmpty = document.getElementById("lllts-test-popup-scenarios-empty");
+		var popupScenariosPlayAll = document.getElementById("lllts-test-popup-scenarios-play-all");
 
 		if (
 			!toggleButton ||
@@ -227,7 +229,8 @@
 			!popupRenderHost ||
 			!popupClose ||
 			!popupScenariosList ||
-			!popupScenariosEmpty
+			!popupScenariosEmpty ||
+			!popupScenariosPlayAll
 		) {
 			return;
 		}
@@ -272,33 +275,80 @@
 				var activeTestClass = null;
 				var activePreviewElement = null;
 
-				scenarioApi.renderScenarioButtons(popupScenariosList, popupScenariosEmpty, selectedScenarios, async function (scenario) {
+				async function executeScenario(scenario) {
 					if (loadToken !== loadTokenCounter) {
+						return "stale";
+					}
+					if (!activeTestClass) {
+						setStatus(popupStatus, "Test is still loading. Please wait.", false);
+						return "failed";
+					}
+					scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
+					scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
+					setStatus(popupStatus, "Running scenario: " + scenario.title, false);
+					try {
+						await scenarioApi.runScenarioMethod(activeTestClass, scenario.methodName, {
+							testPath: selectedPath,
+							previewElement: activePreviewElement,
+							renderHost: popupRenderHost,
+							document: document,
+							window: window
+						});
+						scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
+						setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
+						return "passed";
+					} catch (scenarioError) {
+						scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "error");
+						setStatus(popupStatus, errorMessage(scenarioError), true);
+						return "failed";
+					}
+				}
+
+				scenarioApi.renderScenarioButtons(popupScenariosList, popupScenariosEmpty, selectedScenarios, async function (scenario) {
+					scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
+					await executeScenario(scenario);
+				});
+				scenarioApi.markScenarioSelection(popupScenariosList, "");
+				scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
+				scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
+
+				popupScenariosPlayAll.onclick = async function () {
+					if (loadToken !== loadTokenCounter) {
+						return;
+					}
+					if (selectedScenarios.length === 0) {
+						setStatus(popupStatus, "No scenarios were discovered for this test.", false);
 						return;
 					}
 					if (!activeTestClass) {
 						setStatus(popupStatus, "Test is still loading. Please wait.", false);
 						return;
+					}
+
+					scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
+					scenarioApi.setAllScenarioStates(popupScenariosList, "idle");
+					scenarioApi.markScenarioSelection(popupScenariosList, "");
+
+					var hasFailures = false;
+					for (var i = 0; i < selectedScenarios.length; i += 1) {
+						var result = await executeScenario(selectedScenarios[i]);
+						if (result === "stale") {
+							return;
 						}
-						scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
-						scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
-						setStatus(popupStatus, "Running scenario: " + scenario.title, false);
-						try {
-							await scenarioApi.runScenarioMethod(activeTestClass, scenario.methodName, {
-							testPath: selectedPath,
-							previewElement: activePreviewElement,
-							renderHost: popupRenderHost,
-							document: document,
-								window: window
-							});
-							scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
-							setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
-						} catch (scenarioError) {
-							scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "error");
-							setStatus(popupStatus, errorMessage(scenarioError), true);
+						if (result === "failed") {
+							hasFailures = true;
 						}
-					});
-				scenarioApi.markScenarioSelection(popupScenariosList, "");
+					}
+
+					if (hasFailures) {
+						scenarioApi.setPlayAllState(popupScenariosPlayAll, "error");
+						setStatus(popupStatus, "Play All finished: at least one scenario failed.", true);
+						return;
+					}
+
+					scenarioApi.setPlayAllState(popupScenariosPlayAll, "success");
+					setStatus(popupStatus, "Play All finished: all scenarios passed.", false);
+				};
 
 				openPopup();
 				popupBody.textContent = "Loading test preview...";
@@ -331,6 +381,7 @@
 					var testType = testInstance ? testInstance.testType : undefined;
 					if (testType === "unit") {
 						popupBody.textContent = "Please choose a scenario to run this unit test.";
+						scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, selectedScenarios.length > 0);
 						if (selectedScenarios.length > 0) {
 							setStatus(popupStatus, "Choose a scenario from the left panel.", false);
 						} else {
@@ -342,6 +393,7 @@
 						popupBody.textContent = "Please choose a scenario or play with this behavioral test component yourself.";
 						var preview = mountBehavioralPreview(popupRenderHost, TestClass, selectedPath);
 						activePreviewElement = preview.element;
+						scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, selectedScenarios.length > 0);
 						if (selectedScenarios.length > 0) {
 							setStatus(popupStatus, "Choose a scenario from the left panel.", false);
 						} else {
@@ -354,6 +406,7 @@
 					if (loadToken !== loadTokenCounter) {
 						return;
 					}
+					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
 					popupBody.textContent = "Unable to preview this test.";
 					setStatus(popupStatus, errorMessage(error), true);
 				}

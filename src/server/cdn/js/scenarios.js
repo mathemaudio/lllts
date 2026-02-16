@@ -87,6 +87,31 @@
 		targetButton.setAttribute("data-scenario-state", targetState);
 	}
 
+	function setAllScenarioStates(listElement, state) {
+		if (!listElement) {
+			return;
+		}
+		var targetState = String(state || "idle");
+		var allButtons = listElement.querySelectorAll("button[data-scenario-method]");
+		for (var i = 0; i < allButtons.length; i += 1) {
+			allButtons[i].setAttribute("data-scenario-state", targetState);
+		}
+	}
+
+	function setPlayAllState(playAllButton, state) {
+		if (!playAllButton) {
+			return;
+		}
+		playAllButton.setAttribute("data-state", String(state || "idle"));
+	}
+
+	function setPlayAllEnabled(playAllButton, isEnabled) {
+		if (!playAllButton) {
+			return;
+		}
+		playAllButton.disabled = !isEnabled;
+	}
+
 	function markScenarioSelection(listElement, methodName) {
 		if (!listElement) {
 			return;
@@ -129,6 +154,9 @@
 		getScenariosForTest: getScenariosForTest,
 		renderScenarioButtons: renderScenarioButtons,
 		setScenarioState: setScenarioState,
+		setAllScenarioStates: setAllScenarioStates,
+		setPlayAllState: setPlayAllState,
+		setPlayAllEnabled: setPlayAllEnabled,
 		markScenarioSelection: markScenarioSelection,
 		runScenarioMethod: runScenarioMethod
 	};
