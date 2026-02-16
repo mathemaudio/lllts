@@ -218,6 +218,9 @@
 		var popupScenariosList = document.getElementById("lllts-test-popup-scenarios-list");
 		var popupScenariosEmpty = document.getElementById("lllts-test-popup-scenarios-empty");
 		var popupScenariosPlayAll = document.getElementById("lllts-test-popup-scenarios-play-all");
+		var terminalPopup = document.getElementById("lllts-terminal-popup");
+		var terminalPopupBody = document.getElementById("lllts-terminal-popup-body");
+		var terminalPopupClose = document.getElementById("lllts-terminal-popup-close");
 
 		if (
 			!toggleButton ||
@@ -234,7 +237,10 @@
 			!popupClose ||
 			!popupScenariosList ||
 			!popupScenariosEmpty ||
-			!popupScenariosPlayAll
+			!popupScenariosPlayAll ||
+			!terminalPopup ||
+			!terminalPopupBody ||
+			!terminalPopupClose
 		) {
 			return;
 		}
@@ -245,11 +251,22 @@
 		var isRunningAllTests = false;
 
 		function openPopup() {
+			closeTerminalPopup();
 			popup.classList.add("lllts-open");
 		}
 
 		function closePopup() {
 			popup.classList.remove("lllts-open");
+		}
+
+		function openTerminalPopup(reportText) {
+			closePopup();
+			terminalPopupBody.textContent = String(reportText || "");
+			terminalPopup.classList.add("lllts-open");
+		}
+
+		function closeTerminalPopup() {
+			terminalPopup.classList.remove("lllts-open");
 		}
 
 		function setPanelResult(state, message) {
@@ -279,6 +296,79 @@
 			}
 		}
 
+		function storeScenarioResult(runContext, scenario, state, details) {
+			if (!runContext || !scenario) {
+				return;
+			}
+			var methodName = String(scenario.methodName || "");
+			if (methodName.length === 0) {
+				return;
+			}
+			if (!runContext.scenarioResultByMethod) {
+				runContext.scenarioResultByMethod = {};
+			}
+			runContext.scenarioResultByMethod[methodName] = {
+				title: String(scenario.title || methodName),
+				state: String(state || "failed"),
+				details: String(details || "")
+			};
+		}
+
+		function collectScenarioResults(runContext) {
+			var results = [];
+			var scenarios = runContext && Array.isArray(runContext.selectedScenarios) ? runContext.selectedScenarios : [];
+			var resultMap = runContext && runContext.scenarioResultByMethod ? runContext.scenarioResultByMethod : {};
+			for (var i = 0; i < scenarios.length; i += 1) {
+				var scenario = scenarios[i];
+				var methodName = String(scenario.methodName || "");
+				var resolvedResult = resultMap[methodName];
+				if (resolvedResult) {
+					results.push({
+						title: resolvedResult.title,
+						state: resolvedResult.state,
+						details: String(resolvedResult.details || "")
+					});
+					continue;
+				}
+				results.push({
+					title: String(scenario.title || methodName || "scenario"),
+					state: "failed",
+					details: ""
+				});
+			}
+			return results;
+		}
+
+		function buildTerminalReport(testReports, allPassed) {
+			var lines = [];
+			var reports = Array.isArray(testReports) ? testReports : [];
+			for (var i = 0; i < reports.length; i += 1) {
+				var report = reports[i];
+				var testPath = String((report && report.testPath) || "unknown-test");
+				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
+				lines.push("## " + testPath);
+				if (scenarioResults.length === 0) {
+					lines.push("- (no scenarios): passed");
+				} else {
+					for (var j = 0; j < scenarioResults.length; j += 1) {
+						var scenarioResult = scenarioResults[j];
+						var scenarioTitle = String((scenarioResult && scenarioResult.title) || "scenario");
+						var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
+						var scenarioDetails = String((scenarioResult && scenarioResult.details) || "").trim();
+						if (scenarioState === "failed" && scenarioDetails.length > 0) {
+							lines.push("- " + scenarioTitle + ": " + scenarioState + ": " + scenarioDetails);
+						} else {
+							lines.push("- " + scenarioTitle + ": " + scenarioState);
+						}
+					}
+				}
+				lines.push("");
+			}
+			lines.push("");
+			lines.push(allPassed ? "All passed" : "some failed");
+			return lines.join("\n");
+		}
+
 		async function executeScenario(runContext, scenario) {
 			if (runContext.loadToken !== loadTokenCounter) {
 				return "stale";
@@ -299,29 +389,42 @@
 					window: window
 				});
 				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
+				storeScenarioResult(runContext, scenario, "passed", "");
 				setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
 				return "passed";
 			} catch (scenarioError) {
+				var scenarioErrorText = errorMessage(scenarioError);
 				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "error");
-				setStatus(popupStatus, errorMessage(scenarioError), true);
+				storeScenarioResult(runContext, scenario, "failed", scenarioErrorText);
+				setStatus(popupStatus, scenarioErrorText, true);
 				return "failed";
 			}
 		}
 
 		async function runPlayAllScenarios(runContext) {
 			if (runContext.loadToken !== loadTokenCounter) {
-				return "stale";
+				return {
+					status: "stale",
+					scenarioResults: []
+				};
 			}
 			if (runContext.selectedScenarios.length === 0) {
 				scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
 				setStatus(popupStatus, "No scenarios were discovered for this test.", false);
-				return "no-scenarios";
+				return {
+					status: "no-scenarios",
+					scenarioResults: []
+				};
 			}
 			if (!runContext.activeTestClass) {
 				setStatus(popupStatus, "Test is still loading. Please wait.", false);
-				return "failed";
+				return {
+					status: "failed",
+					scenarioResults: collectScenarioResults(runContext)
+				};
 			}
 
+			runContext.scenarioResultByMethod = {};
 			scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
 			setScenarioButtonsEnabled(false);
 			scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
@@ -332,7 +435,10 @@
 				for (var i = 0; i < runContext.selectedScenarios.length; i += 1) {
 					var result = await executeScenario(runContext, runContext.selectedScenarios[i]);
 					if (result === "stale") {
-						return "stale";
+						return {
+							status: "stale",
+							scenarioResults: collectScenarioResults(runContext)
+						};
 					}
 					if (result === "failed") {
 						hasFailures = true;
@@ -342,12 +448,18 @@
 				if (hasFailures) {
 					scenarioApi.setPlayAllState(popupScenariosPlayAll, "error");
 					setStatus(popupStatus, "Play All finished: at least one scenario failed.", true);
-					return "failed";
+					return {
+						status: "failed",
+						scenarioResults: collectScenarioResults(runContext)
+					};
 				}
 
 				scenarioApi.setPlayAllState(popupScenariosPlayAll, "success");
 				setStatus(popupStatus, "Play All finished: all scenarios passed.", false);
-				return "passed";
+				return {
+					status: "passed",
+					scenarioResults: collectScenarioResults(runContext)
+				};
 			} finally {
 				setScenarioButtonsEnabled(true);
 				scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
@@ -361,7 +473,8 @@
 				selectedScenarios: scenarioApi.getScenariosForTest(config, selectedPath),
 				loadToken: 0,
 				activeTestClass: null,
-				activePreviewElement: null
+				activePreviewElement: null,
+				scenarioResultByMethod: {}
 			};
 			loadTokenCounter += 1;
 			runContext.loadToken = loadTokenCounter;
@@ -390,7 +503,10 @@
 				setStatus(popupStatus, "Importing " + moduleUrl, false);
 				var moduleObject = await import(moduleUrl);
 				if (runContext.loadToken !== loadTokenCounter) {
-					return "stale";
+					return {
+						status: "stale",
+						scenarioResults: []
+					};
 				}
 				var TestClass = resolveTestClass(moduleObject);
 				if (!TestClass) {
@@ -431,16 +547,25 @@
 				}
 			} catch (error) {
 				if (runContext.loadToken !== loadTokenCounter) {
-					return "stale";
+					return {
+						status: "stale",
+						scenarioResults: []
+					};
 				}
 				scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
 				popupBody.textContent = "Unable to preview this test.";
 				setStatus(popupStatus, errorMessage(error), true);
-				return "failed";
+				return {
+					status: "failed",
+					scenarioResults: []
+				};
 			}
 
 			if (!shouldRunPlayAll) {
-				return "loaded";
+				return {
+					status: "loaded",
+					scenarioResults: []
+				};
 			}
 			return await runPlayAllScenarios(runContext);
 		}
@@ -452,6 +577,7 @@
 			panel.classList.toggle("lllts-open");
 		});
 		popupClose.addEventListener("click", closePopup);
+		terminalPopupClose.addEventListener("click", closeTerminalPopup);
 		setPanelResult("", "");
 
 		if (tests.length === 0) {
@@ -488,11 +614,19 @@
 			setListButtonsEnabled(false);
 
 			var hasFailures = false;
+			var testReports = [];
 			try {
 				for (var i = 0; i < tests.length; i += 1) {
 					setPanelResult("running", String(i + 1) + "/" + String(tests.length));
-					var testResult = await loadTestPreview(tests[i], true);
-					if (testResult !== "passed" && testResult !== "no-scenarios") {
+					var testPath = String(tests[i] || "");
+					var testResult = await loadTestPreview(testPath, true);
+					var status = testResult && testResult.status ? String(testResult.status) : "failed";
+					var scenarioResults = testResult && Array.isArray(testResult.scenarioResults) ? testResult.scenarioResults : [];
+					testReports.push({
+						testPath: testPath,
+						scenarioResults: scenarioResults
+					});
+					if (status !== "passed" && status !== "no-scenarios") {
 						hasFailures = true;
 					}
 				}
@@ -501,6 +635,8 @@
 				setPanelPlayAllEnabled(true);
 				setListButtonsEnabled(true);
 			}
+
+			openTerminalPopup(buildTerminalReport(testReports, !hasFailures));
 
 			if (hasFailures) {
 				setPanelResult("error", "Failed");
