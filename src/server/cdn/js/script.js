@@ -176,6 +176,7 @@
     var panel = document.getElementById("lllts-test-panel");
     var list = document.getElementById("lllts-test-list");
     var emptyState = document.getElementById("lllts-test-empty");
+    var popupBackdrop = document.getElementById("lllts-test-popup-backdrop");
     var popup = document.getElementById("lllts-test-popup");
     var popupBody = document.getElementById("lllts-test-popup-body");
     var popupLink = document.getElementById("lllts-test-popup-link");
@@ -183,7 +184,7 @@
     var popupRenderHost = document.getElementById("lllts-test-popup-render");
     var popupClose = document.getElementById("lllts-test-popup-close");
 
-    if (!toggleButton || !panel || !list || !emptyState || !popup || !popupBody || !popupLink || !popupStatus || !popupRenderHost || !popupClose) {
+    if (!toggleButton || !panel || !list || !emptyState || !popupBackdrop || !popup || !popupBody || !popupLink || !popupStatus || !popupRenderHost || !popupClose) {
       return;
     }
     if (toggleButton.getAttribute("data-lllts-wired") === "true") {
@@ -191,15 +192,24 @@
     }
     toggleButton.setAttribute("data-lllts-wired", "true");
 
+    function openPopup() {
+      popupBackdrop.classList.add("lllts-open");
+      popup.classList.add("lllts-open");
+    }
+
+    function closePopup() {
+      popupBackdrop.classList.remove("lllts-open");
+      popup.classList.remove("lllts-open");
+    }
+
     if (openByDefault) {
       panel.classList.add("lllts-open");
     }
     toggleButton.addEventListener("click", function () {
       panel.classList.toggle("lllts-open");
     });
-    popupClose.addEventListener("click", function () {
-      popup.classList.remove("lllts-open");
-    });
+    popupClose.addEventListener("click", closePopup);
+    popupBackdrop.addEventListener("click", closePopup);
 
     if (tests.length === 0) {
       emptyState.hidden = false;
@@ -215,7 +225,7 @@
       button.textContent = String(testPath);
       button.addEventListener("click", async function () {
         var selectedPath = String(testPath || "");
-        popup.classList.add("lllts-open");
+        openPopup();
         popupBody.textContent = "Loading test preview...";
         popupLink.textContent = selectedPath;
         setStatus(popupStatus, "", false);
