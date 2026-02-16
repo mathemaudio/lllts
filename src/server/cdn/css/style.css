@@ -1,3 +1,31 @@
+#lllts-test-popup-scenarios-list button::before {
+	content: "🧪";
+	flex: 0 0 auto
+}
+
+#lllts-test-popup-scenarios-list button[data-scenario-state="success"]::before {
+	content: "🟢"
+}
+
+#lllts-test-popup-scenarios-list button[data-scenario-state="error"]::before {
+	content: "⛔️"
+}
+
+
+#lllts-test-popup-scenarios-play-all::before {
+	content: "🧪"
+}
+
+#lllts-test-popup-scenarios-play-all[data-state="success"]::before {
+	content: "🟢"
+}
+
+#lllts-test-popup-scenarios-play-all[data-state="error"]::before {
+	content: "⛔️"
+}
+
+
+
 #lllts-test-toggle {
 	position: fixed;
 	left: 16px;
@@ -204,18 +232,6 @@
 	gap: 6px
 }
 
-#lllts-test-popup-scenarios-play-all::before {
-	content: "👉"
-}
-
-#lllts-test-popup-scenarios-play-all[data-state="success"]::before {
-	content: "✅"
-}
-
-#lllts-test-popup-scenarios-play-all[data-state="error"]::before {
-	content: "❌"
-}
-
 #lllts-test-popup-scenarios-play-all:disabled {
 	opacity: .6;
 	cursor: default
@@ -251,18 +267,6 @@
 	gap: 8px
 }
 
-#lllts-test-popup-scenarios-list button::before {
-	content: "👉";
-	flex: 0 0 auto
-}
-
-#lllts-test-popup-scenarios-list button[data-scenario-state="success"]::before {
-	content: "✳️"
-}
-
-#lllts-test-popup-scenarios-list button[data-scenario-state="error"]::before {
-	content: "❌"
-}
 
 #lllts-test-popup-scenarios-list button:hover {
 	background: #666666

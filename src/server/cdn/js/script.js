@@ -1,6 +1,8 @@
 (function () {
 	var CONFIG_ELEMENT_ID = "lllts-overlay-config";
 	var FALLBACK_ASSETS_BASE_PATH = "/__lllts-overlay";
+	var TEST_STATUS_EMOJI_PASSED = "🟢";
+	var TEST_STATUS_EMOJI_FAILED = "⛔️";
 
 	function parseConfig() {
 		var configElement = document.getElementById(CONFIG_ELEMENT_ID);
@@ -37,11 +39,11 @@
 				listElement.textContent = "";
 				emptyElement.hidden = false;
 			},
-			markScenarioSelection: function () {},
-			setScenarioState: function () {},
-			setAllScenarioStates: function () {},
-			setPlayAllState: function () {},
-			setPlayAllEnabled: function () {},
+			markScenarioSelection: function () { },
+			setScenarioState: function () { },
+			setAllScenarioStates: function () { },
+			setPlayAllState: function () { },
+			setPlayAllEnabled: function () { },
 			runScenarioMethod: async function () {
 				throw new Error("Scenario helper script is unavailable.");
 			}
@@ -106,7 +108,7 @@
 				if (tValue) {
 					return tValue;
 				}
-			} catch (_error) {}
+			} catch (_error) { }
 		}
 		return "";
 	}
@@ -170,7 +172,7 @@
 	}
 
 	function createPreviewElementClass(TestClass) {
-		return class extends TestClass {};
+		return class extends TestClass { };
 	}
 
 	function ensurePreviewTagDefined(tagName, TestClass) {
@@ -348,7 +350,7 @@
 				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
 				lines.push("## " + testPath);
 				if (scenarioResults.length === 0) {
-					lines.push("- (no scenarios): passed");
+					lines.push("(no scenarios)");
 				} else {
 					for (var j = 0; j < scenarioResults.length; j += 1) {
 						var scenarioResult = scenarioResults[j];
@@ -356,9 +358,10 @@
 						var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
 						var scenarioDetails = String((scenarioResult && scenarioResult.details) || "").trim();
 						if (scenarioState === "failed" && scenarioDetails.length > 0) {
-							lines.push("- " + scenarioTitle + ": " + scenarioState + ": " + scenarioDetails);
+							lines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": failed: " + scenarioDetails);
 						} else {
-							lines.push("- " + scenarioTitle + ": " + scenarioState);
+							var stateEmoji = scenarioState === "passed" ? `- ` : TEST_STATUS_EMOJI_FAILED;
+							lines.push(stateEmoji + " " + scenarioTitle + ": " + scenarioState);
 						}
 					}
 				}
