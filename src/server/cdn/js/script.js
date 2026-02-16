@@ -205,6 +205,7 @@
 		var openByDefault = !!config.openByDefault;
 		var scenarioApi = getScenarioApi();
 		var loadTokenCounter = 0;
+		var backdrop = document.getElementById("lllts-overlay-backdrop");
 		var toggleButton = document.getElementById("lllts-test-toggle");
 		var panel = document.getElementById("lllts-test-panel");
 		var list = document.getElementById("lllts-test-list");
@@ -226,6 +227,7 @@
 
 		if (
 			!toggleButton ||
+			!backdrop ||
 			!panel ||
 			!list ||
 			!emptyState ||
@@ -255,20 +257,32 @@
 		function openPopup() {
 			closeTerminalPopup();
 			popup.classList.add("lllts-open");
+			syncBackdropState();
 		}
 
 		function closePopup() {
 			popup.classList.remove("lllts-open");
+			syncBackdropState();
 		}
 
 		function openTerminalPopup(reportText) {
 			closePopup();
 			terminalPopupBody.textContent = String(reportText || "");
 			terminalPopup.classList.add("lllts-open");
+			syncBackdropState();
 		}
 
 		function closeTerminalPopup() {
 			terminalPopup.classList.remove("lllts-open");
+			syncBackdropState();
+		}
+
+		function syncBackdropState() {
+			var shouldShowBackdrop =
+				panel.classList.contains("lllts-open") ||
+				popup.classList.contains("lllts-open") ||
+				terminalPopup.classList.contains("lllts-open");
+			backdrop.classList.toggle("lllts-open", shouldShowBackdrop);
 		}
 
 		function setPanelResult(state, message) {
@@ -578,10 +592,12 @@
 		}
 		toggleButton.addEventListener("click", function () {
 			panel.classList.toggle("lllts-open");
+			syncBackdropState();
 		});
 		popupClose.addEventListener("click", closePopup);
 		terminalPopupClose.addEventListener("click", closeTerminalPopup);
 		setPanelResult("", "");
+		syncBackdropState();
 
 		if (tests.length === 0) {
 			emptyState.hidden = false;

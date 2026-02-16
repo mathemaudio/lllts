@@ -26,6 +26,19 @@
 
 
 
+#lllts-overlay-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483639;
+	background: rgba(0, 0, 0, .5);
+	backdrop-filter: blur(8px);
+	display: none
+}
+
+#lllts-overlay-backdrop.lllts-open {
+	display: block
+}
+
 #lllts-test-toggle {
 	position: fixed;
 	left: 16px;
