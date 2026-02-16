@@ -40,10 +40,68 @@
 	display: block
 }
 
-#lllts-test-panel h3 {
+#lllts-test-panel-header {
 	margin: 0 0 8px 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	flex-wrap: wrap
+}
+
+#lllts-test-panel h3 {
+	margin: 0;
 	font: 700 14px/1.3 ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 	color: rgb(224, 224, 224)
+}
+
+#lllts-test-panel-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px
+}
+
+#lllts-test-panel-play-all {
+	border: 1px solid #7f7f7f;
+	border-radius: 8px;
+	background: #5d5d5d;
+	color: rgb(235, 235, 235);
+	padding: 6px 9px;
+	font: 600 11px/1.2 ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	cursor: pointer
+}
+
+#lllts-test-panel-play-all:disabled {
+	opacity: .6;
+	cursor: default
+}
+
+#lllts-test-panel-result {
+	min-width: 62px;
+	padding: 3px 7px;
+	border: 1px solid #7f7f7f;
+	border-radius: 8px;
+	background: #5d5d5d;
+	color: rgb(215, 215, 215);
+	font: 700 11px/1.2 ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	text-align: center;
+	text-transform: uppercase;
+	letter-spacing: .02em
+}
+
+#lllts-test-panel-result[data-state="running"] {
+	color: rgb(255, 213, 111);
+	border-color: rgb(198, 150, 47)
+}
+
+#lllts-test-panel-result[data-state="success"] {
+	color: rgb(167, 255, 167);
+	border-color: rgb(87, 196, 87)
+}
+
+#lllts-test-panel-result[data-state="error"] {
+	color: rgb(255, 164, 164);
+	border-color: rgb(212, 88, 88)
 }
 
 #lllts-test-list {

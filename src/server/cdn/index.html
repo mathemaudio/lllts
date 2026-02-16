@@ -1,6 +1,12 @@
 <button id="lllts-test-toggle" type="button">LLLTS Tests</button>
 <aside id="lllts-test-panel" aria-label="LLLTS tests panel">
-  <h3>Project Tests</h3>
+  <div id="lllts-test-panel-header">
+    <h3>Project Tests</h3>
+    <div id="lllts-test-panel-controls">
+      <button id="lllts-test-panel-play-all" type="button">Play All</button>
+      <span id="lllts-test-panel-result" aria-live="polite"></span>
+    </div>
+  </div>
   <p id="lllts-test-empty" hidden>No .test.lll.ts files found.</p>
   <ul id="lllts-test-list"></ul>
 </aside>
