@@ -3,6 +3,8 @@
 	var FALLBACK_ASSETS_BASE_PATH = "/__lllts-overlay";
 	var TEST_STATUS_EMOJI_PASSED = "🟢";
 	var TEST_STATUS_EMOJI_FAILED = "⛔️";
+	var FIXED_LAST_RUN_REPORT_KEY = "FIXED_llltsLastRunReport";
+	var FIXED_LAST_RUN_REPORT_JSON_KEY = "FIXED_llltsLastRunReportJson";
 
 	function parseConfig() {
 		var configElement = document.getElementById(CONFIG_ELEMENT_ID);
@@ -254,6 +256,16 @@
 		toggleButton.setAttribute("data-lllts-wired", "true");
 		var isRunningAllTests = false;
 
+		function clearFixedLastRunReport() {
+			window[FIXED_LAST_RUN_REPORT_KEY] = undefined;
+			window[FIXED_LAST_RUN_REPORT_JSON_KEY] = undefined;
+		}
+
+		function setFixedLastRunReport(reportText, reportJson) {
+			window[FIXED_LAST_RUN_REPORT_KEY] = String(reportText || "");
+			window[FIXED_LAST_RUN_REPORT_JSON_KEY] = reportJson === undefined ? undefined : reportJson;
+		}
+
 		function openPopup() {
 			closeTerminalPopup();
 			popup.classList.add("lllts-open");
@@ -384,6 +396,32 @@
 			lines.push("");
 			lines.push(allPassed ? "All passed" : "some failed");
 			return lines.join("\n");
+		}
+
+		function buildTerminalReportJson(testReports, allPassed) {
+			var reports = Array.isArray(testReports) ? testReports : [];
+			var passedScenarios = 0;
+			var failedScenarios = 0;
+			for (var i = 0; i < reports.length; i += 1) {
+				var scenarioResults = Array.isArray(reports[i] && reports[i].scenarioResults) ? reports[i].scenarioResults : [];
+				for (var j = 0; j < scenarioResults.length; j += 1) {
+					var scenarioState = String((scenarioResults[j] && scenarioResults[j].state) || "failed");
+					if (scenarioState === "passed") {
+						passedScenarios += 1;
+					} else if (scenarioState === "failed") {
+						failedScenarios += 1;
+					}
+				}
+			}
+			return {
+				status: allPassed ? "passed" : "failed",
+				summary: {
+					totalTests: reports.length,
+					passedScenarios: passedScenarios,
+					failedScenarios: failedScenarios
+				},
+				tests: reports
+			};
 		}
 
 		async function executeScenario(runContext, scenario) {
@@ -598,10 +636,13 @@
 		terminalPopupClose.addEventListener("click", closeTerminalPopup);
 		setPanelResult("", "");
 		syncBackdropState();
+		clearFixedLastRunReport();
 
 		if (tests.length === 0) {
 			emptyState.hidden = false;
 			setPanelPlayAllEnabled(false);
+			var emptyReportText = buildTerminalReport([], true);
+			setFixedLastRunReport(emptyReportText, buildTerminalReportJson([], true));
 			return;
 		}
 		emptyState.hidden = true;
@@ -624,10 +665,11 @@
 			list.appendChild(item);
 		});
 
-		panelPlayAll.addEventListener("click", async function () {
+		async function runPanelPlayAllSequence(_isAutoRun) {
 			if (isRunningAllTests || tests.length === 0) {
 				return;
 			}
+			clearFixedLastRunReport();
 			isRunningAllTests = true;
 			setPanelPlayAllEnabled(false);
 			setListButtonsEnabled(false);
@@ -649,20 +691,43 @@
 						hasFailures = true;
 					}
 				}
+			} catch (runError) {
+				hasFailures = true;
+				testReports.push({
+					testPath: "<overlay-runner>",
+					scenarioResults: [
+						{
+							title: "Play All runtime",
+							state: "failed",
+							details: errorMessage(runError)
+						}
+					]
+				});
 			} finally {
 				isRunningAllTests = false;
 				setPanelPlayAllEnabled(true);
 				setListButtonsEnabled(true);
 			}
 
-			openTerminalPopup(buildTerminalReport(testReports, !hasFailures));
+			var reportText = buildTerminalReport(testReports, !hasFailures);
+			var reportJson = buildTerminalReportJson(testReports, !hasFailures);
+			openTerminalPopup(reportText);
+			setFixedLastRunReport(reportText, reportJson);
 
 			if (hasFailures) {
 				setPanelResult("error", "Failed");
 				return;
 			}
 			setPanelResult("success", "Passed");
+		}
+
+		panelPlayAll.addEventListener("click", async function () {
+			await runPanelPlayAllSequence(false);
 		});
+
+		setTimeout(function () {
+			void runPanelPlayAllSequence(true);
+		}, 0);
 	}
 
 	async function init() {

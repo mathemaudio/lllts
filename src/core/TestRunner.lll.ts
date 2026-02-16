@@ -57,7 +57,25 @@ type TestType = "unit" | "behavioral"
 
 type Phase = "render" | "scenario"
 
-@Spec("Executes scenario methods inside '.test.lll.ts' classes in deterministic unit or (future) behavioral mode.")
+type TestClassRecord = {
+	file: SourceFile
+	exportedClass: ClassDeclaration
+	className: string
+	relativeFile: string
+}
+
+type BehavioralTestReference = {
+	className: string
+	filePath: string
+	line: number
+}
+
+type TestInventorySummary = {
+	hasBehavioralTests: boolean
+	behavioralTests: BehavioralTestReference[]
+}
+
+@Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
 export class TestRunner {
 	private readonly projectRoot: string
 	private readonly rootDir: string
@@ -116,30 +134,12 @@ export class TestRunner {
 	public async runAll(): Promise<TestRunnerResult> {
 		const diagnostics: DiagnosticObject[] = []
 		const reports: TestReport[] = []
-		const files = this.loader.getFiles()
+		const testClasses = this.listTestClasses()
 
-		for (const file of files) {
-			if (!file.getFilePath().endsWith(".test.lll.ts")) {
-				continue
-			}
-
-			const exportedClass = BaseRule.getExportedClass(file)
-			if (!exportedClass) continue
-
-			const className = exportedClass.getName()
-			if (!className || !className.endsWith("Test")) {
-				continue
-			}
-
-			const relativeFile = this.toProjectRelativePath(file.getFilePath())
+		for (const testClass of testClasses) {
+			const { file, exportedClass, className, relativeFile } = testClass
 			const scenarioEntries = this.getScenarioMethods(exportedClass)
 			if (scenarioEntries.length === 0) {
-				continue
-			}
-
-			const runtimeClass = this.loadRuntimeClass(file, className)
-			if (!runtimeClass) {
-				diagnostics.push(this.createModuleDiagnostic(file.getFilePath(), className))
 				continue
 			}
 
@@ -150,7 +150,12 @@ export class TestRunner {
 			}
 
 			if (testType === "behavioral") {
-				diagnostics.push(this.createBehavioralNotImplementedDiag(relativeFile, className, exportedClass.getStartLineNumber()))
+				continue
+			}
+
+			const runtimeClass = this.loadRuntimeClass(file, className)
+			if (!runtimeClass) {
+				diagnostics.push(this.createModuleDiagnostic(file.getFilePath(), className))
 				continue
 			}
 
@@ -202,6 +207,42 @@ export class TestRunner {
 		return { diagnostics, reports }
 	}
 
+	@Spec("Builds deterministic inventory data for behavioral test classes.")
+	@Out("summary", "TestInventorySummary")
+	public summarizeInventory(): TestInventorySummary {
+		const behavioralTests: BehavioralTestReference[] = []
+		const testClasses = this.listTestClasses()
+
+		for (const testClass of testClasses) {
+			const testType = this.getTestTypeLiteral(testClass.exportedClass)
+			if (testType !== "behavioral") {
+				continue
+			}
+			behavioralTests.push({
+				className: testClass.className,
+				filePath: testClass.relativeFile,
+				line: testClass.exportedClass.getStartLineNumber()
+			})
+		}
+
+		behavioralTests.sort((a, b) => {
+			const byPath = a.filePath.localeCompare(b.filePath)
+			if (byPath !== 0) {
+				return byPath
+			}
+			const byLine = a.line - b.line
+			if (byLine !== 0) {
+				return byLine
+			}
+			return a.className.localeCompare(b.className)
+		})
+
+		return {
+			hasBehavioralTests: behavioralTests.length > 0,
+			behavioralTests
+		}
+	}
+
 	@Spec("Reads compiler options for locating compiled files.")
 	@Out("config", "TsConfig")
 	private loadTsConfig(configPath: string) {
@@ -234,6 +275,48 @@ export class TestRunner {
 		const text = init?.getText().trim()
 		const match = text ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
 		return (match?.[1] as TestType) ?? null
+	}
+
+	@Spec("Collects executable test classes from discovered '.test.lll.ts' files in deterministic order.")
+	@Out("records", "TestClassRecord[]")
+	private listTestClasses(): TestClassRecord[] {
+		const records: TestClassRecord[] = []
+		const files = this.loader.getFiles()
+
+		for (const file of files) {
+			if (!file.getFilePath().endsWith(".test.lll.ts")) {
+				continue
+			}
+
+			const exportedClass = BaseRule.getExportedClass(file)
+			if (!exportedClass) {
+				continue
+			}
+
+			const className = exportedClass.getName()
+			if (!className || !className.endsWith("Test")) {
+				continue
+			}
+
+			records.push({
+				file,
+				exportedClass,
+				className,
+				relativeFile: this.toProjectRelativePath(file.getFilePath())
+			})
+		}
+
+		return records.sort((a, b) => {
+			const byPath = a.relativeFile.localeCompare(b.relativeFile)
+			if (byPath !== 0) {
+				return byPath
+			}
+			const byLine = a.exportedClass.getStartLineNumber() - b.exportedClass.getStartLineNumber()
+			if (byLine !== 0) {
+				return byLine
+			}
+			return a.className.localeCompare(b.className)
+		})
 	}
 
 	@Spec("Requires the compiled JS module and returns the exported class reference.")
@@ -355,13 +438,6 @@ export class TestRunner {
 			this.getRuleCode(),
 			line
 		)
-	}
-
-	@Spec("Reports that behavioral test mode is not implemented yet.")
-	@Out("diagnostic", "DiagnosticObject")
-	private createBehavioralNotImplementedDiag(file: string, className: string, line: number) {
-		const message = `Behavioral test mode for '${className}' is not implemented yet. Switch to testType = 'unit'.`
-		return BaseRule.createWarning(file, message, this.getRuleCode(), line)
 	}
 
 	@Spec("Reports render forbidden in unit mode.")

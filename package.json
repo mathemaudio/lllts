@@ -18,6 +18,8 @@
 		"lll-example-bad-rogue-top-level": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
 		"build": "tsc",
 		"ts-check": "tsc --noEmit",
+		"playwright-setup": "pnpm exec playwright install chromium",
+		"playwright-list": "pnpm exec playwright install --list",
 		"i": "pnpm i",
 		"install-lllts-global": "pnpm link --global"
 	},
@@ -31,6 +33,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"express": "^4.22.1",
+		"playwright": "^1.52.0",
 		"ts-morph": "^21.0.1"
 	},
 	"devDependencies": {

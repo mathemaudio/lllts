@@ -230,6 +230,10 @@ export class LlltsServerTest {
 			assert(scriptResponse.body.includes("testType === \"behavioral\""), "Overlay script should include behavioral branching logic")
 			assert(scriptResponse.body.includes("customElements.define(tagName, PreviewElementClass)"), "Overlay script should define preview custom elements")
 			assert(scriptResponse.body.includes("scenarioApi.runScenarioMethod"), "Overlay script should execute scenario methods via helper API")
+			assert(scriptResponse.body.includes("FIXED_llltsLastRunReport"), "Overlay script should expose fixed string report variable")
+			assert(scriptResponse.body.includes("FIXED_llltsLastRunReportJson"), "Overlay script should expose fixed JSON report variable")
+			assert(scriptResponse.body.includes("setFixedLastRunReport"), "Overlay script should assign fixed report globals at completion")
+			assert(scriptResponse.body.includes("runPanelPlayAllSequence(true)"), "Overlay script should auto-run Play All on page load")
 
 			const scenariosScriptResponse = await this.request(app, "/__lllts-overlay/js/scenarios.js")
 			assert(scenariosScriptResponse.status === 200, "Overlay scenarios helper route should return HTTP 200")

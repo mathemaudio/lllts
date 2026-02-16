@@ -2,6 +2,8 @@
 import { ProjectInitiator } from "./core/ProjectInitiator.lll"
 import { ResultReporter } from "./core/ResultReporter.lll"
 import { RulesEngine } from "./core/RulesEngine.lll"
+import { BaseRule } from "./core/BaseRule.lll"
+import { ClientTunnelRunner } from "./core/ClientTunnelRunner.lll"
 import { LoadStrategy } from "./LoadStrategy"
 import { Out } from "./public/lll.lll"
 import { Spec } from "./public/lll.lll"
@@ -9,8 +11,11 @@ import { TestRunner } from "./core/TestRunner.lll"
 import { LlltsServer } from "./server/LlltsServer.lll"
 
 type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
+type TestInventorySummary = ReturnType<TestRunner["summarizeInventory"]>
+type ClientTunnelRunResult = Awaited<ReturnType<ClientTunnelRunner["run"]>>
 type MainResult = { mode: "compile"; exitCode: number } | { mode: "server"; port: number }
 type ServerModeConfig = { projectPath: string; projectClientLink: string }
+type ClientTunnelConfig = { url: string | null; headed: boolean; timeoutMs: number }
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
@@ -28,6 +33,12 @@ export class LLLTS {
 		const entryFile = this.getArg(args, "--entry")
 		const loadStrategy = this.getOptionalArg(args, "--load-strategy", "from_imports") as LoadStrategy
 		const verbose = this.hasFlag(args, "--verbose")
+		const clientTunnelConfigResult = this.parseClientTunnelConfig(args)
+		if (!clientTunnelConfigResult.valid) {
+			console.error(`\n❌ ${clientTunnelConfigResult.error}`)
+			return { mode: "compile", exitCode: 1 }
+		}
+		const clientTunnelConfig = clientTunnelConfigResult.config
 
 
 
@@ -47,9 +58,25 @@ export class LLLTS {
 		const results = ruleEngine.runAll()
 
 		const testRunner = new TestRunner(loader, projectPath)
+		const inventory = testRunner.summarizeInventory()
 		const { diagnostics: scenarioDiagnostics, reports } = await testRunner.runAll()
 
 		const allDiagnostics = [...results, ...scenarioDiagnostics]
+		if (inventory.hasBehavioralTests && !clientTunnelConfig.url) {
+			allDiagnostics.push(this.createMissingClientTunnelDiagnostic(inventory))
+		}
+
+		let clientTunnelResult: ClientTunnelRunResult | null = null
+		if (inventory.hasBehavioralTests && clientTunnelConfig.url) {
+			const runner = new ClientTunnelRunner()
+			clientTunnelResult = await runner.run({
+				url: clientTunnelConfig.url,
+				headed: clientTunnelConfig.headed,
+				timeoutMs: clientTunnelConfig.timeoutMs
+			})
+			allDiagnostics.push(...this.mapClientTunnelResultToDiagnostics(clientTunnelResult, inventory))
+			this.printClientTunnelOutput(clientTunnelResult, verbose)
+		}
 		// const bad = new BadExample2()
 		// console.log("Bad test 1: ", typeof bad)
 
@@ -155,6 +182,138 @@ export class LLLTS {
 		return { valid: true, value }
 	}
 
+	@Spec("Parses optional client tunnel flags used for behavioral browser execution.")
+	@Out("configResult", "{ valid: true; config: ClientTunnelConfig } | { valid: false; error: string }")
+	private static parseClientTunnelConfig(args: string[]): { valid: true; config: ClientTunnelConfig } | { valid: false; error: string } {
+		const urlResult = this.parseOptionalArgValue(args, "--clientTunnel")
+		if (!urlResult.valid) {
+			return urlResult
+		}
+
+		const timeoutResult = this.parseOptionalPositiveIntegerArg(args, "--clientTunnelTimeoutMs", 60000)
+		if (!timeoutResult.valid) {
+			return timeoutResult
+		}
+
+		return {
+			valid: true,
+			config: {
+				url: urlResult.value,
+				headed: this.hasFlag(args, "--clientTunnelHeaded"),
+				timeoutMs: timeoutResult.value
+			}
+		}
+	}
+
+	@Spec("Parses an optional flag value and validates non-empty argument text.")
+	@Out("valueResult", "{ valid: true; value: string | null } | { valid: false; error: string }")
+	private static parseOptionalArgValue(args: string[], flag: string): { valid: true; value: string | null } | { valid: false; error: string } {
+		const i = args.indexOf(flag)
+		if (i < 0) {
+			return { valid: true, value: null }
+		}
+		if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
+			return { valid: false, error: `Missing value for ${flag}.` }
+		}
+		const value = args[i + 1].trim()
+		if (value.length === 0) {
+			return { valid: false, error: `Missing value for ${flag}.` }
+		}
+		return { valid: true, value }
+	}
+
+	@Spec("Parses an optional positive integer flag with fallback default.")
+	@Out("valueResult", "{ valid: true; value: number } | { valid: false; error: string }")
+	private static parseOptionalPositiveIntegerArg(
+		args: string[],
+		flag: string,
+		defaultValue: number
+	): { valid: true; value: number } | { valid: false; error: string } {
+		const i = args.indexOf(flag)
+		if (i < 0) {
+			return { valid: true, value: defaultValue }
+		}
+		if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
+			return { valid: false, error: `Missing value for ${flag}.` }
+		}
+
+		const rawValue = args[i + 1].trim()
+		if (!/^\d+$/.test(rawValue)) {
+			return { valid: false, error: `Invalid ${flag} value '${rawValue}'. Expected positive integer.` }
+		}
+
+		const parsed = Number(rawValue)
+		if (!Number.isInteger(parsed) || parsed <= 0) {
+			return { valid: false, error: `Invalid ${flag} value '${rawValue}'. Expected positive integer.` }
+		}
+		return { valid: true, value: parsed }
+	}
+
+	@Spec("Builds compile diagnostics when behavioral tests require a client tunnel URL.")
+	@Out("diagnostic", "import('./core/DiagnosticObject').DiagnosticObject")
+	private static createMissingClientTunnelDiagnostic(inventory: TestInventorySummary) {
+		const first = inventory.behavioralTests[0]
+		if (!first) {
+			return BaseRule.createError(
+				"(behavioral-tests)",
+				"Behavioral tests were discovered, but '--clientTunnel <url>' was not provided.",
+				"test-failure"
+			)
+		}
+		const details = inventory.behavioralTests
+			.map(test => `- ${test.filePath}:${test.line} (${test.className})`)
+			.join("\n")
+		const messageLines = [
+			"Behavioral tests were discovered, but '--clientTunnel <url>' was not provided.",
+			"Provide a reachable overlay page URL and rerun compile mode.",
+			"Detected behavioral tests:",
+			details
+		]
+		return BaseRule.createError(first.filePath, messageLines.join("\n"), "test-failure", first.line)
+	}
+
+	@Spec("Maps client tunnel results to compile diagnostics.")
+	@Out("diagnostics", "import('./core/DiagnosticObject').DiagnosticObject[]")
+	private static mapClientTunnelResultToDiagnostics(result: ClientTunnelRunResult, inventory: TestInventorySummary) {
+		if (result.status === "passed") {
+			return []
+		}
+
+		const anchor = inventory.behavioralTests[0]
+		const file = anchor?.filePath ?? "(behavioral-tests)"
+		const line = anchor?.line
+		if (result.status === "failed") {
+			return [
+				BaseRule.createError(
+					file,
+					"Behavioral scenarios failed in client tunnel execution.",
+					"test-failure",
+					line
+				)
+			]
+		}
+
+		if (result.status === "timeout") {
+			return [
+				BaseRule.createError(
+					file,
+					`Client tunnel timed out while waiting for FIXED_llltsLastRunReport. ${result.message ?? ""}`.trim(),
+					"test-failure",
+					line
+				)
+			]
+		}
+
+		return [
+			BaseRule.createError(
+				file,
+				`Client tunnel runtime error. ${result.message ?? ""}`.trim(),
+				"test-failure",
+				line
+			)
+		]
+	}
+
 	@Spec("Retrieves a required CLI argument by flag or throws error.")
 
 	@Out("argument", "string")
@@ -202,6 +361,34 @@ export class LLLTS {
 				console.log(`   ${icon} ${scenario.name}`)
 			}
 		}
+	}
+
+	@Spec("Prints tunnel summary plus full report based on status and verbosity.")
+	private static printClientTunnelOutput(result: ClientTunnelRunResult, verbose: boolean) {
+		if (result.status === "passed") {
+			console.log("\n🌐 Client tunnel behavioral tests passed.")
+			if (verbose && result.reportText) {
+				console.log("\n📋 Client tunnel report")
+				console.log(result.reportText)
+			}
+			return
+		}
+
+		if (result.status === "failed") {
+			console.log("\n🌐 Client tunnel behavioral tests failed.")
+			if (result.reportText) {
+				console.log("\n📋 Client tunnel report")
+				console.log(result.reportText)
+			}
+			return
+		}
+
+		if (result.status === "timeout") {
+			console.error(`\n❌ Client tunnel timed out: ${result.message ?? "No additional details."}`)
+			return
+		}
+
+		console.error(`\n❌ Client tunnel runtime error: ${result.message ?? "No additional details."}`)
 	}
 }
 
