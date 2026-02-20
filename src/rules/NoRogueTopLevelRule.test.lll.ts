@@ -155,4 +155,14 @@ export function Scenario() {}`
 		)
 		assert(diagnostics.length === 0, "Expected lll.lll.ts to be an explicit exception")
 	}
+
+	@Scenario("Allows top-level Spec call immediately before exported type")
+	static async allowsTopLevelSpecBeforeExportedType(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
+			"/src/ProjectReport.ts",
+			`Spec("project report")
+export type ProjectReport = { value: string }`
+		)
+		assert(diagnostics.length === 0, "Expected top-level Spec before exported type to pass")
+	}
 }

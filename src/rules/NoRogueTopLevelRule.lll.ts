@@ -28,7 +28,8 @@ export class NoRogueTopLevelRule {
 				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
 				NoRogueTopLevelRule.validateTopLevelIfPlacement(filePath, statements, diagnostics)
 
-				for (const statement of statements) {
+				for (let index = 0; index < statements.length; index++) {
+					const statement = statements[index]
 					const kind = statement.getKind()
 					const line = statement.getStartLineNumber()
 
@@ -102,6 +103,9 @@ export class NoRogueTopLevelRule {
 
 					if (kind === SyntaxKind.ExpressionStatement) {
 						if (NoRogueTopLevelRule.isAllowedFinalClassInstantiationStatement(sourceFile, statement, statements)) {
+							continue
+						}
+						if (NoRogueTopLevelRule.isAllowedSpecCallBeforeExportedType(statement, statements, index)) {
 							continue
 						}
 
@@ -215,6 +219,22 @@ export class NoRogueTopLevelRule {
 
 		const constructedName = newExpression.getExpression().getText().trim()
 		return constructedName === exportedClassName
+	}
+
+	@Spec("Checks whether statement is a top-level Spec(...) call immediately before an exported type alias.")
+	@Out("allowed", "boolean")
+	private static isAllowedSpecCallBeforeExportedType(statement: Statement, statements: Statement[], index: number) {
+		const expressionStatement = statement.asKind(SyntaxKind.ExpressionStatement)
+		const expression = expressionStatement?.getExpression()
+		const callExpression = expression?.asKind(SyntaxKind.CallExpression)
+		const callee = callExpression?.getExpression().asKind(SyntaxKind.Identifier)
+		if (!callee || !["Spec", "spec"].includes(callee.getText())) {
+			return false
+		}
+
+		const nextStatement = statements[index + 1]
+		const nextTypeAlias = nextStatement?.asKind(SyntaxKind.TypeAliasDeclaration)
+		return !!nextTypeAlias?.isExported()
 	}
 
 	@Spec("Validates one-final-if top-level rule.")

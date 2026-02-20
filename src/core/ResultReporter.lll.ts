@@ -18,6 +18,7 @@ export class ResultReporter {
 		"rogue-top-level": "Forbidden top-level declarations/statements",
 		"missing-spec-class": "Missing @Spec on class",
 		"missing-spec-method": "Missing @Spec on method",
+		"missing-spec-type": "Missing Spec call before exported type",
 		"missing-desc-class": "Missing description in class @Spec",
 		"missing-desc-method": "Missing description in method @Spec",
 		"missing-test": "Test companion structure missing",

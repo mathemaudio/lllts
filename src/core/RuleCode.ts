@@ -1,5 +1,8 @@
+import { Spec } from "../public/lll.lll"
+
 // Rule code type definition
 
+Spec("RuleCode union of all supported diagnostics.")
 export type RuleCode =
 	// LllClassPerFileRule
 	| "no-export"        // No export or multiple exports
@@ -10,6 +13,7 @@ export type RuleCode =
 	// MustHaveSpecHeaderRule
 	| "missing-spec-class"   // No @Spec on class
 	| "missing-spec-method"  // No @Spec on method
+	| "missing-spec-type"    // No leading Spec(...) call on exported type
 	// MustHaveDescRule
 	| "missing-desc-class"   // No description in class @Spec
 	| "missing-desc-method"  // No description in method @Spec

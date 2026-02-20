@@ -74,4 +74,95 @@ export class EmptyCtor {
 		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor must call Spec"))
 		assert(ctorDiagnostics.length === 0, "Empty constructor with no params should not require Spec call")
 	}
+
+	@Scenario("Allow short exported type without leading Spec call")
+	static async allowShortExportedTypeWithoutLeadingSpec(input: object = {}, assert: AssertFn) {
+		const project = new Project({ useInMemoryFileSystem: true })
+		const sourceFile = project.createSourceFile(
+			"/tmp/GoodType.ts",
+			`export type GoodType = {
+	value: string
+}`
+		)
+
+		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
+		const typeDiagnostics = diagnostics.filter(diag => diag.ruleCode === "missing-spec-type")
+		assert(typeDiagnostics.length === 0, "Short exported type should not require leading Spec call")
+	}
+
+	@Scenario("Require leading Spec for exported type with more than 10 lines")
+	static async requireLeadingSpecForLongExportedType(input: object = {}, assert: AssertFn) {
+		const project = new Project({ useInMemoryFileSystem: true })
+		const sourceFile = project.createSourceFile(
+			"/tmp/BadLongType.ts",
+			`export type BadLongType =
+	| { tag: "a"; v: string }
+	| { tag: "b"; v: string }
+	| { tag: "c"; v: string }
+	| { tag: "d"; v: string }
+	| { tag: "e"; v: string }
+	| { tag: "f"; v: string }
+	| { tag: "g"; v: string }
+	| { tag: "h"; v: string }
+	| { tag: "i"; v: string }
+	| { tag: "j"; v: string }
+	| { tag: "k"; v: string }
+	| { tag: "l"; v: string }`
+		)
+
+		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
+		const typeDiagnostics = diagnostics.filter(diag => diag.ruleCode === "missing-spec-type")
+		assert(typeDiagnostics.length === 1, "Exported type with more than 10 lines should require leading Spec call")
+	}
+
+	@Scenario("Require leading Spec for exported type with more than 10 members")
+	static async requireLeadingSpecForManyMembersExportedType(input: object = {}, assert: AssertFn) {
+		const project = new Project({ useInMemoryFileSystem: true })
+		const sourceFile = project.createSourceFile(
+			"/tmp/BadManyMembersType.ts",
+			`export type BadManyMembersType = {
+	a: string
+	b: string
+	c: string
+	d: string
+	e: string
+	f: string
+	g: string
+	h: string
+	i: string
+	j: string
+	k: string
+}`
+		)
+
+		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
+		const typeDiagnostics = diagnostics.filter(diag => diag.ruleCode === "missing-spec-type")
+		assert(typeDiagnostics.length === 1, "Exported type with more than 10 members should require leading Spec call")
+	}
+
+	@Scenario("Allow complex exported type with immediate leading Spec call")
+	static async allowComplexExportedTypeWithImmediateLeadingSpec(input: object = {}, assert: AssertFn) {
+		const project = new Project({ useInMemoryFileSystem: true })
+		const sourceFile = project.createSourceFile(
+			"/tmp/GoodComplexType.ts",
+			`Spec("complex type")
+export type GoodComplexType = {
+	a: string
+	b: string
+	c: string
+	d: string
+	e: string
+	f: string
+	g: string
+	h: string
+	i: string
+	j: string
+	k: string
+}`
+		)
+
+		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
+		const typeDiagnostics = diagnostics.filter(diag => diag.ruleCode === "missing-spec-type")
+		assert(typeDiagnostics.length === 0, "Complex exported type with immediate leading Spec call should pass")
+	}
 }
