@@ -31,6 +31,7 @@ export class ResultReporter {
 	}
 
 	constructor(tsconfigPath: string) {
+		Spec("Initializes reporter root path from tsconfig location.")
 		this.projectRoot = path.dirname(tsconfigPath)
 	}
 

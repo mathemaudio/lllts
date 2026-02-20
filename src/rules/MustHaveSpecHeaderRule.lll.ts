@@ -4,6 +4,7 @@ import { BaseRule } from "../core/BaseRule.lll"
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
+import { Node } from "ts-morph"
 
 @Spec("Verifies that each class and method has a @Spec decorator.")
 
@@ -36,6 +37,36 @@ export class MustHaveSpecHeaderRule {
 				// Check method-level @Spec decorators
 				const methods = exportedClass.getMethods()
 				const isTestFile = sourceFile.getFilePath().endsWith(".test.lll.ts")
+				const constructorDeclaration = exportedClass.getConstructors()[0]
+
+				if (constructorDeclaration) {
+					const body = constructorDeclaration.getBody()
+					const statements = body && Node.isBlock(body) ? body.getStatements() : []
+					const firstStatement = statements[0]
+					const hasParameters = constructorDeclaration.getParameters().length > 0
+					const hasBodyStatements = statements.length > 0
+					const requiresConstructorSpec = hasParameters || hasBodyStatements
+					let hasLeadingSpecCall = false
+
+					if (firstStatement && Node.isExpressionStatement(firstStatement)) {
+						const expression = firstStatement.getExpression()
+						if (Node.isCallExpression(expression)) {
+							const callee = expression.getExpression()
+							hasLeadingSpecCall = Node.isIdentifier(callee) && ["Spec", "spec"].includes(callee.getText())
+						}
+					}
+
+					if (requiresConstructorSpec && !hasLeadingSpecCall) {
+						diagnostics.push(
+							BaseRule.createError(
+								sourceFile.getFilePath(),
+								"Constructor must call Spec(\"...\") (or spec(\"...\")) as its first statement when it has parameters or executable body statements.",
+								"missing-spec-method",
+								constructorDeclaration.getStartLineNumber()
+							)
+						)
+					}
+				}
 
 				for (const method of methods) {
 					const methodName = method.getName()

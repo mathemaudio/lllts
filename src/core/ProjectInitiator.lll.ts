@@ -18,6 +18,7 @@ export class ProjectInitiator {
 	private config: tsconfig_type
 
 	constructor(private tsconfigPath: string, strategy: LoadStrategy = "from_imports", private entryFile?: string) {
+		Spec("Initializes project graph loading based on the provided strategy.")
 		this.config = this.loadTsConfig(tsconfigPath)
 
 		// When using from_imports strategy, don't auto-load files from tsconfig

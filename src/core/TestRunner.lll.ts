@@ -82,6 +82,7 @@ export class TestRunner {
 	private readonly outDir: string
 
 	constructor(private loader: ProjectInitiator, tsconfigPath: string) {
+		Spec("Initializes runtime paths and decorator-safe browser globals for test execution.")
 		TestRunner.populateFakeBrowserClassesForDecorators()
 		this.projectRoot = path.dirname(tsconfigPath)
 		const config = this.loadTsConfig(tsconfigPath)

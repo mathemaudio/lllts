@@ -19,7 +19,9 @@ type ClientTunnelRunResult = {
 
 @Spec("Runs behavioral scenarios through the overlay UI using a Playwright browser tunnel.")
 export class ClientTunnelRunner {
-	constructor(private readonly loadPlaywright: () => any = () => require("playwright")) { }
+	constructor(private readonly loadPlaywright: () => any = () => require("playwright")) {
+		Spec("Initializes client tunnel runner with injectable playwright loader.")
+	}
 
 	@Spec("Launches browser, waits for the fixed report variable, and returns parsed behavioral status.")
 	@Out("result", "ClientTunnelRunResult")

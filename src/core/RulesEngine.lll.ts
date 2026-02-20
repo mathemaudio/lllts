@@ -13,7 +13,9 @@ import { ProjectInitiator } from "./ProjectInitiator.lll"
 
 @Spec("Loads and executes all rules against project files.")
 export class RulesEngine {
-	constructor(private loader: ProjectInitiator) { }
+	constructor(private loader: ProjectInitiator) {
+		Spec("Initializes the rules engine with a project loader.")
+	}
 
 	@Spec("Executes all registered rules and returns diagnostics.")
 	@Out("diagnostics", "Diagnostic[]")
