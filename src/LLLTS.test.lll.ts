@@ -20,6 +20,7 @@ export class LLLTSTest {
 	private static async withCompileStubs(
 		input: {
 			hasBehavioralTests: boolean
+			ruleDiagnostics?: Array<{ severity: "error" | "warning" | "notice"; file: string; message: string; ruleCode: string; line?: number }>
 			tunnelRunner?: (runInput: { url: string; headed: boolean; timeoutMs: number }) => Promise<{
 				status: "passed" | "failed" | "timeout" | "runtime_error"
 				reportText?: string
@@ -35,7 +36,7 @@ export class LLLTSTest {
 		const originalTunnelRun = ClientTunnelRunner.prototype.run
 
 		RulesEngine.prototype.runAll = function stubRulesRunAll() {
-			return []
+			return input.ruleDiagnostics ?? []
 		}
 		TestRunner.prototype.summarizeInventory = function stubInventory() {
 			return {
@@ -93,7 +94,7 @@ export class LLLTSTest {
 				hasBehavioralTests: true,
 				tunnelRunner: async () => {
 					tunnelInvoked = true
-					return { status: "passed", reportText: "All passed" }
+					return { status: "passed", reportText: "All client behavioral tests passed" }
 				}
 			},
 			async () => {
@@ -126,7 +127,7 @@ export class LLLTSTest {
 					hasBehavioralTests: true,
 					tunnelRunner: async () => ({
 						status: "passed",
-						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll passed"
+						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll client behavioral tests passed"
 					})
 				},
 				async () => {
@@ -144,9 +145,31 @@ export class LLLTSTest {
 			"Passing tunnel run should print summary line"
 		)
 		assert(
-			!logLines.some(line => line.includes("All passed")),
+			!logLines.some(line => line.includes("All client behavioral tests passed")),
 			"Passing tunnel run should not print full report when --verbose is missing"
 		)
+	}
+
+	@Scenario("Behavioral tunnel is skipped when local diagnostics already fail compile")
+	@Out("result", "void")
+	static async behavioralTunnelSkippedOnLocalErrors(input: object = {}, assert: AssertFn) {
+		let tunnelInvoked = false
+		await this.withCompileStubs(
+			{
+				hasBehavioralTests: true,
+				ruleDiagnostics: [{ severity: "error", file: "src/Start.lll.ts", message: "Missing @Spec on method", ruleCode: "missing-spec-method" }],
+				tunnelRunner: async () => {
+					tunnelInvoked = true
+					return { status: "passed", reportText: "All client behavioral tests passed" }
+				}
+			},
+			async () => {
+				const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+				assert(result.mode === "compile", "Compile mode should run for tunnel args")
+				assert(result.exitCode === 1, "Existing compile errors should keep compile mode failing")
+			}
+		)
+		assert(!tunnelInvoked, "Client tunnel runner should not execute when compile already has local errors")
 	}
 
 	@Scenario("Behavioral tunnel failure prints full report and fails compile")
@@ -243,7 +266,7 @@ export class LLLTSTest {
 					hasBehavioralTests: true,
 					tunnelRunner: async () => ({
 						status: "passed",
-						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll passed"
+						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll client behavioral tests passed"
 					})
 				},
 				async () => {
@@ -275,7 +298,7 @@ export class LLLTSTest {
 				hasBehavioralTests: true,
 				tunnelRunner: async (runInput) => {
 					calls.push(runInput)
-					return { status: "passed", reportText: "All passed" }
+					return { status: "passed", reportText: "All client behavioral tests passed" }
 				}
 			},
 			async () => {

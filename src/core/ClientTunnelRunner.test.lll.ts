@@ -31,7 +31,7 @@ export class ClientTunnelRunnerTest {
 			evaluate: async function evaluate(_fn: Function) {
 				evaluateCount += 1
 				if (evaluateCount === 1) {
-					return options.reportText ?? "All passed"
+					return options.reportText ?? "All client behavioral tests passed"
 				}
 				return options.reportJson
 			}
@@ -71,12 +71,12 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Passes when final report line does not contain failed")
-	static async passesWhenLastLineIsAllPassed(input: object = {}, assert: AssertFn) {
+	static async passesWhenLastLineIsClientBehavioralPassed(input: object = {}, assert: AssertFn) {
 		const fixture = this.createRunner({
-			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll passed"
+			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll client behavioral tests passed"
 		})
 		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
-		assert(result.status === "passed", "Expected tunnel result to pass when report ends with All passed")
+		assert(result.status === "passed", "Expected tunnel result to pass when report ends with client behavioral pass summary")
 		assert(fixture.state.launchHeadless === true, "Runner should launch headless browser when headed=false")
 		assert(fixture.state.contextClosedCount === 1, "Runner should close context after run")
 		assert(fixture.state.browserClosedCount === 1, "Runner should close browser after run")
@@ -118,11 +118,11 @@ export class ClientTunnelRunnerTest {
 			summary: { totalTests: 1, passedScenarios: 2, failedScenarios: 0 }
 		}
 		const fixture = this.createRunner({
-			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll passed",
+			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll client behavioral tests passed",
 			reportJson
 		})
 		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
-		assert(result.status === "passed", "Expected report with All passed to map to passed status")
+		assert(result.status === "passed", "Expected report with client behavioral pass summary to map to passed status")
 		assert(!!result.reportJson && typeof result.reportJson === "object", "Expected JSON mirror to be returned when present")
 		const summary = (result.reportJson as { summary?: { totalTests?: number } }).summary
 		assert(!!summary && summary.totalTests === 1, "Expected JSON mirror summary to preserve totalTests")

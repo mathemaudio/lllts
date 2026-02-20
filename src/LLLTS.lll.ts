@@ -66,7 +66,8 @@ export class LLLTS {
 		}
 
 		let clientTunnelResult: ClientTunnelRunResult | null = null
-		if (inventory.hasBehavioralTests && clientTunnelConfig.url) {
+		const diagnosticsFailedBeforeClientTunnel = allDiagnostics.some(r => r.severity === "error")
+		if (!diagnosticsFailedBeforeClientTunnel && inventory.hasBehavioralTests && clientTunnelConfig.url) {
 			const runner = new ClientTunnelRunner()
 			clientTunnelResult = await runner.run({
 				url: clientTunnelConfig.url,

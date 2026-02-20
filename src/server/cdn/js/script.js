@@ -394,7 +394,7 @@
 				lines.push("");
 			}
 			lines.push("");
-			lines.push(allPassed ? "All passed" : "some failed");
+			lines.push(allPassed ? "All client behavioral tests passed" : "some failed");
 			return lines.join("\n");
 		}
 
