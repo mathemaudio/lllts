@@ -5,7 +5,7 @@ import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 
-@Spec("Ensures each .lll.ts file exports exactly lll item, which can be either a class or a type alias.")
+@Spec("Ensures each file has exactly one exported primary class/type and no additional top-level class/type/interface declarations.")
 
 export class OneClassPerFileRule {
 	@Spec("Returns the rule configuration object.")
@@ -79,6 +79,38 @@ export class OneClassPerFileRule {
 							sourceFile.getFilePath(),
 							`Exported ${exportedClasses.length === 1 ? 'class' : 'type'} name "${exportedName}" must match the filename "${fileName}"`,
 							"name-mismatch"
+						)
+					]
+				}
+
+				const primaryClass = exportedClasses.length === 1 ? exportedClasses[0] : undefined
+				const primaryType = exportedTypes.length === 1 ? exportedTypes[0] : undefined
+				const extraTopLevelDeclarations: string[] = []
+
+				sourceFile.getClasses().forEach(classDecl => {
+					if (classDecl !== primaryClass) {
+						extraTopLevelDeclarations.push(`class ${classDecl.getName() ?? "(anonymous)"}`)
+					}
+				})
+
+				sourceFile.getTypeAliases().forEach(typeAlias => {
+					if (typeAlias !== primaryType) {
+						extraTopLevelDeclarations.push(`type ${typeAlias.getName() ?? "(anonymous)"}`)
+					}
+				})
+
+				sourceFile.getInterfaces().forEach(iface => {
+					extraTopLevelDeclarations.push(`interface ${iface.getName() ?? "(anonymous)"}`)
+				})
+
+				if (extraTopLevelDeclarations.length > 0) {
+					const exportType = exportedClasses.length === 1 ? 'class' : 'type'
+					const exportName = exportedClasses.length === 1 ? exportedClasses[0].getName() : exportedTypes[0].getName()
+					return [
+						BaseRule.createError(
+							sourceFile.getFilePath(),
+							`File must contain exactly one top-level ${exportType} declaration (${exportName}). Move these declarations to their own files: ${extraTopLevelDeclarations.join(", ")}.`,
+							"extra-top-level"
 						)
 					]
 				}

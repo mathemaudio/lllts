@@ -14,6 +14,7 @@ export class ResultReporter {
 		"no-export": "Wrong number of exports. Only if it's impossible to follow LLLTS, for example, 1. you need to support old system, 2. you export decorators - only in those two cases - rename the file from .ts to .old.ts, but avoid it at all costs",
 		"name-mismatch": "Export name must match filename",
 		"extra-exports": "Extra exports beyond main class/type",
+		"extra-top-level": "Extra top-level class/type/interface declarations",
 		"rogue-top-level": "Forbidden top-level declarations/statements",
 		"missing-spec-class": "Missing @Spec on class",
 		"missing-spec-method": "Missing @Spec on method",

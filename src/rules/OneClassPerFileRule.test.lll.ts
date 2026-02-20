@@ -46,4 +46,24 @@ export * from './types/EndpointMethod'`
 		)
 		assert(diagnostics.length === 0, "Expected pure re-export barrel to skip one-export checks")
 	}
+
+	@Scenario("Reject additional non-exported top-level type aliases")
+	static async rejectLocalTopLevelHelperType(input: object = {}, assert: AssertFn) {
+		const diagnostics = OneClassPerFileRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`type InternalName = string
+export class MathObject {}`
+		)
+		assert(diagnostics.some(d => d.ruleCode === "extra-top-level"), "Expected local top-level helper type to be rejected")
+	}
+
+	@Scenario("Reject additional top-level interfaces even when non-exported")
+	static async rejectLocalTopLevelInterface(input: object = {}, assert: AssertFn) {
+		const diagnostics = OneClassPerFileRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`interface InternalShape { value: string }
+export class MathObject {}`
+		)
+		assert(diagnostics.some(d => d.ruleCode === "extra-top-level"), "Expected local top-level interface to be rejected")
+	}
 }
