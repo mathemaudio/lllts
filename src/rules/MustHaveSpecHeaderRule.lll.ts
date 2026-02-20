@@ -60,7 +60,7 @@ export class MustHaveSpecHeaderRule {
 						diagnostics.push(
 							BaseRule.createError(
 								sourceFile.getFilePath(),
-								"Constructor must call Spec(\"...\") (or spec(\"...\")) as its first statement when it has parameters or executable body statements.",
+								"Constructor must call Spec(\"...\") as its first statement when it has parameters or executable body statements. All other methods must use @Spec as a decorator, but constructor is an exception.",
 								"missing-spec-method",
 								constructorDeclaration.getStartLineNumber()
 							)
