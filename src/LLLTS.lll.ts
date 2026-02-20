@@ -9,13 +9,12 @@ import { Out } from "./public/lll.lll"
 import { Spec } from "./public/lll.lll"
 import { TestRunner } from "./core/TestRunner.lll"
 import { LlltsServer } from "./server/LlltsServer.lll"
-
-type TestRunnerReports = Awaited<ReturnType<TestRunner["runAll"]>>["reports"]
-type TestInventorySummary = ReturnType<TestRunner["summarizeInventory"]>
-type ClientTunnelRunResult = Awaited<ReturnType<ClientTunnelRunner["run"]>>
-type MainResult = { mode: "compile"; exitCode: number } | { mode: "server"; port: number }
-type ServerModeConfig = { projectPath: string; projectClientLink: string }
-type ClientTunnelConfig = { url: string | null; headed: boolean; timeoutMs: number }
+import type { ClientTunnelConfig } from "./ClientTunnelConfig"
+import type { MainResult } from "./MainResult"
+import type { ServerModeConfig } from "./ServerModeConfig"
+import type { ClientTunnelRunResult } from "./core/ClientTunnelRunResult"
+import type { TestInventorySummary } from "./core/TestInventorySummary"
+import type { TestReport } from "./core/TestReport"
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
@@ -339,7 +338,7 @@ export class LLLTS {
 	}
 
 	@Spec("Logs test and scenario details when --verbose is provided.")
-	private static printTestSummary(reports: TestRunnerReports, hasBehavioralTests: boolean) {
+	private static printTestSummary(reports: TestReport[], hasBehavioralTests: boolean) {
 		if (reports.length === 0) {
 			if (hasBehavioralTests) {
 				return

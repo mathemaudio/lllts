@@ -1,21 +1,8 @@
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import * as util from "util"
-
-type ClientTunnelRunStatus = "passed" | "failed" | "timeout" | "runtime_error"
-
-type ClientTunnelRunInput = {
-	url: string
-	headed: boolean
-	timeoutMs: number
-}
-
-type ClientTunnelRunResult = {
-	status: ClientTunnelRunStatus
-	reportText?: string
-	reportJson?: unknown
-	message?: string
-}
+import type { ClientTunnelRunInput } from "./ClientTunnelRunInput"
+import type { ClientTunnelRunResult } from "./ClientTunnelRunResult"
 
 @Spec("Runs behavioral scenarios through the overlay UI using a Playwright browser tunnel.")
 export class ClientTunnelRunner {

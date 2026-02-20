@@ -1,19 +1,7 @@
 import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll"
 import { ClientTunnelRunner } from "./ClientTunnelRunner.lll"
-
-type FakeRunnerOptions = {
-	reportText?: string
-	reportJson?: unknown
-	gotoError?: Error
-	waitError?: Error
-	launchError?: Error
-}
-
-type FakeRunnerState = {
-	launchHeadless: boolean | null
-	contextClosedCount: number
-	browserClosedCount: number
-}
+import type { FakeRunnerOptions } from "./FakeRunnerOptions"
+import type { FakeRunnerState } from "./FakeRunnerState"
 
 @Spec("Unit coverage for client tunnel browser execution and status mapping.")
 export class ClientTunnelRunnerTest {

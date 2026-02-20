@@ -5,11 +5,7 @@ import { Spec } from "../public/lll.lll.js"
 import * as fs from "fs"
 import * as path from "path"
 import { LoadStrategy } from "../LoadStrategy"
-
-type tsconfig_type = {
-	include?: string[]
-	exclude?: string[]
-}
+import type { tsconfig_type } from "./tsconfig_type"
 
 
 @Spec("Loads a TypeScript project using ts-morph and returns source files.")

@@ -4,30 +4,10 @@ import * as path from "path"
 import { Project } from "ts-morph"
 import type { MethodDeclaration } from "ts-morph"
 import { Out, Spec } from "../public/lll.lll"
-
-type ScenarioDescriptor = {
-	methodName: string
-	title: string
-}
-
-type TestDescriptor = {
-	path: string
-	scenarios: ScenarioDescriptor[]
-}
-
-type ProjectReport = {
-	projectName: string
-	projectPath: string
-	exists: boolean
-	isDirectory: boolean
-	testFiles: string[]
-	testScenarios: Record<string, ScenarioDescriptor[]>
-}
-
-type ServerConfig = {
-	projectPath: string
-	projectClientLink: string
-}
+import type { ProjectReport } from "./ProjectReport"
+import type { ScenarioDescriptor } from "./ScenarioDescriptor"
+import type { ServerConfig } from "./ServerConfig"
+import type { TestDescriptor } from "./TestDescriptor"
 
 @Spec("Hosts the foreground HTTP server mode for lllts.")
 export class LlltsServer {

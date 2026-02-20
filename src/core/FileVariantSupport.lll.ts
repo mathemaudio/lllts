@@ -1,16 +1,7 @@
 import * as path from "path"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
-
-type FileVariant = {
-	primarySuffix: string
-	testSuffix: string
-}
-
-type VariantMatch = {
-	variant: FileVariant
-	isTest: boolean
-}
+import type { VariantMatch } from "./VariantMatch"
 
 @Spec("Provides shared file variant helpers for primary/test file naming.")
 export class FileVariantSupport {

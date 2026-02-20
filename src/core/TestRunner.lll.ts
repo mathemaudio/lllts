@@ -8,72 +8,17 @@ import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import * as fs from "fs"
 import * as path from "path"
 import * as util from "util"
-
-type TsConfig = {
-	compilerOptions?: {
-		rootDir?: string
-		outDir?: string
-	}
-}
-
-type ScenarioMetadata = {
-	id?: string
-	title?: string
-}
-
-type ScenarioEntry = {
-	method: MethodDeclaration
-	metadata: ScenarioMetadata
-}
-
-type ScenarioReport = {
-	id?: string
-	title?: string
-	name: string
-	status: "passed" | "failed"
-}
-
-type TestReport = {
-	className: string
-	filePath: string
-	line: number
-	scenarios: ScenarioReport[]
-}
-
-type TestRunnerResult = {
-	diagnostics: DiagnosticObject[]
-	reports: TestReport[]
-}
-
-type ScenarioContext = {
-	className: string
-	filePath: string
-	scenarioMethodName: string
-	scenarioName: string
-	line: number
-}
-
-type TestType = "unit" | "behavioral"
-
-type Phase = "render" | "scenario"
-
-type TestClassRecord = {
-	file: SourceFile
-	exportedClass: ClassDeclaration
-	className: string
-	relativeFile: string
-}
-
-type BehavioralTestReference = {
-	className: string
-	filePath: string
-	line: number
-}
-
-type TestInventorySummary = {
-	hasBehavioralTests: boolean
-	behavioralTests: BehavioralTestReference[]
-}
+import type { BehavioralTestReference } from "./BehavioralTestReference"
+import type { Phase } from "./Phase"
+import type { ScenarioContext } from "./ScenarioContext"
+import type { ScenarioEntry } from "./ScenarioEntry"
+import type { ScenarioMetadata } from "./ScenarioMetadata"
+import type { TestClassRecord } from "./TestClassRecord"
+import type { TestInventorySummary } from "./TestInventorySummary"
+import type { TestReport } from "./TestReport"
+import type { TestRunnerResult } from "./TestRunnerResult"
+import type { TestType } from "./TestType"
+import type { TsConfig } from "./TsConfig"
 
 @Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
 export class TestRunner {
@@ -252,8 +197,8 @@ export class TestRunner {
 	}
 
 	@Spec("Returns static scenario methods decorated with @Scenario.")
-	@Out("scenarios", "MethodDeclaration[]")
-	private getScenarioMethods(classDecl: ClassDeclaration) {
+	@Out("scenarios", "ScenarioEntry[]")
+	private getScenarioMethods(classDecl: ClassDeclaration): ScenarioEntry[] {
 		return classDecl.getMethods()
 			.filter(method => method.isStatic() && BaseRule.hasDecorator(method, "Scenario"))
 			.map(method => ({
