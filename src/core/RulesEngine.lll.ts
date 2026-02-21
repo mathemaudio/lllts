@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import * as path from "path"
 import { Out, Spec } from "../public/lll.lll"
 import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
@@ -64,6 +65,7 @@ export class RulesEngine {
 
 		let totalClasses = 0
 		let coveredClasses = 0
+		const uncoveredClassFiles: string[] = []
 
 		for (const file of files) {
 			const filePath = file.getFilePath()
@@ -76,15 +78,25 @@ export class RulesEngine {
 			if (!exportedClass) continue
 
 			totalClasses++
+			let isCovered = false
 
 			const testPath = FileVariantSupport.getTestFilePath(filePath, exportedClass.getName())
-			if (!testPath || !fs.existsSync(testPath)) continue
+			if (!testPath || !fs.existsSync(testPath)) {
+				uncoveredClassFiles.push(path.relative(process.cwd(), filePath))
+				continue
+			}
 
 			const testFile = fileByPath.get(testPath)
-			if (!testFile) continue
+			if (!testFile) {
+				uncoveredClassFiles.push(path.relative(process.cwd(), filePath))
+				continue
+			}
 
 			const testClass = BaseRule.getExportedClass(testFile)
-			if (!testClass) continue
+			if (!testClass) {
+				uncoveredClassFiles.push(path.relative(process.cwd(), filePath))
+				continue
+			}
 
 			const hasScenario = testClass
 				.getMethods()
@@ -92,24 +104,42 @@ export class RulesEngine {
 
 			if (hasScenario) {
 				coveredClasses++
+				isCovered = true
+			}
+			if (!isCovered) {
+				uncoveredClassFiles.push(path.relative(process.cwd(), filePath))
 			}
 		}
 
-		if (totalClasses <= 5) {
+		if (totalClasses === 0) {
 			return []
 		}
 
 		const status = this.coverageStatus(totalClasses, coveredClasses)
-		if (status.severity === "ok") {
-			return []
-		}
 		const round = (value: number) => Math.round(value * 10) / 10
-		const currentCoverage = round(coveredClasses / totalClasses * 100)
-		const currentTarget = round(status.requiredCoveragePercent)
-		const isBelow = currentCoverage < currentTarget
-		const message = status.requiredMissingTests > 0
-			? `test technical debt ${status.debtPercent}% ${status.severity === "error" ? "exceeds safe limit" : "(warning)"}: ${coveredClasses}/${totalClasses} primary classes have tests with scenarios (counted primaries only; project has ${files.length} source files); required ${status.requiredTests}. Add ${status.requiredMissingTests} more to meet the target.`
-			: `test coverage is ${currentCoverage}%, ${isBelow ? "below" : "above"} current target of ${currentTarget}%. ${isBelow ? `I recommend adding ${status.idealMissingTests} more tests to reach full coverage.` : `No action required yet.`}`
+		const currentCoverage = round(status.coveragePercent)
+		const currentUncovered = round(status.uncoveredPercent)
+		const currentDebt = round(status.displayDebtPercent)
+		const action =
+			status.band === "notice"
+				? "Notice: keep coverage high and continue adding tests for new classes."
+				: status.band === "warning"
+					? "Warning: add more class companions to reduce test-coverage debt."
+					: status.band === "alert"
+						? "ALERT: coverage is close to the failure threshold; add tests."
+						: "Error: uncovered classes reached the failure threshold (20% or more)."
+		const message = `test coverage debt ${currentDebt}%: ${coveredClasses}/${totalClasses} primary classes are covered with scenario tests (${currentUncovered}% uncovered). ${action}`
+		const showUncovered = status.severity === "warning" || status.severity === "error"
+		if (showUncovered && uncoveredClassFiles.length > 0) {
+			const preview = uncoveredClassFiles.slice(0, 10)
+			const remaining = uncoveredClassFiles.length - preview.length
+			const moreText = remaining > 0 ? ` And ${remaining} many more uncovered.` : ""
+			const withList = `${message} Uncovered class files: ${preview.join(", ")}.${moreText}`
+			if (status.severity === "error") {
+				return [BaseRule.createError("project", withList, "test-coverage")]
+			}
+			return [BaseRule.createWarning("project", withList, "test-coverage")]
+		}
 
 		if (status.severity === "error") {
 			return [BaseRule.createError("project", message, "test-coverage")]
@@ -123,46 +153,36 @@ export class RulesEngine {
 	@Spec("Determines whether a file should be skipped from coverage calculations.")
 	@Out("ignore", "boolean")
 	private shouldIgnore(filePath: string) {
-		return filePath.endsWith(".old.ts") || filePath.endsWith(".d.old.ts") || filePath.endsWith("decorators.ts")
+		return filePath.endsWith(".old.ts")
+			|| filePath.endsWith(".d.old.ts")
+			|| filePath.endsWith("decorators.ts")
+			|| filePath.endsWith("/lll.lll.ts")
 	}
 
-	@Spec("Computes required test coverage ratio for class count.")
-	@Out("ratio", "number")
-	private requiredCoverage(classCount: number) {
-		if (classCount <= 10) return 0
-		if (classCount <= 100) return 0.09 + 0.41 * (classCount - 11) / 89
-		if (classCount <= 500) return 0.50 + 0.50 * (classCount - 100) / 400
-		return 1
-	}
-
-	@Spec("Builds test coverage status details from class/test counts.")
+	@Spec("Builds linear test coverage debt status details from class/test counts.")
 	@Out("status", "object")
 	private coverageStatus(classCount: number, covered = 0) {
 		const classes = Math.max(0, classCount)
 		const effectiveCovered = Math.min(Math.max(0, covered), classes)
-		const reqRatio = this.requiredCoverage(classes)
-		const required = Math.ceil(reqRatio * classes)
-		const idealMissing = Math.max(0, classes - effectiveCovered)
-		const requiredMissing = Math.max(0, required - effectiveCovered)
-		const debtRequired = required === 0 ? 0 : (requiredMissing / required) * 100
-		const debtIdeal = classes === 0 ? 0 : (idealMissing / classes) * 100
+		const coveragePercent = classes === 0 ? 100 : (effectiveCovered / classes) * 100
+		const uncoveredPercent = Math.max(0, 100 - coveragePercent)
+		const displayDebt = (uncoveredPercent / 20) * 100
+		const band =
+			uncoveredPercent < 5
+				? "notice"
+				: uncoveredPercent < 15
+					? "warning"
+					: uncoveredPercent < 20
+						? "alert"
+						: "error"
 		return {
 			totalClasses: classes,
 			coveredClasses: effectiveCovered,
-			requiredCoveragePercent: +(reqRatio * 100).toFixed(2),
-			requiredTests: required,
-			idealMissingTests: idealMissing,
-			requiredMissingTests: requiredMissing,
-			debtPercent: +debtRequired.toFixed(2),
-			idealDebtPercent: +debtIdeal.toFixed(2),
-			severity:
-				debtRequired >= 100
-					? "error"
-					: debtRequired > 0
-						? "warning"
-						: idealMissing > 0
-							? "notice"
-							: "ok"
+			coveragePercent: +coveragePercent.toFixed(2),
+			uncoveredPercent: +uncoveredPercent.toFixed(2),
+			displayDebtPercent: +displayDebt.toFixed(2),
+			band,
+			severity: band === "error" ? "error" : band === "notice" ? "notice" : "warning"
 		}
 	}
 }

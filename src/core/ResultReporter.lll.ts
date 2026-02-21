@@ -28,7 +28,7 @@ export class ResultReporter {
 		"missing-out": "Missing @Out when returning value",
 		"extra-out": "Has @Out but doesn't return value",
 		"bad-out": "Invalid @Out parameters",
-		"test-coverage": "Test coverage",
+		"test-coverage": "Test coverage debt",
 		"test-failure": "Test scenario failed"
 	}
 
@@ -64,6 +64,7 @@ export class ResultReporter {
 
 		const notices = results.filter(r => r.severity === "notice")
 		const issues = results.filter(r => r.severity !== "notice")
+		const hasErrors = results.some(r => r.severity === "error")
 
 		// Print notices first (informational)
 		if (notices.length) {
@@ -75,8 +76,8 @@ export class ResultReporter {
 			this.printGrouped(issues)
 		}
 
-		// If only notices were present, still affirm OK status
-		if (issues.length === 0 && !suppressSuccessMessage) {
+		// Affirm OK status whenever compile has no errors, even if warnings/notices exist.
+		if (!hasErrors && !suppressSuccessMessage) {
 			console.log("\n✅ No issues found.")
 		}
 	}
@@ -95,7 +96,11 @@ export class ResultReporter {
 						? "\x1b[36m"
 						: "\x1b[37m"
 			const reset = "\x1b[0m"
-			const description = ResultReporter.RULE_DESCRIPTIONS[ruleCode as keyof typeof ResultReporter.RULE_DESCRIPTIONS] || ruleCode
+			const baseDescription = ResultReporter.RULE_DESCRIPTIONS[ruleCode as keyof typeof ResultReporter.RULE_DESCRIPTIONS] || ruleCode
+			const coverageDebtMatch = ruleCode === "test-coverage"
+				? diagnostics[0]?.message.match(/^test coverage debt\s+([0-9]+(?:\.[0-9]+)?)%:/i)
+				: null
+			const description = coverageDebtMatch ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
 
 			console.log(`\n${color}${severity.toUpperCase()}: ${description}${reset}`)
 
@@ -114,15 +119,17 @@ export class ResultReporter {
 					console.log(`${indent}${relativePath}`)
 				}
 				for (const diag of fileDiags) {
+					const displayMessage = ruleCode === "test-coverage"
+						? diag.message.replace(/^test coverage debt\s+[0-9]+(?:\.[0-9]+)?%:\s*/i, "")
+						: diag.message || ""
 					const locationPrefix = diag.line
 						? single
 							? `${indent}${relativePath}:${diag.line}`
 							: `${indent}${indent}line ${diag.line}`
 						: single
-							? `${indent}${relativePath}`
+							? (ruleCode === "test-coverage" && file === "project" ? `${indent}` : `${indent}${relativePath}`)
 							: `${indent}${indent}`
-					const message = diag.message || ""
-					console.log(`${locationPrefix} ${message}`)
+					console.log(`${locationPrefix} ${displayMessage}`)
 				}
 			}
 		}

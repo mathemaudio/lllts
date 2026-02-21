@@ -4,6 +4,7 @@ import { RulesEngine } from "./core/RulesEngine.lll.js";
 import { TestRunner } from "./core/TestRunner.lll.js";
 import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
+import type { RuleCode } from "./core/RuleCode";
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
 export class LLLTSTest {
@@ -20,7 +21,7 @@ export class LLLTSTest {
 	private static async withCompileStubs(
 		input: {
 			hasBehavioralTests: boolean
-			ruleDiagnostics?: Array<{ severity: "error" | "warning" | "notice"; file: string; message: string; ruleCode: string; line?: number }>
+			ruleDiagnostics?: Array<{ severity: "error" | "warning" | "notice"; file: string; message: string; ruleCode: RuleCode; line?: number }>
 			tunnelRunner?: (runInput: { url: string; headed: boolean; timeoutMs: number }) => Promise<{
 				status: "passed" | "failed" | "timeout" | "runtime_error"
 				reportText?: string
@@ -111,6 +112,84 @@ export class LLLTSTest {
 		const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnelTimeoutMs", "0"])
 		assert(result.mode === "compile", "Invalid timeout should still return compile result mode")
 		assert(result.exitCode === 1, "Invalid timeout should return non-zero compile exit code")
+	}
+
+	@Scenario("Coverage debt warning keeps compile successful and prints success footer")
+	static async coverageDebtWarningKeepsSuccess(input: object = {}, assert: AssertFn) {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: false,
+					ruleDiagnostics: [{
+						severity: "warning",
+						file: "project",
+						message: "test coverage debt 75%: 85/100 primary classes are covered with scenario tests (85% coverage, 15% uncovered; project has 150 source files). ALERT: coverage is close to the failure threshold; add tests immediately.",
+						ruleCode: "test-coverage"
+					}]
+				},
+				async () => {
+					const result = await LLLTS.main(this.baseCompileArgs())
+					assert(result.mode === "compile", "Compile mode should run for compiler args")
+					assert(result.exitCode === 0, "Warning-level coverage debt should not fail compile")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			logLines.some(line => line.includes("Test coverage debt 75%")),
+			"Coverage warning output should include linear debt message"
+		)
+		assert(
+			logLines.some(line => line.includes("No issues found")),
+			"Warning-only run should keep success footer"
+		)
+	}
+
+	@Scenario("Coverage debt error fails compile and suppresses success footer")
+	static async coverageDebtErrorFailsCompile(input: object = {}, assert: AssertFn) {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: false,
+					ruleDiagnostics: [{
+						severity: "error",
+						file: "project",
+						message: "test coverage debt 125%: 75/100 primary classes are covered with scenario tests (75% coverage, 25% uncovered; project has 150 source files). Error: uncovered classes reached the failure threshold (20% or more).",
+						ruleCode: "test-coverage"
+					}]
+				},
+				async () => {
+					const result = await LLLTS.main(this.baseCompileArgs())
+					assert(result.mode === "compile", "Compile mode should run for compiler args")
+					assert(result.exitCode === 1, "Error-level coverage debt should fail compile")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			logLines.some(line => line.includes("Test coverage debt 125%")),
+			"Coverage error output should include linear debt message"
+		)
+		assert(
+			!logLines.some(line => line.includes("No issues found")),
+			"Error run should not print success footer"
+		)
 	}
 
 	@Scenario("Behavioral tunnel pass returns compile success without full report by default")
