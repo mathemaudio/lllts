@@ -32,6 +32,7 @@ export class LLLTS {
 		const entryFile = this.getArg(args, "--entry")
 		const loadStrategy = this.getOptionalArg(args, "--load-strategy", "from_imports") as LoadStrategy
 		const verbose = this.hasFlag(args, "--verbose")
+		const noTests = this.hasFlag(args, "--noTests")
 		const clientTunnelConfigResult = this.parseClientTunnelConfig(args)
 		if (!clientTunnelConfigResult.valid) {
 			console.error(`\n❌ ${clientTunnelConfigResult.error}`)
@@ -54,20 +55,33 @@ export class LLLTS {
 		}
 
 		const ruleEngine = new RulesEngine(loader)
-		const results = ruleEngine.runAll()
+		const results = ruleEngine.runAll({
+			skipTestRules: noTests,
+			skipTestCoverageDebt: noTests
+		})
 
-		const testRunner = new TestRunner(loader, projectPath)
-		const inventory = testRunner.summarizeInventory()
-		const { diagnostics: scenarioDiagnostics, reports } = await testRunner.runAll()
+		let inventory: TestInventorySummary = {
+			hasBehavioralTests: false,
+			behavioralTests: []
+		}
+		let scenarioDiagnostics: import("./core/DiagnosticObject").DiagnosticObject[] = []
+		let reports: TestReport[] = []
+		if (!noTests) {
+			const testRunner = new TestRunner(loader, projectPath)
+			inventory = testRunner.summarizeInventory()
+			const testRunResult = await testRunner.runAll()
+			scenarioDiagnostics = testRunResult.diagnostics
+			reports = testRunResult.reports
+		}
 
 		const allDiagnostics = [...results, ...scenarioDiagnostics]
-		if (inventory.hasBehavioralTests && !clientTunnelConfig.url) {
+		if (!noTests && inventory.hasBehavioralTests && !clientTunnelConfig.url) {
 			allDiagnostics.push(this.createMissingClientTunnelDiagnostic(inventory))
 		}
 
 		let clientTunnelResult: ClientTunnelRunResult | null = null
 		const diagnosticsFailedBeforeClientTunnel = allDiagnostics.some(r => r.severity === "error")
-		if (!diagnosticsFailedBeforeClientTunnel && inventory.hasBehavioralTests && clientTunnelConfig.url) {
+		if (!noTests && !diagnosticsFailedBeforeClientTunnel && inventory.hasBehavioralTests && clientTunnelConfig.url) {
 			const runner = new ClientTunnelRunner()
 			clientTunnelResult = await runner.run({
 				url: clientTunnelConfig.url,
@@ -82,7 +96,7 @@ export class LLLTS {
 
 		const reporter = new ResultReporter(projectPath)
 		const tunnelFailed = clientTunnelResult?.status === "failed"
-		if (verbose) {
+		if (verbose && !noTests) {
 			this.printTestSummary(reports, inventory.hasBehavioralTests)
 		}
 		reporter.print(allDiagnostics, { suppressSuccessMessage: tunnelFailed })

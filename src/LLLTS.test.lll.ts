@@ -192,6 +192,89 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("--noTests skips test execution/reporting and ignores test-only failures")
+	@Out("result", "void")
+	static async noTestsSkipsTestExecutionAndCoverageDebtErrors(input: object = {}, assert: AssertFn) {
+		const originalRulesRunAll = RulesEngine.prototype.runAll
+		const originalInventory = TestRunner.prototype.summarizeInventory
+		const originalRunAll = TestRunner.prototype.runAll
+		const originalTunnelRun = ClientTunnelRunner.prototype.run
+		const originalLog = console.log
+		const logLines: string[] = []
+		let summarizeInventoryCalled = false
+		let runAllTestsCalled = false
+		let tunnelRunCalled = false
+		const observedSkipSettings: Array<{ skipTestRules?: boolean; skipTestCoverageDebt?: boolean }> = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		RulesEngine.prototype.runAll = function stubRulesRunAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}) {
+			observedSkipSettings.push(options)
+			if (options.skipTestCoverageDebt === true) {
+				return []
+			}
+			return [{
+				severity: "error",
+				file: "project",
+				message: "test coverage debt 125%: synthetic error",
+				ruleCode: "test-coverage"
+			}]
+		}
+		TestRunner.prototype.summarizeInventory = function stubInventory() {
+			summarizeInventoryCalled = true
+			return {
+				hasBehavioralTests: true,
+				behavioralTests: [{ className: "BehavioralSuiteTest", filePath: "src/BehavioralSuite.test.lll.ts", line: 7 }]
+			}
+		}
+		TestRunner.prototype.runAll = async function stubRunAll() {
+			runAllTestsCalled = true
+			return { diagnostics: [], reports: [] }
+		}
+		ClientTunnelRunner.prototype.run = async function stubTunnelRun() {
+			tunnelRunCalled = true
+			return { status: "passed", reportText: "All client behavioral tests passed" }
+		}
+
+		try {
+			const resultWithoutNoTests = await LLLTS.main(this.baseCompileArgs())
+			assert(resultWithoutNoTests.mode === "compile", "Compile mode should run without --noTests")
+			assert(resultWithoutNoTests.exitCode === 1, "Without --noTests, error-level coverage debt should fail compile")
+
+			const resultWithNoTests = await LLLTS.main([
+				...this.baseCompileArgs(),
+				"--noTests",
+				"--verbose",
+				"--clientTunnel", "http://localhost:3000"
+			])
+			assert(resultWithNoTests.mode === "compile", "Compile mode should run with --noTests")
+			assert(resultWithNoTests.exitCode === 0, "--noTests should ignore synthetic test-coverage failure")
+		} finally {
+			RulesEngine.prototype.runAll = originalRulesRunAll
+			TestRunner.prototype.summarizeInventory = originalInventory
+			TestRunner.prototype.runAll = originalRunAll
+			ClientTunnelRunner.prototype.run = originalTunnelRun
+			console.log = originalLog
+		}
+
+		assert(observedSkipSettings.length >= 2, "Rules engine should be invoked for both compile runs")
+		assert(observedSkipSettings[0].skipTestCoverageDebt !== true, "Default run should not skip coverage debt")
+		assert(observedSkipSettings[1].skipTestCoverageDebt === true, "--noTests run should skip coverage debt")
+		assert(observedSkipSettings[1].skipTestRules === true, "--noTests run should skip test rules")
+		assert(summarizeInventoryCalled, "Default run should still summarize inventory")
+		assert(runAllTestsCalled, "Default run should still execute tests")
+		assert(!tunnelRunCalled, "Synthetic coverage error in default run should block tunnel; --noTests should skip tunnel path")
+		assert(
+			!logLines.some(line => line.includes("Test Execution Details")),
+			"--noTests should suppress verbose test execution section"
+		)
+		assert(
+			!logLines.some(line => line.includes("Client tunnel behavioral tests")),
+			"--noTests should not print client tunnel test status"
+		)
+	}
+
 	@Scenario("Behavioral tunnel pass returns compile success without full report by default")
 	static async behavioralTunnelPass(input: object = {}, assert: AssertFn) {
 		const originalLog = console.log

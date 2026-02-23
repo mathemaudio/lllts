@@ -20,16 +20,20 @@ export class RulesEngine {
 
 	@Spec("Executes all registered rules and returns diagnostics.")
 	@Out("diagnostics", "Diagnostic[]")
-	public runAll() {
+	public runAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}) {
+		const skipTestRules = options.skipTestRules === true
+		const skipTestCoverageDebt = options.skipTestCoverageDebt === true
 		const files = this.loader.getFiles()
 		const rules = [
 			OneClassPerFileRule.getRule(),
 			NoRogueTopLevelRule.getRule(),
 			MustHaveSpecHeaderRule.getRule(),
 			MustHaveDescRule.getRule(),
-			MustHaveTestRule.getRule(),
-			MustHaveOutRule.getRule(),
 		]
+		if (!skipTestRules) {
+			rules.push(MustHaveTestRule.getRule())
+		}
+		rules.push(MustHaveOutRule.getRule())
 
 		const all: DiagnosticObject[] = []
 		for (const file of files) {
@@ -50,7 +54,9 @@ export class RulesEngine {
 				}
 			}
 		}
-		all.push(...this.computeTestCoverage())
+		if (!skipTestCoverageDebt) {
+			all.push(...this.computeTestCoverage())
+		}
 		return all
 	}
 
