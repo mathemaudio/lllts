@@ -34,3 +34,6 @@ export type RuleCode =
 	| "file-too-long"        // Non-test file exceeds 900 lines
 	// Method length
 	| "method-too-long"      // Method body exceeds 200 lines
+	// Folder breadth
+	| "folder-too-many-files"
+	| "folder-too-many-folders"
