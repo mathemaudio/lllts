@@ -359,7 +359,7 @@ export class TestRunner {
 		return {
 			file,
 			line: 0,
-			message: `Test runner could not load compiled class '${className}'. The expected output directory is '${relativeOutDir}'. Please run 'npx tsc --noEmit' to check for TypeScript errors or 'npx tsc' to build the project before running tests.`,
+			message: `Test runner could not load compiled class '${className}'. Please compile TypeScript to JavaScript before running tests. Expected output folder is '${relativeOutDir}'.`,
 			severity: "error",
 			ruleCode: this.getRuleCode()
 		}

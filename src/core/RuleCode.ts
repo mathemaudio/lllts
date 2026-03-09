@@ -32,3 +32,5 @@ export type RuleCode =
 	| "test-failure"         // Scenario or expect failed during execution
 	// File length
 	| "file-too-long"        // Non-test file exceeds 900 lines
+	// Method length
+	| "method-too-long"      // Method body exceeds 200 lines

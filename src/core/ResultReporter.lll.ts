@@ -6,6 +6,7 @@ import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import * as path from "path"
 import { MaxFileLengthRule } from "../rules/MaxFileLengthRule.lll"
+import { MaxMethodLengthRule } from "../rules/MaxMethodLengthRule.lll"
 
 @Spec("Formats and prints diagnostics to the console.")
 export class ResultReporter {
@@ -31,7 +32,8 @@ export class ResultReporter {
 		"bad-out": "Invalid @Out parameters",
 		"test-coverage": "Test coverage debt",
 		"test-failure": "Test scenario failed",
-		"file-too-long": `File allowed maximum line limit is ${MaxFileLengthRule.MAX_LINES} lines. Consider splitting into smaller modules`
+		"file-too-long": `File allowed maximum line limit is ${MaxFileLengthRule.MAX_LINES} lines. Consider splitting into smaller modules`,
+		"method-too-long": `Method body allowed maximum line limit is ${MaxMethodLengthRule.MAX_LINES} lines. Consider refactoring into smaller methods`
 	}
 
 	constructor(tsconfigPath: string) {
