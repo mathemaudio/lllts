@@ -5,6 +5,7 @@ import { MustHaveDescRule } from "../rules/MustHaveDescRule.lll"
 import { MustHaveOutRule } from "../rules/MustHaveOutRule.lll"
 import { MustHaveSpecHeaderRule } from "../rules/MustHaveSpecHeaderRule.lll"
 import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
+import { MaxFileLengthRule } from "../rules/MaxFileLengthRule.lll"
 import { NoRogueTopLevelRule } from "../rules/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { BaseRule } from "./BaseRule.lll"
@@ -29,6 +30,7 @@ export class RulesEngine {
 			NoRogueTopLevelRule.getRule(),
 			MustHaveSpecHeaderRule.getRule(),
 			MustHaveDescRule.getRule(),
+			MaxFileLengthRule.getRule(),
 		]
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())

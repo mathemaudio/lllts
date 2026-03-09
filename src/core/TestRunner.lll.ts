@@ -355,10 +355,11 @@ export class TestRunner {
 	@Spec("Reports missing compiled module for a class.")
 	@Out("diagnostic", "Diagnostic")
 	private createModuleDiagnostic(file: string, className: string): DiagnosticObject {
+		const relativeOutDir = path.relative(this.projectRoot, this.outDir)
 		return {
 			file,
 			line: 0,
-			message: `Test runner could not load compiled class '${className}'. Ensure the project is built and outDir contains the compiled file.`,
+			message: `Test runner could not load compiled class '${className}'. The expected output directory is '${relativeOutDir}'. Please run 'npx tsc --noEmit' to check for TypeScript errors or 'npx tsc' to build the project before running tests.`,
 			severity: "error",
 			ruleCode: this.getRuleCode()
 		}

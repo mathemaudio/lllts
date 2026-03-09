@@ -5,13 +5,14 @@ import { Severity } from "./Severity"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import * as path from "path"
+import { MaxFileLengthRule } from "../rules/MaxFileLengthRule.lll"
 
 @Spec("Formats and prints diagnostics to the console.")
 export class ResultReporter {
 	private projectRoot: string
 
 	private static readonly RULE_DESCRIPTIONS: Record<RuleCode, string> = {
-		"no-export": "Wrong number of exports. Only if it's impossible to follow LLLTS, for example, 1. you need to support old system, 2. you export decorators - only in those two cases - rename the file from .ts to .old.ts, but avoid it at all costs",
+		"no-export": "Wrong number of exports. Only if it's impossible to follow LLLTS, for example: 1. you need to support old system, 2. you export decorators - only in those two cases - rename the file from .ts to .old.ts, but avoid it at all costs",
 		"name-mismatch": "Export name must match filename",
 		"extra-exports": "Extra exports beyond main class/type",
 		"extra-top-level": "Extra top-level class/type/interface declarations",
@@ -29,7 +30,8 @@ export class ResultReporter {
 		"extra-out": "Has @Out but doesn't return value",
 		"bad-out": "Invalid @Out parameters",
 		"test-coverage": "Test coverage debt",
-		"test-failure": "Test scenario failed"
+		"test-failure": "Test scenario failed",
+		"file-too-long": `File allowed maximum line limit is ${MaxFileLengthRule.MAX_LINES} lines. Consider splitting into smaller modules`
 	}
 
 	constructor(tsconfigPath: string) {
