@@ -1,5 +1,5 @@
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import * as util from "util"
 import type { ClientTunnelRunInput } from "./ClientTunnelRunInput"
 import type { ClientTunnelRunResult } from "./ClientTunnelRunResult"
@@ -14,7 +14,7 @@ export class ClientTunnelRunner {
 	@Out("result", "ClientTunnelRunResult")
 	public async run(input: ClientTunnelRunInput): Promise<ClientTunnelRunResult> {
 		let browser: any = null
-		let context: any = null
+		let context: any = null;
 
 		try {
 			const playwright = this.loadPlaywright()

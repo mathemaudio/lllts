@@ -1,7 +1,7 @@
-import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll"
+import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { ClientTunnelRunner } from "./ClientTunnelRunner.lll"
-import type { FakeRunnerOptions } from "./FakeRunnerOptions"
-import type { FakeRunnerState } from "./FakeRunnerState"
+import type { FakeRunnerOptions } from "../FakeRunnerOptions"
+import type { FakeRunnerState } from "../FakeRunnerState"
 
 @Spec("Unit coverage for client tunnel browser execution and status mapping.")
 export class ClientTunnelRunnerTest {

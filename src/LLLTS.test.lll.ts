@@ -1,5 +1,5 @@
 import { LLLTS } from "./LLLTS.lll.js";
-import { ClientTunnelRunner } from "./core/ClientTunnelRunner.lll.js";
+import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll.js";
 import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll.js";
 import { TestRunner } from "./core/testing/TestRunner.lll.js";
 import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
