@@ -1,8 +1,8 @@
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { FileVariantSupport } from "../core/FileVariantSupport.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Enforces a maximum file length in lines for non-test LLLTS files.")
 export class MaxFileLengthRule {

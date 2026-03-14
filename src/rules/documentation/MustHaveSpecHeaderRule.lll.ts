@@ -1,9 +1,9 @@
 
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { DiagnosticObject } from "../core/DiagnosticObject"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { DiagnosticObject } from "../../core/DiagnosticObject"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { Node, SyntaxKind, Statement } from "ts-morph"
 
 @Spec("Verifies that each class and method has a @Spec decorator.")

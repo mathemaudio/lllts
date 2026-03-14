@@ -1,7 +1,7 @@
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { Node } from "ts-morph"
 
@@ -19,7 +19,7 @@ export class NoAnyRule {
 					return []
 				}
 
-				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 				const anyKeywords = sourceFile.getDescendantsOfKind(SyntaxKind.AnyKeyword)
 
 				for (const anyKeyword of anyKeywords) {

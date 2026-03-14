@@ -1,7 +1,7 @@
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { Statement, SyntaxKind } from "ts-morph"
 
 @Spec("Forbids rogue top-level declarations; allows one final if, or one final new of exported class in production files.")
@@ -25,7 +25,7 @@ export class NoRogueTopLevelRule {
 				}
 
 				const statements = sourceFile.getStatements()
-				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 				NoRogueTopLevelRule.validateTopLevelIfPlacement(filePath, statements, diagnostics)
 
 				for (let index = 0; index < statements.length; index++) {
@@ -241,7 +241,7 @@ export class NoRogueTopLevelRule {
 	private static validateTopLevelIfPlacement(
 		filePath: string,
 		statements: Statement[],
-		diagnostics: import("../core/DiagnosticObject").DiagnosticObject[]
+		diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[]
 	) {
 		const topLevelIfStatements = statements
 			.filter(statement => statement.getKind() === SyntaxKind.IfStatement)

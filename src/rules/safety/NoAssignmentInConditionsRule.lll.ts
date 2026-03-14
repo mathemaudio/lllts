@@ -1,7 +1,7 @@
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { Node, SyntaxKind } from "ts-morph"
 import type { BinaryExpression, ConditionalExpression, DoStatement, Expression, ForStatement, IfStatement, SourceFile, WhileStatement } from "ts-morph"
 
@@ -19,7 +19,7 @@ export class NoAssignmentInConditionsRule {
 					return []
 				}
 
-				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 				const conditionContexts = NoAssignmentInConditionsRule.collectConditionContexts(sourceFile)
 
 				for (const conditionContext of conditionContexts) {

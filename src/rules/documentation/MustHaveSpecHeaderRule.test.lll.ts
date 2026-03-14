@@ -1,6 +1,6 @@
-import { AssertFn } from "../public/lll.lll"
-import { Scenario } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { AssertFn } from "../../public/lll.lll"
+import { Scenario } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 import { Project } from "ts-morph"
 

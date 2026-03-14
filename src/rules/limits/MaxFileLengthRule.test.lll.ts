@@ -1,6 +1,6 @@
-import { AssertFn } from "../public/lll.lll"
-import { Scenario } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { AssertFn } from "../../public/lll.lll"
+import { Scenario } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { MaxFileLengthRule } from "./MaxFileLengthRule.lll"
 
 @Spec("Covers MaxFileLengthRule enforcement scenarios.")

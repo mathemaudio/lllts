@@ -5,8 +5,8 @@ import { Severity } from "./Severity"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import * as path from "path"
-import { MaxFileLengthRule } from "../rules/MaxFileLengthRule.lll"
-import { MaxMethodLengthRule } from "../rules/MaxMethodLengthRule.lll"
+import { MaxFileLengthRule } from "../rules/limits/MaxFileLengthRule.lll"
+import { MaxMethodLengthRule } from "../rules/limits/MaxMethodLengthRule.lll"
 
 @Spec("Formats and prints diagnostics to the console.")
 export class ResultReporter {

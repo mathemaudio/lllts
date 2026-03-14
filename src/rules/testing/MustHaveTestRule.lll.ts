@@ -1,13 +1,13 @@
 import * as path from "path"
-import { Rule } from "../core/rulesEngine/Rule"
-import { DiagnosticObject } from "../core/DiagnosticObject"
-import { BaseRule } from "../core/BaseRule.lll"
-import { FileVariantSupport } from "../core/FileVariantSupport.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { DiagnosticObject } from "../../core/DiagnosticObject"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
-import type { TestType } from "../core/testing/TestType"
+import type { TestType } from "../../core/testing/TestType"
 
 @Spec("Enforces dedicated '.test.lll.ts' test classes with valid test structure and boundaries.")
 export class MustHaveTestRule {

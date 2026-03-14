@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Out, Scenario, Spec } from "../../../public/lll.lll"
 import { NoImplicitPrimitiveCoercionRule } from "./NoImplicitPrimitiveCoercionRule.lll"
 
 @Spec("Validates the ban on implicit primitive coercion in arithmetic operators.")
@@ -7,7 +7,7 @@ export class NoImplicitPrimitiveCoercionRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoImplicitPrimitiveCoercionRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
+	@Out("diagnostics", "import('../../../core/DiagnosticObject').DiagnosticObject[]")
 	private static runRuleOn(filePath: string, body: string) {
 		const project = new Project({
 			useInMemoryFileSystem: true,

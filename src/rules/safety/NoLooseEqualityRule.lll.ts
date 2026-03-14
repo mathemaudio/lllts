@@ -1,7 +1,7 @@
-import { Rule } from "../core/rulesEngine/Rule"
-import { BaseRule } from "../core/BaseRule.lll"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { BinaryExpression, SourceFile } from "ts-morph"
 
@@ -19,7 +19,7 @@ export class NoLooseEqualityRule {
 					return []
 				}
 
-				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 				const binaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.BinaryExpression)
 
 				for (const binaryExpression of binaryExpressions) {

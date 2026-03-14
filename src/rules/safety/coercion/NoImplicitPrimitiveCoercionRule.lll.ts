@@ -1,7 +1,7 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Out } from "../../../public/lll.lll"
+import { Spec } from "../../../public/lll.lll"
 import { SyntaxKind, ts } from "ts-morph"
 import type { PrefixUnaryExpression, SourceFile, Type } from "ts-morph"
 
@@ -19,7 +19,7 @@ export class NoImplicitPrimitiveCoercionRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				diagnostics.push(...NoImplicitPrimitiveCoercionRule.collectBinaryOperatorDiagnostics(sourceFile, filePath))
 				diagnostics.push(...NoImplicitPrimitiveCoercionRule.collectUnaryOperatorDiagnostics(sourceFile, filePath))
 				return diagnostics
@@ -28,9 +28,9 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Collects diagnostics for binary arithmetic operators whose operands are not both numeric.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
+	@Out("diagnostics", "import('../../../core/DiagnosticObject').DiagnosticObject[]")
 	private static collectBinaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string) {
-		const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+		const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 		const binaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.BinaryExpression)
 
 		for (const binaryExpression of binaryExpressions) {
@@ -67,9 +67,9 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Collects diagnostics for unary plus or minus when the operand is not statically numeric.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
+	@Out("diagnostics", "import('../../../core/DiagnosticObject').DiagnosticObject[]")
 	private static collectUnaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string) {
-		const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+		const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 		const unaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.PrefixUnaryExpression)
 
 		for (const unaryExpression of unaryExpressions) {

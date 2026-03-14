@@ -1,7 +1,7 @@
-import { AssertFn } from "../public/lll.lll"
-import { Out } from "../public/lll.lll"
-import { Scenario } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
+import { AssertFn } from "../../public/lll.lll"
+import { Out } from "../../public/lll.lll"
+import { Scenario } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { MustHaveTestRule } from "./MustHaveTestRule.lll"
 import { Project, SourceFile } from "ts-morph"
 
@@ -16,7 +16,7 @@ export class MustHaveTestRuleTest {
 	}
 
 	@Spec("Runs the rule against one in-memory source file.")
-	@Out("diagnostics", "import('../core/DiagnosticObject').DiagnosticObject[]")
+	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
 	private static runRuleOn(filePath: string, source: string, supportFiles: Record<string, string> = {}) {
 		const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { experimentalDecorators: true } })
 		for (const [supportPath, supportBody] of Object.entries(supportFiles)) {
