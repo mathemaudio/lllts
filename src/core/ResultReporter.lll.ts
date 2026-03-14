@@ -38,7 +38,8 @@ export class ResultReporter {
 		"folder-too-many-folders": "Folder contains too many subfolders",
 		"assignment-in-conditions": "Assignments are forbidden inside conditions",
 		"no-loose-equality": "Loose equality operators are forbidden",
-		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness"
+		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness",
+		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands"
 	}
 
 	constructor(tsconfigPath: string) {

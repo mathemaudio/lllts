@@ -10,6 +10,7 @@ import { MaxMethodLengthRule } from "../rules/MaxMethodLengthRule.lll"
 import { MaxFolderBreadthRule } from "../rules/MaxFolderBreadthRule.lll"
 import { NoAssignmentInConditionsRule } from "../rules/NoAssignmentInConditionsRule.lll"
 import { NoImplicitTruthinessRule } from "../rules/NoImplicitTruthinessRule.lll"
+import { NoImplicitPrimitiveCoercionRule } from "../rules/coercion/NoImplicitPrimitiveCoercionRule.lll"
 import { NoLooseEqualityRule } from "../rules/NoLooseEqualityRule.lll"
 import { NoRogueTopLevelRule } from "../rules/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
@@ -41,6 +42,7 @@ export class RulesEngine {
 			NoAssignmentInConditionsRule.getRule(),
 			NoLooseEqualityRule.getRule(),
 			NoImplicitTruthinessRule.getRule(),
+			NoImplicitPrimitiveCoercionRule.getRule(),
 		]
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())
@@ -196,9 +198,9 @@ export class RulesEngine {
 		return {
 			totalClasses: classes,
 			coveredClasses: effectiveCovered,
-			coveragePercent: +coveragePercent.toFixed(2),
-			uncoveredPercent: +uncoveredPercent.toFixed(2),
-			displayDebtPercent: +displayDebt.toFixed(2),
+			coveragePercent: Number(coveragePercent.toFixed(2)),
+			uncoveredPercent: Number(uncoveredPercent.toFixed(2)),
+			displayDebtPercent: Number(displayDebt.toFixed(2)),
 			band,
 			severity: band === "error" ? "error" : band === "notice" ? "notice" : "warning"
 		}
