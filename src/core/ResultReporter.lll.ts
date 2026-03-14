@@ -39,7 +39,8 @@ export class ResultReporter {
 		"assignment-in-conditions": "Assignments are forbidden inside conditions",
 		"no-loose-equality": "Loose equality operators are forbidden",
 		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness",
-		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands"
+		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands",
+		"no-any": "Explicit any is forbidden"
 	}
 
 	constructor(tsconfigPath: string) {

@@ -42,3 +42,4 @@ export type RuleCode =
 	| "no-loose-equality"           // Loose equality operators are forbidden
 	| "no-implicit-truthiness"      // Conditions must be statically boolean instead of relying on truthiness
 	| "no-implicit-primitive-coercion" // Arithmetic operators require operands statically known to be numeric
+	| "no-any"                      // Explicit any is forbidden
