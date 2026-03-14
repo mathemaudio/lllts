@@ -42,6 +42,7 @@ export type RuleCode =
 	| "no-loose-equality"           // Loose equality operators are forbidden
 	| "no-implicit-truthiness"      // Conditions must be statically boolean instead of relying on truthiness
 	| "switch-fallthrough"          // Switch clauses must terminate or include an explicit fallthrough marker
+	| "no-ignored-promises"         // Promise-valued expression statements must be handled explicitly
 	| "no-implicit-primitive-coercion" // Arithmetic operators require operands statically known to be numeric
 	| "no-any"                      // Explicit any is forbidden
 	| "no-non-null-assertion"       // Postfix non-null assertions are forbidden
