@@ -8,7 +8,7 @@ import { MustHaveTestRule } from "../rules/MustHaveTestRule.lll"
 import { MaxFileLengthRule } from "../rules/MaxFileLengthRule.lll"
 import { MaxMethodLengthRule } from "../rules/MaxMethodLengthRule.lll"
 import { MaxFolderBreadthRule } from "../rules/MaxFolderBreadthRule.lll"
-import { NoAssignmentInIfRule } from "../rules/NoAssignmentInIfRule.lll"
+import { NoAssignmentInConditionsRule } from "../rules/NoAssignmentInConditionsRule.lll"
 import { NoRogueTopLevelRule } from "../rules/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../rules/OneClassPerFileRule.lll"
 import { BaseRule } from "./BaseRule.lll"
@@ -36,7 +36,7 @@ export class RulesEngine {
 			MaxFileLengthRule.getRule(),
 			MaxMethodLengthRule.getRule(),
 			MaxFolderBreadthRule.getRule(),
-			NoAssignmentInIfRule.getRule(),
+			NoAssignmentInConditionsRule.getRule(),
 		]
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())

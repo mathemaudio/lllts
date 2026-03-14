@@ -5,14 +5,14 @@ import { Spec } from "../public/lll.lll"
 import { Node, SyntaxKind } from "ts-morph"
 import type { BinaryExpression, ConditionalExpression, DoStatement, Expression, ForStatement, IfStatement, SourceFile, WhileStatement } from "ts-morph"
 
-@Spec("Forbids assignment expressions anywhere inside condition expressions.")
-export class NoAssignmentInIfRule {
+@Spec("Forbids assignment expressions anywhere inside supported condition expressions.")
+export class NoAssignmentInConditionsRule {
 	@Spec("Returns the rule configuration object.")
 	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R10",
-			title: "No assignments inside if conditions",
+			title: "No assignments inside conditions",
 			run(sourceFile) {
 				const filePath = sourceFile.getFilePath()
 				if (!filePath.endsWith(".ts") || filePath.endsWith(".d.ts")) {
@@ -20,17 +20,17 @@ export class NoAssignmentInIfRule {
 				}
 
 				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
-				const conditionContexts = NoAssignmentInIfRule.collectConditionContexts(sourceFile)
+				const conditionContexts = NoAssignmentInConditionsRule.collectConditionContexts(sourceFile)
 
 				for (const conditionContext of conditionContexts) {
-					const assignments = NoAssignmentInIfRule.findAssignmentsInCondition(conditionContext.expression)
+					const assignments = NoAssignmentInConditionsRule.findAssignmentsInCondition(conditionContext.expression)
 					for (const assignment of assignments) {
 						const operator = assignment.getOperatorToken().getText()
 						diagnostics.push(
 							BaseRule.createError(
 								filePath,
 								`Assignments are forbidden inside ${conditionContext.kind} conditions. Found '${operator}'. Move the assignment before the condition and keep the condition as a pure boolean check.`,
-								"assignment-in-if",
+								"assignment-in-conditions",
 								assignment.getStartLineNumber()
 							)
 						)
@@ -51,15 +51,15 @@ export class NoAssignmentInIfRule {
 		}> = []
 
 		for (const ifStatement of sourceFile.getDescendantsOfKind(SyntaxKind.IfStatement)) {
-			conditions.push(NoAssignmentInIfRule.createConditionContext("if", ifStatement))
+			conditions.push(NoAssignmentInConditionsRule.createConditionContext("if", ifStatement))
 		}
 
 		for (const whileStatement of sourceFile.getDescendantsOfKind(SyntaxKind.WhileStatement)) {
-			conditions.push(NoAssignmentInIfRule.createConditionContext("while", whileStatement))
+			conditions.push(NoAssignmentInConditionsRule.createConditionContext("while", whileStatement))
 		}
 
 		for (const doStatement of sourceFile.getDescendantsOfKind(SyntaxKind.DoStatement)) {
-			conditions.push(NoAssignmentInIfRule.createConditionContext("do while", doStatement))
+			conditions.push(NoAssignmentInConditionsRule.createConditionContext("do while", doStatement))
 		}
 
 		for (const forStatement of sourceFile.getDescendantsOfKind(SyntaxKind.ForStatement)) {
@@ -70,7 +70,7 @@ export class NoAssignmentInIfRule {
 		}
 
 		for (const conditionalExpression of sourceFile.getDescendantsOfKind(SyntaxKind.ConditionalExpression)) {
-			conditions.push(NoAssignmentInIfRule.createConditionContext("ternary", conditionalExpression))
+			conditions.push(NoAssignmentInConditionsRule.createConditionContext("ternary", conditionalExpression))
 		}
 
 		return conditions
@@ -92,10 +92,10 @@ export class NoAssignmentInIfRule {
 	@Spec("Returns assignment binary expressions contained in the condition subtree.")
 	@Out("assignments", "BinaryExpression[]")
 	private static findAssignmentsInCondition(condition: Expression) {
-		const binaryExpressions = NoAssignmentInIfRule.collectBinaryExpressions(condition)
+		const binaryExpressions = NoAssignmentInConditionsRule.collectBinaryExpressions(condition)
 		return binaryExpressions.filter(binaryExpression => {
 			const operatorKind = binaryExpression.getOperatorToken().getKind()
-			return NoAssignmentInIfRule.isAssignmentOperator(operatorKind)
+			return NoAssignmentInConditionsRule.isAssignmentOperator(operatorKind)
 		})
 	}
 

@@ -1,9 +1,9 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll"
-import { NoAssignmentInIfRule } from "./NoAssignmentInIfRule.lll"
+import { NoAssignmentInConditionsRule } from "./NoAssignmentInConditionsRule.lll"
 
 @Spec("Validates the ban on assignment expressions inside if conditions.")
-export class NoAssignmentInIfRuleTest {
+export class NoAssignmentInConditionsRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoAssignmentInIfRule on an in-memory source file.")
@@ -11,12 +11,12 @@ export class NoAssignmentInIfRuleTest {
 	private static runRuleOn(filePath: string, body: string) {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
-		return NoAssignmentInIfRule.getRule().run(sourceFile)
+		return NoAssignmentInConditionsRule.getRule().run(sourceFile)
 	}
 
 	@Scenario("Allows pure boolean checks inside if")
 	static async allowsPureBooleanChecks(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -32,7 +32,7 @@ export class NoAssignmentInIfRuleTest {
 
 	@Scenario("Rejects direct assignment inside if condition")
 	static async rejectsDirectAssignmentInsideIfCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -43,12 +43,12 @@ export class NoAssignmentInIfRuleTest {
 	}
 }`
 		)
-		assert(diagnostics.some(d => d.ruleCode === "assignment-in-if"), "Expected assignment-in-if diagnostic for '='")
+		assert(diagnostics.some(d => d.ruleCode === "assignment-in-conditions"), "Expected assignment-in-conditions diagnostic for '='")
 	}
 
 	@Scenario("Rejects compound assignment nested inside if condition")
 	static async rejectsCompoundAssignmentNestedInsideIfCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -64,7 +64,7 @@ export class NoAssignmentInIfRuleTest {
 
 	@Scenario("Rejects logical assignment inside nested if expression")
 	static async rejectsLogicalAssignmentInsideNestedIfExpression(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -76,12 +76,12 @@ export class NoAssignmentInIfRuleTest {
 	}
 }`
 		)
-		assert(diagnostics.some(d => d.ruleCode === "assignment-in-if"), "Expected logical assignment inside if to fail")
+		assert(diagnostics.some(d => d.ruleCode === "assignment-in-conditions"), "Expected logical assignment inside if to fail")
 	}
 
 	@Scenario("Rejects assignment inside while condition")
 	static async rejectsAssignmentInsideWhileCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -97,7 +97,7 @@ export class NoAssignmentInIfRuleTest {
 
 	@Scenario("Rejects assignment inside do while condition")
 	static async rejectsAssignmentInsideDoWhileCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -113,7 +113,7 @@ export class NoAssignmentInIfRuleTest {
 
 	@Scenario("Rejects assignment inside for condition")
 	static async rejectsAssignmentInsideForCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -127,7 +127,7 @@ export class NoAssignmentInIfRuleTest {
 
 	@Scenario("Rejects assignment inside ternary condition")
 	static async rejectsAssignmentInsideTernaryCondition(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
@@ -140,9 +140,35 @@ export class NoAssignmentInIfRuleTest {
 		assert(diagnostics.some(d => d.message.includes("ternary conditions")), "Expected assignment inside ternary condition to fail")
 	}
 
+	@Scenario("Rejects assignments across all supported condition positions")
+	static async rejectsAssignmentsAcrossAllSupportedConditionPositions(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		let value = 0
+		if (value = 1) {
+			value = 2
+		}
+		while ((value += 1) < 4) {
+			value = value + 1
+		}
+		do {
+			value = value + 1
+		} while ((value *= 2) < 20)
+		for (; (value -= 1) > 0; value = value - 1) {
+		}
+		const done = (value ||= 0) ? true : false
+		return done
+	}
+}`
+		)
+		assert(diagnostics.length === 5, `Expected one diagnostic per supported condition position, got ${diagnostics.length}`)
+	}
+
 	@Scenario("Allows assignments outside the ternary condition slot")
 	static async allowsAssignmentsOutsideTernaryConditionSlot(input: object = {}, assert: AssertFn) {
-		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
 	static main() {
