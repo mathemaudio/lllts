@@ -1,7 +1,7 @@
 
 import { Severity } from "./Severity"
 import { DiagnosticObject } from "./DiagnosticObject"
-import { RuleCode } from "./RuleCode"
+import { RuleCode } from "./rulesEngine/RuleCode"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import type { SourceFile, ClassDeclaration, Decorator, Node } from "ts-morph"

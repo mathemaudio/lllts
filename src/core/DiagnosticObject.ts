@@ -1,5 +1,5 @@
 import { Severity } from "./Severity";
-import { RuleCode } from "./RuleCode";
+import { RuleCode } from "./rulesEngine/RuleCode";
 
 
 export type DiagnosticObject = {

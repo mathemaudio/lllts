@@ -1,4 +1,4 @@
-import { Rule } from "../core/Rule"
+import { Rule } from "../core/rulesEngine/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { Out } from "../public/lll.lll"
@@ -24,7 +24,7 @@ export class MaxFileLengthRule {
 
 				// Skip test files
 				const variant = FileVariantSupport.getVariantForFile(filePath)
-					if (variant !== null && variant.isTest) {
+				if (variant !== null && variant.isTest) {
 					return []
 				}
 

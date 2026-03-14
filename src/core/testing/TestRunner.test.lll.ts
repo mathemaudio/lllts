@@ -1,9 +1,8 @@
-import { Scenario } from "../public/lll.lll.js"
-import { Spec } from "../public/lll.lll.js"
-import { AssertFn } from "../public/lll.lll.js"
-import { TestRunner } from "./TestRunner.lll"
-import { ProjectInitiator } from "./ProjectInitiator.lll"
-
+import { Scenario } from "../../public/lll.lll.js"
+import { Spec } from "../../public/lll.lll.js"
+import { AssertFn } from "../../public/lll.lll.js"
+import { TestRunner } from "./TestRunner.lll.js"
+import { ProjectInitiator } from "../ProjectInitiator.lll.js"
 @Spec("Smoke tests for the scenario execution pipeline.")
 export class TestRunnerTest {
 	testType = "unit"

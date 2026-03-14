@@ -1,6 +1,6 @@
-import { AssertFn, Scenario, Spec } from "../public/lll.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import { RulesEngine } from "./RulesEngine.lll"
-
+//
 type CoverageStatus = {
 	totalClasses: number
 	coveredClasses: number

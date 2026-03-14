@@ -1,4 +1,4 @@
-import { Spec } from "../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 
 // Rule code type definition
 

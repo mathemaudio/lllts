@@ -1,4 +1,4 @@
-import type { ScenarioReport } from "./ScenarioReport"
+import type { ScenarioReport } from "../scenario/ScenarioReport"
 
 export type TestReport = {
 	className: string

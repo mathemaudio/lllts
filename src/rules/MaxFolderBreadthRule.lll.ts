@@ -1,5 +1,5 @@
 import * as path from "path"
-import { Rule } from "../core/Rule"
+import { Rule } from "../core/rulesEngine/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { Out } from "../public/lll.lll"
@@ -64,7 +64,7 @@ export class MaxFolderBreadthRule {
 					ensureFolder(dir)
 					if (!isDotFolder(dir)) {
 						const info = folderInfo.get(dir)
-							if (info !== undefined) {
+						if (info !== undefined) {
 							info.files += 1
 						}
 					}

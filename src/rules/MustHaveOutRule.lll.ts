@@ -1,6 +1,6 @@
 
 import { DiagnosticObject } from "../core/DiagnosticObject"
-import { Rule } from "../core/Rule"
+import { Rule } from "../core/rulesEngine/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
@@ -61,7 +61,7 @@ export class MustHaveOutRule {
 					}
 
 					// Case 3: If method has @Out, verify it has the required parameters
-						if (hasOut && outDecorator !== undefined) {
+					if (hasOut && outDecorator !== undefined) {
 						const args = outDecorator.getArguments()
 						if (args.length < 2) {
 							diagnostics.push(
@@ -113,7 +113,7 @@ export class MustHaveOutRule {
 		// Check if any return statement has a value
 		for (const returnStmt of returnStatements) {
 			const expression = returnStmt.getExpression()
-				if (expression !== undefined) {
+			if (expression !== undefined) {
 				// Has a return value
 				return true
 			}

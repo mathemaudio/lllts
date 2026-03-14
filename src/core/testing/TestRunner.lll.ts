@@ -1,25 +1,25 @@
-import { ProjectInitiator } from "./ProjectInitiator.lll"
-import { DiagnosticObject } from "./DiagnosticObject"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
-import { BaseRule } from "./BaseRule.lll"
-import { RuleCode } from "./RuleCode"
+import { ProjectInitiator } from "../ProjectInitiator.lll"
+import { DiagnosticObject } from "../DiagnosticObject"
+import { Out } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../BaseRule.lll"
+import { RuleCode } from "../rulesEngine/RuleCode"
 import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import * as fs from "fs"
 import * as path from "path"
 import * as util from "util"
-import type { BehavioralTestReference } from "./BehavioralTestReference"
-import type { Phase } from "./Phase"
-import type { ScenarioContext } from "./ScenarioContext"
-import type { ScenarioEntry } from "./ScenarioEntry"
-import type { ScenarioMetadata } from "./ScenarioMetadata"
+import type { BehavioralTestReference } from "../BehavioralTestReference"
+import type { Phase } from "../Phase"
+import type { ScenarioContext } from "../scenario/ScenarioContext"
+import type { ScenarioEntry } from "../scenario/ScenarioEntry"
+import type { ScenarioMetadata } from "../scenario/ScenarioMetadata"
 import type { TestClassRecord } from "./TestClassRecord"
 import type { TestInventorySummary } from "./TestInventorySummary"
 import type { TestReport } from "./TestReport"
 import type { TestRunnerResult } from "./TestRunnerResult"
 import type { TestType } from "./TestType"
-import type { TsConfig } from "./TsConfig"
-
+import type { TsConfig } from "../TsConfig"
+//
 @Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
 export class TestRunner {
 	private readonly projectRoot: string
@@ -108,7 +108,7 @@ export class TestRunner {
 			const renderMethod = this.getRenderMethod(exportedClass)
 			const staticRenderMethod = exportedClass.getStaticMethod("render")
 			const forbiddenRender = renderMethod ?? staticRenderMethod
-				if (testType === "unit" && forbiddenRender !== undefined) {
+			if (testType === "unit" && forbiddenRender !== undefined) {
 				diagnostics.push(this.createRenderForbiddenDiag(relativeFile, className, forbiddenRender.getStartLineNumber()))
 				continue
 			}
@@ -139,12 +139,12 @@ export class TestRunner {
 					id: entry.metadata.id,
 					title: entry.metadata.title,
 					name: scenarioName,
-						status: failure === null ? "passed" : "failed"
-					})
+					status: failure === null ? "passed" : "failed"
+				})
 
-					if (failure !== null) {
-						diagnostics.push(failure)
-					}
+				if (failure !== null) {
+					diagnostics.push(failure)
+				}
 			}
 
 			reports.push(report)

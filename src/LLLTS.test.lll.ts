@@ -1,10 +1,10 @@
 import { LLLTS } from "./LLLTS.lll.js";
 import { ClientTunnelRunner } from "./core/ClientTunnelRunner.lll.js";
-import { RulesEngine } from "./core/RulesEngine.lll.js";
-import { TestRunner } from "./core/TestRunner.lll.js";
+import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll.js";
+import { TestRunner } from "./core/testing/TestRunner.lll.js";
 import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
-import type { RuleCode } from "./core/RuleCode";
+import type { RuleCode } from "./core/rulesEngine/RuleCode.js";
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
 export class LLLTSTest {
@@ -394,7 +394,7 @@ export class LLLTSTest {
 					assert(result.mode === "compile", "Compile mode should run for tunnel args")
 					assert(result.exitCode === 1, "Failing tunnel run should still fail compile mode")
 				}
-				)
+			)
 		} finally {
 			console.log = originalLog
 			console.error = originalError

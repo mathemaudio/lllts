@@ -1,4 +1,4 @@
-import { DiagnosticObject } from "./DiagnosticObject";
+import { DiagnosticObject } from "../DiagnosticObject";
 
 
 export type Rule = {

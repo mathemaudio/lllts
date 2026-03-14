@@ -1,5 +1,5 @@
 import * as path from "path"
-import { Rule } from "../core/Rule"
+import { Rule } from "../core/rulesEngine/Rule"
 import { DiagnosticObject } from "../core/DiagnosticObject"
 import { BaseRule } from "../core/BaseRule.lll"
 import { FileVariantSupport } from "../core/FileVariantSupport.lll"
@@ -7,7 +7,7 @@ import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
-import type { TestType } from "../core/TestType"
+import type { TestType } from "../core/testing/TestType"
 
 @Spec("Enforces dedicated '.test.lll.ts' test classes with valid test structure and boundaries.")
 export class MustHaveTestRule {
@@ -106,7 +106,7 @@ export class MustHaveTestRule {
 			const renderMethod = exportedClass.getInstanceMethod("render")
 			const staticRenderMethod = exportedClass.getStaticMethod("render")
 			const forbiddenMethod = renderMethod ?? staticRenderMethod
-				if (forbiddenMethod !== undefined) {
+			if (forbiddenMethod !== undefined) {
 				diagnostics.push(
 					BaseRule.createError(
 						file,
@@ -200,7 +200,7 @@ export class MustHaveTestRule {
 
 		const renderMethod = exportedClass.getInstanceMethod("render")
 		const staticRenderMethod = exportedClass.getStaticMethod("render")
-			if (staticRenderMethod !== undefined) {
+		if (staticRenderMethod !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
@@ -298,8 +298,8 @@ export class MustHaveTestRule {
 		}
 
 		const init = testTypeProp.getInitializer()
-			const text = init?.getText().trim()
-			const match = text !== undefined && text.length > 0 ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
+		const text = init?.getText().trim()
+		const match = text !== undefined && text.length > 0 ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
 		const testType = match?.[1] as TestType | undefined
 		if (!testType) {
 			diagnostics.push(
@@ -331,7 +331,7 @@ export class MustHaveTestRule {
 			}
 
 			const defaultImport = importDecl.getDefaultImport()?.getText()
-				if (defaultImport !== undefined && defaultImport === hostClassName) {
+			if (defaultImport !== undefined && defaultImport === hostClassName) {
 				importedHostAliases.add(defaultImport)
 			}
 
@@ -361,7 +361,7 @@ export class MustHaveTestRule {
 			if (!importedHostAliases.has(name)) {
 				continue
 			}
-				if (identifier.getFirstAncestorByKind(SyntaxKind.ImportDeclaration) !== undefined) {
+			if (identifier.getFirstAncestorByKind(SyntaxKind.ImportDeclaration) !== undefined) {
 				continue
 			}
 			usedAliases.add(name)

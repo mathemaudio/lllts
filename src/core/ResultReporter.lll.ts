@@ -1,6 +1,6 @@
 
 import { DiagnosticObject } from "./DiagnosticObject"
-import { RuleCode } from "./RuleCode"
+import { RuleCode } from "./rulesEngine/RuleCode"
 import { Severity } from "./Severity"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"

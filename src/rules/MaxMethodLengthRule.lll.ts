@@ -1,4 +1,4 @@
-import { Rule } from "../core/Rule"
+import { Rule } from "../core/rulesEngine/Rule"
 import { BaseRule } from "../core/BaseRule.lll"
 import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { DiagnosticObject } from "../core/DiagnosticObject"
@@ -25,7 +25,7 @@ export class MaxMethodLengthRule {
 
 				// Skip test files
 				const variant = FileVariantSupport.getVariantForFile(filePath)
-					if (variant !== null && variant.isTest) {
+				if (variant !== null && variant.isTest) {
 					return []
 				}
 
@@ -42,7 +42,7 @@ export class MaxMethodLengthRule {
 						// Get the method body
 						const body = method.getBody()
 
-							if (body !== undefined) {
+						if (body !== undefined) {
 							// Count lines in the method body
 							const lineCount = body.getEndLineNumber() - body.getStartLineNumber() + 1
 
