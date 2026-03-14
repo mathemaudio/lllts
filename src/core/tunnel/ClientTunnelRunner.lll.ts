@@ -52,7 +52,6 @@ export class ClientTunnelRunner {
 			}>
 			close: BrowserContext["close"]
 		} | null = null
-
 		try {
 			const playwright = this.loadPlaywright()
 			if (!playwright.chromium || typeof playwright.chromium.launch !== "function") {

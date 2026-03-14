@@ -127,7 +127,10 @@ export class NoImplicitPrimitiveCoercionRule {
 		const visited = new Set<Type>()
 
 		while (pending.length > 0) {
-			const current = pending.pop()!
+			const current = pending.pop()
+			if (current === undefined) {
+				continue
+			}
 			if (visited.has(current)) {
 				continue
 			}

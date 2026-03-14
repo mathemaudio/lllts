@@ -11,6 +11,7 @@ import { NoAnyRule } from "../../rules/safety/NoAnyRule.lll"
 import { NoAssignmentInConditionsRule } from "../../rules/safety/NoAssignmentInConditionsRule.lll"
 import { NoImplicitTruthinessRule } from "../../rules/safety/NoImplicitTruthinessRule.lll"
 import { NoLooseEqualityRule } from "../../rules/safety/NoLooseEqualityRule.lll"
+import { NoNonNullAssertionRule } from "../../rules/safety/NoNonNullAssertionRule.lll"
 import { NoImplicitPrimitiveCoercionRule } from "../../rules/safety/coercion/NoImplicitPrimitiveCoercionRule.lll"
 import { NoRogueTopLevelRule } from "../../rules/structure/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../../rules/structure/OneClassPerFileRule.lll"
@@ -46,6 +47,7 @@ export class RulesEngine {
 			NoImplicitTruthinessRule.getRule(),
 			NoImplicitPrimitiveCoercionRule.getRule(),
 			NoAnyRule.getRule(),
+			NoNonNullAssertionRule.getRule(),
 		]
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())

@@ -40,7 +40,8 @@ export class ResultReporter {
 		"no-loose-equality": "Loose equality operators are forbidden",
 		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness",
 		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands",
-		"no-any": "Explicit any is forbidden"
+		"no-any": "Explicit any is forbidden",
+		"no-non-null-assertion": "Non-null assertions are forbidden"
 	}
 
 	constructor(tsconfigPath: string) {
@@ -58,7 +59,10 @@ export class ResultReporter {
 			if (!grouped.has(ruleCode)) {
 				grouped.set(ruleCode, [])
 			}
-			grouped.get(ruleCode)!.push(diagnostic)
+			const groupedDiagnostics = grouped.get(ruleCode)
+			if (groupedDiagnostics !== undefined) {
+				groupedDiagnostics.push(diagnostic)
+			}
 		}
 		return grouped
 	}
@@ -120,7 +124,10 @@ export class ResultReporter {
 				if (!byFile.has(diag.file)) {
 					byFile.set(diag.file, [])
 				}
-				byFile.get(diag.file)!.push(diag)
+				const fileDiagnostics = byFile.get(diag.file)
+				if (fileDiagnostics !== undefined) {
+					fileDiagnostics.push(diag)
+				}
 			}
 			const indent = `  `
 			for (const [file, fileDiags] of byFile) {

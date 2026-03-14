@@ -10,10 +10,10 @@
 	"type": "commonjs",
 	"scripts": {
 		"watch": "TSC_NONPOLLING_WATCHER=1 tsc --watch",
-		"lll-server": "lllts --server start --port 54300 --projectPath . --projectClientLink http://localhost:1",
 		"lll-check": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
+		"lll-server": "lllts --server start --port 54300 --projectPath . --projectClientLink http://localhost:1",
 		"lll-example-check-quick": "lllts --project tsconfig.json --entry src/examples/MathObject.lll.ts",
 		"lll-example-bad-many-functions": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
 		"lll-example-bad-rogue-top-level": "lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",

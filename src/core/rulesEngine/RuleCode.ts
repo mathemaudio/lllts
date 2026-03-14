@@ -43,3 +43,4 @@ export type RuleCode =
 	| "no-implicit-truthiness"      // Conditions must be statically boolean instead of relying on truthiness
 	| "no-implicit-primitive-coercion" // Arithmetic operators require operands statically known to be numeric
 	| "no-any"                      // Explicit any is forbidden
+	| "no-non-null-assertion"       // Postfix non-null assertions are forbidden
