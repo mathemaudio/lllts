@@ -37,3 +37,5 @@ export type RuleCode =
 	// Folder breadth
 	| "folder-too-many-files"
 	| "folder-too-many-folders"
+	// Control-flow restrictions
+	| "assignment-in-if"    // Assignment expressions are forbidden inside if conditions
