@@ -12,6 +12,7 @@ import { NoAssignmentInConditionsRule } from "../../rules/safety/NoAssignmentInC
 import { NoImplicitTruthinessRule } from "../../rules/safety/NoImplicitTruthinessRule.lll"
 import { NoLooseEqualityRule } from "../../rules/safety/NoLooseEqualityRule.lll"
 import { NoNonNullAssertionRule } from "../../rules/safety/NoNonNullAssertionRule.lll"
+import { NoSwitchFallthroughRule } from "../../rules/safety/NoSwitchFallthroughRule.lll"
 import { NoImplicitPrimitiveCoercionRule } from "../../rules/safety/coercion/NoImplicitPrimitiveCoercionRule.lll"
 import { NoRogueTopLevelRule } from "../../rules/structure/NoRogueTopLevelRule.lll"
 import { OneClassPerFileRule } from "../../rules/structure/OneClassPerFileRule.lll"
@@ -45,6 +46,7 @@ export class RulesEngine {
 			NoAssignmentInConditionsRule.getRule(),
 			NoLooseEqualityRule.getRule(),
 			NoImplicitTruthinessRule.getRule(),
+			NoSwitchFallthroughRule.getRule(),
 			NoImplicitPrimitiveCoercionRule.getRule(),
 			NoAnyRule.getRule(),
 			NoNonNullAssertionRule.getRule(),

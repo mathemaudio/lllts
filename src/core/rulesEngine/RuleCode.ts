@@ -41,6 +41,7 @@ export type RuleCode =
 	| "assignment-in-conditions"    // Assignment expressions are forbidden inside supported condition positions
 	| "no-loose-equality"           // Loose equality operators are forbidden
 	| "no-implicit-truthiness"      // Conditions must be statically boolean instead of relying on truthiness
+	| "switch-fallthrough"          // Switch clauses must terminate or include an explicit fallthrough marker
 	| "no-implicit-primitive-coercion" // Arithmetic operators require operands statically known to be numeric
 	| "no-any"                      // Explicit any is forbidden
 	| "no-non-null-assertion"       // Postfix non-null assertions are forbidden
