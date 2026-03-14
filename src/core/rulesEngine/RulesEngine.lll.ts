@@ -10,6 +10,7 @@ import { MaxMethodLengthRule } from "../../rules/limits/MaxMethodLengthRule.lll"
 import { NoAnyRule } from "../../rules/safety/NoAnyRule.lll"
 import { NoAssignmentInConditionsRule } from "../../rules/safety/NoAssignmentInConditionsRule.lll"
 import { NoImplicitTruthinessRule } from "../../rules/safety/NoImplicitTruthinessRule.lll"
+import { NoFloatingPromisesRule } from "../../rules/safety/NoFloatingPromisesRule.lll"
 import { NoIgnoredPromisesRule } from "../../rules/safety/NoIgnoredPromisesRule.lll"
 import { NoLooseEqualityRule } from "../../rules/safety/NoLooseEqualityRule.lll"
 import { NoNonNullAssertionRule } from "../../rules/safety/NoNonNullAssertionRule.lll"
@@ -49,6 +50,7 @@ export class RulesEngine {
 			NoImplicitTruthinessRule.getRule(),
 			NoSwitchFallthroughRule.getRule(),
 			NoIgnoredPromisesRule.getRule(),
+			NoFloatingPromisesRule.getRule(),
 			NoImplicitPrimitiveCoercionRule.getRule(),
 			NoAnyRule.getRule(),
 			NoNonNullAssertionRule.getRule(),

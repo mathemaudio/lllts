@@ -41,6 +41,7 @@ export class ResultReporter {
 		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness",
 		"switch-fallthrough": "Switch clauses must terminate or use an explicit fallthrough marker",
 		"no-ignored-promises": "Promise-valued expression statements must be handled explicitly",
+		"no-floating-promises": "Promise values created in async code must be awaited, returned, or combined explicitly",
 		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands",
 		"no-any": "Explicit any is forbidden",
 		"no-non-null-assertion": "Non-null assertions are forbidden"
