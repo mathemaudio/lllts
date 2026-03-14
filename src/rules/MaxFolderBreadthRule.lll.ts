@@ -19,23 +19,18 @@ export class MaxFolderBreadthRule {
 			run(sourceFile) {
 				const filePath = sourceFile.getFilePath()
 
-				if (!filePath.endsWith(".lll.ts")) {
+				if (!MaxFolderBreadthRule.isCountedSourceFile(filePath)) {
 					return []
 				}
 
-				const variant = FileVariantSupport.getVariantForFile(filePath)
-				if (!variant || variant.isTest) {
+				if (MaxFolderBreadthRule.isTestFile(filePath)) {
 					return []
 				}
 
 				const project = sourceFile.getProject()
 				const relevantFiles = project.getSourceFiles().filter(f => {
 					const p = f.getFilePath()
-					if (!p.endsWith(".lll.ts")) {
-						return false
-					}
-					const v = FileVariantSupport.getVariantForFile(p)
-					return v !== null && !v.isTest
+					return MaxFolderBreadthRule.isCountedSourceFile(p) && !MaxFolderBreadthRule.isTestFile(p)
 				})
 
 				if (relevantFiles.length === 0) {
@@ -176,5 +171,22 @@ export class MaxFolderBreadthRule {
 			.sort((left, right) => left.localeCompare(right))
 
 		return firstFile === currentFilePath
+	}
+
+	@Spec("Checks whether the file is a TypeScript source file counted by folder breadth.")
+	@Out("isCounted", "boolean")
+	private static isCountedSourceFile(filePath: string) {
+		return filePath.endsWith(".ts") && !filePath.endsWith(".d.ts")
+	}
+
+	@Spec("Checks whether the file path represents a test file that should be excluded from breadth counts.")
+	@Out("isTest", "boolean")
+	private static isTestFile(filePath: string) {
+		const variant = FileVariantSupport.getVariantForFile(filePath)
+		if (variant !== null) {
+			return variant.isTest
+		}
+
+		return filePath.endsWith(".test.ts")
 	}
 }
