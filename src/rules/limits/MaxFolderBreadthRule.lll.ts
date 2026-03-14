@@ -60,7 +60,7 @@ export class MaxFolderBreadthRule {
 					if (!isDotFolder(dir)) {
 						const info = folderInfo.get(dir)
 						if (info !== undefined) {
-							info.files += 1
+							info.files++
 						}
 					}
 
@@ -150,7 +150,7 @@ export class MaxFolderBreadthRule {
 			const parts = dir.split(path.sep).filter(Boolean)
 			let i = 0
 			while (i < commonParts.length && i < parts.length && commonParts[i] === parts[i]) {
-				i += 1
+				i++
 			}
 			commonParts = commonParts.slice(0, i)
 		}

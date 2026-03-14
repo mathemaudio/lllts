@@ -53,7 +53,7 @@ export class NoAssignmentInConditionsRuleTest {
 			`export class MathObject {
 	static main() {
 		let count = 0
-		if ((count += 1) > 0) {
+		if ((count ++) > 0) {
 			count = 10
 		}
 	}
@@ -104,7 +104,7 @@ export class NoAssignmentInConditionsRuleTest {
 		let value = 0
 		do {
 			value = value + 1
-		} while ((value += 1) < 4)
+		} while ((value ++) < 4)
 	}
 }`
 		)
@@ -150,7 +150,7 @@ export class NoAssignmentInConditionsRuleTest {
 		if (value = 1) {
 			value = 2
 		}
-		while ((value += 1) < 4) {
+		while ((value ++) < 4) {
 			value = value + 1
 		}
 		do {

@@ -23,7 +23,7 @@ export class MaxFolderBreadthRuleTest {
 	@Scenario("Verify folder breadth diagnostics are emitted once per project")
 	static async verifyProjectDiagnosticsAreNotDuplicated(input: object = {}, assert: AssertFn) {
 		const project = new Project({ useInMemoryFileSystem: true })
-		for (let i = 1; i <= 13; i += 1) {
+		for (let i = 1; i <= 13; i++) {
 			const name = `Rule${String(i).padStart(2, "0")}`
 			project.createSourceFile(
 				`/repo/src/rules/${name}.lll.ts`,
@@ -48,7 +48,7 @@ export class MaxFolderBreadthRuleTest {
 		const project = new Project({ useInMemoryFileSystem: true })
 		project.createSourceFile("/repo/src/core/Anchor.lll.ts", "export class Anchor {}")
 
-		for (let i = 1; i <= 12; i += 1) {
+		for (let i = 1; i <= 12; i++) {
 			project.createSourceFile(
 				`/repo/src/core/Helper${String(i).padStart(2, "0")}.ts`,
 				`export const helper${i} = ${i}`

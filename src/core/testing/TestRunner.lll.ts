@@ -18,7 +18,6 @@ import type { TestInventorySummary } from "./TestInventorySummary"
 import type { TestReport } from "./TestReport"
 import type { TestRunnerResult } from "./TestRunnerResult"
 import type { TestType } from "./TestType"
-import type { TsConfig } from "../TsConfig"
 //
 @Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
 export class TestRunner {
@@ -69,7 +68,7 @@ export class TestRunner {
 			"MediaRecorder", "WebSocket", "EventSource", "Worker", "SharedWorker", "MessageChannel",
 			"BroadcastChannel", "FileReader", "Blob", "File", "FormData", "DataTransfer", "DataTransferItem"
 		]
-		const target = globalThis as any
+		const target = globalThis as Record<string, unknown>
 		for (const className of browserClasses) {
 			target[className] = target[className] || {}
 		}
@@ -266,15 +265,18 @@ export class TestRunner {
 	}
 
 	@Spec("Requires the compiled JS module and returns the exported class reference.")
-	@Out("classRef", "any")
+	@Out("classRef", "Record<string, unknown> | null")
 	private loadRuntimeClass(sourceFile: SourceFile, className: string) {
 		const compiledPath = this.getCompiledPath(sourceFile.getFilePath())
 		if (!compiledPath || !fs.existsSync(compiledPath)) {
 			return null
 		}
 
-		const exports = require(compiledPath)
-		return exports[className] ?? null
+		const exports = require(compiledPath) as Record<string, unknown>
+		const classRef = exports[className]
+		return typeof classRef === "object" || typeof classRef === "function"
+			? (classRef as Record<string, unknown>)
+			: null
 	}
 
 	@Spec("Maps a source file path to its compiled JavaScript output.")
@@ -291,7 +293,7 @@ export class TestRunner {
 
 	@Spec("Executes a scenario method in unit mode, returning diagnostic on failure.")
 	@Out("diagnostic", "Diagnostic | null")
-	private async runScenarioUnit(context: ScenarioContext, runtimeClass: any) {
+	private async runScenarioUnit(context: ScenarioContext, runtimeClass: Record<string, unknown>) {
 		const capturedLogs: string[] = []
 		const restoreConsole = this.hookConsole(capturedLogs)
 		const assert = this.createAssert()
@@ -303,7 +305,11 @@ export class TestRunner {
 			}
 
 			try {
-				await scenarioFn.call(runtimeClass, undefined, assert)
+				await Reflect.apply(
+					scenarioFn as (input: undefined, assert: unknown) => Promise<unknown> | unknown,
+					runtimeClass,
+					[undefined, assert]
+				)
 			} catch (error) {
 				return this.buildDiagnostic(context, "scenario", error, capturedLogs, "")
 			}

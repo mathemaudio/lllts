@@ -1,43 +1,84 @@
 import { Out } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import * as util from "util"
+import type { Browser } from "playwright"
+import type { BrowserContext } from "playwright"
+import type { BrowserType } from "playwright"
+import type { Page } from "playwright"
 import type { ClientTunnelRunInput } from "./ClientTunnelRunInput"
 import type { ClientTunnelRunResult } from "./ClientTunnelRunResult"
 
 @Spec("Runs behavioral scenarios through the overlay UI using a Playwright browser tunnel.")
 export class ClientTunnelRunner {
-	constructor(private readonly loadPlaywright: () => any = () => require("playwright")) {
+	constructor(
+		private readonly loadPlaywright: () => {
+			chromium: {
+				launch: (...args: Parameters<BrowserType["launch"]>) => Promise<{
+					newContext: (...args: Parameters<Browser["newContext"]>) => Promise<{
+						newPage: (...args: Parameters<BrowserContext["newPage"]>) => Promise<{
+							goto: (...args: Parameters<Page["goto"]>) => Promise<unknown>
+							waitForFunction: (...args: Parameters<Page["waitForFunction"]>) => Promise<unknown>
+							evaluate: <T>(...args: Parameters<Page["evaluate"]>) => Promise<T>
+						}>
+						close: BrowserContext["close"]
+					}>
+					close: Browser["close"]
+				}>
+			}
+		} = () => require("playwright") as typeof import("playwright")
+	) {
 		Spec("Initializes client tunnel runner with injectable playwright loader.")
 	}
 
 	@Spec("Launches browser, waits for the fixed report variable, and returns parsed behavioral status.")
 	@Out("result", "ClientTunnelRunResult")
 	public async run(input: ClientTunnelRunInput): Promise<ClientTunnelRunResult> {
-		let browser: any = null
-		let context: any = null;
+		let browser: {
+			newContext: (...args: Parameters<Browser["newContext"]>) => Promise<{
+				newPage: (...args: Parameters<BrowserContext["newPage"]>) => Promise<{
+					goto: (...args: Parameters<Page["goto"]>) => Promise<unknown>
+					waitForFunction: (...args: Parameters<Page["waitForFunction"]>) => Promise<unknown>
+					evaluate: <T>(...args: Parameters<Page["evaluate"]>) => Promise<T>
+				}>
+				close: BrowserContext["close"]
+			}>
+			close: Browser["close"]
+		} | null = null
+		let context: {
+			newPage: (...args: Parameters<BrowserContext["newPage"]>) => Promise<{
+				goto: (...args: Parameters<Page["goto"]>) => Promise<unknown>
+				waitForFunction: (...args: Parameters<Page["waitForFunction"]>) => Promise<unknown>
+				evaluate: <T>(...args: Parameters<Page["evaluate"]>) => Promise<T>
+			}>
+			close: BrowserContext["close"]
+		} | null = null
 
 		try {
 			const playwright = this.loadPlaywright()
-			const chromium = playwright?.chromium
-			if (!chromium || typeof chromium.launch !== "function") {
+			if (!playwright.chromium || typeof playwright.chromium.launch !== "function") {
 				return {
 					status: "runtime_error",
 					message: "Playwright chromium launcher is unavailable. Install 'playwright' and retry."
 				}
 			}
 
-			browser = await chromium.launch({ headless: !input.headed })
-			context = await browser.newContext()
+			const browserInstance = await playwright.chromium.launch({ headless: !input.headed })
+			browser = browserInstance
+			context = await browserInstance.newContext()
 			const page = await context.newPage()
 
 			await page.goto(input.url, { waitUntil: "domcontentloaded" })
 			await page.waitForFunction(
-				() => typeof (globalThis as any).FIXED_llltsLastRunReport === "string",
+				() => typeof (globalThis as typeof globalThis & { FIXED_llltsLastRunReport?: unknown }).FIXED_llltsLastRunReport === "string",
 				{ timeout: input.timeoutMs }
 			)
 
-			const reportTextRaw = await page.evaluate(() => (globalThis as any).FIXED_llltsLastRunReport)
-			const reportJson = await page.evaluate(() => (globalThis as any).FIXED_llltsLastRunReportJson)
+			const reportTextRaw = await page.evaluate(
+				() => (globalThis as typeof globalThis & { FIXED_llltsLastRunReport?: unknown }).FIXED_llltsLastRunReport
+			)
+			const reportJson = await page.evaluate(
+				() => (globalThis as typeof globalThis & { FIXED_llltsLastRunReportJson?: unknown }).FIXED_llltsLastRunReportJson
+			)
 			const reportText = typeof reportTextRaw === "string" ? reportTextRaw : String(reportTextRaw ?? "")
 
 			return {
@@ -102,7 +143,7 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Safely closes playwright resources without masking primary failures.")
-	private async safeClose(target: any): Promise<void> {
+	private async safeClose(target: { close(): Promise<void> | void } | null) {
 		if (!target || typeof target.close !== "function") {
 			return
 		}

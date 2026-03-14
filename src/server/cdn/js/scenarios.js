@@ -34,7 +34,7 @@
 			return [];
 		}
 		var normalized = [];
-		for (var i = 0; i < rawEntries.length; i += 1) {
+		for (var i = 0; i < rawEntries.length; i++) {
 			var entry = normalizeScenarioEntry(rawEntries[i]);
 			if (!entry) {
 				continue;
@@ -54,7 +54,7 @@
 			return;
 		}
 		emptyElement.hidden = true;
-		for (var i = 0; i < scenarios.length; i += 1) {
+		for (var i = 0; i < scenarios.length; i++) {
 			var scenario = scenarios[i];
 			var item = document.createElement("li");
 			var button = document.createElement("button");
@@ -93,7 +93,7 @@
 		}
 		var targetState = String(state || "idle");
 		var allButtons = listElement.querySelectorAll("button[data-scenario-method]");
-		for (var i = 0; i < allButtons.length; i += 1) {
+		for (var i = 0; i < allButtons.length; i++) {
 			allButtons[i].setAttribute("data-scenario-state", targetState);
 		}
 	}
@@ -117,7 +117,7 @@
 			return;
 		}
 		var allButtons = listElement.querySelectorAll("button[data-scenario-method]");
-		for (var i = 0; i < allButtons.length; i += 1) {
+		for (var i = 0; i < allButtons.length; i++) {
 			var button = allButtons[i];
 			if (button.getAttribute("data-scenario-method") === String(methodName || "")) {
 				button.setAttribute("data-active", "true");

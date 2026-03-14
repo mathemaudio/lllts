@@ -1,4 +1,6 @@
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
+import type { BrowserType } from "playwright"
+import type { Page } from "playwright"
 import { ClientTunnelRunner } from "./ClientTunnelRunner.lll"
 import type { FakeRunnerOptions } from "../FakeRunnerOptions"
 import type { FakeRunnerState } from "../FakeRunnerState"
@@ -18,22 +20,25 @@ export class ClientTunnelRunnerTest {
 
 		let evaluateCount = 0
 		const page = {
-			goto: async function goto(_url: string, _gotoOptions: object) {
+			goto: async function goto(_url: string, _gotoOptions?: Parameters<Page["goto"]>[1]) {
 				if (options.gotoError !== undefined) {
 					throw options.gotoError
 				}
 			},
-			waitForFunction: async function waitForFunction(_predicate: Function, _waitOptions: object) {
+			waitForFunction: async function waitForFunction(
+				_predicate: Parameters<Page["waitForFunction"]>[0],
+				_waitOptions?: Parameters<Page["waitForFunction"]>[1]
+			) {
 				if (options.waitError !== undefined) {
 					throw options.waitError
 				}
 			},
-			evaluate: async function evaluate(_fn: Function) {
-				evaluateCount += 1
+			evaluate: async function evaluate<T>(_fn: Parameters<Page["evaluate"]>[0]) {
+				evaluateCount++
 				if (evaluateCount === 1) {
-					return options.reportText ?? "All client behavioral tests passed"
+					return (options.reportText ?? "All client behavioral tests passed") as T
 				}
-				return options.reportJson
+				return options.reportJson as T
 			}
 		}
 
@@ -42,7 +47,7 @@ export class ClientTunnelRunnerTest {
 				return page
 			},
 			close: async function close() {
-				state.contextClosedCount += 1
+				state.contextClosedCount++
 			}
 		}
 
@@ -51,17 +56,17 @@ export class ClientTunnelRunnerTest {
 				return context
 			},
 			close: async function close() {
-				state.browserClosedCount += 1
+				state.browserClosedCount++
 			}
 		}
 
 		const runner = new ClientTunnelRunner(() => ({
 			chromium: {
-				launch: async function launch(launchOptions: { headless: boolean }) {
+				launch: async function launch(launchOptions?: Parameters<BrowserType["launch"]>[0]) {
 					if (options.launchError !== undefined) {
 						throw options.launchError
 					}
-					state.launchHeadless = launchOptions.headless
+					state.launchHeadless = launchOptions?.headless ?? true
 					return browser
 				}
 			}

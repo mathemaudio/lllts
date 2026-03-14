@@ -98,7 +98,7 @@
 
 	function detectPageModuleTParam() {
 		var moduleScripts = document.querySelectorAll('script[type="module"][src]');
-		for (var i = 0; i < moduleScripts.length; i += 1) {
+		for (var i = 0; i < moduleScripts.length; i++) {
 			var script = moduleScripts[i];
 			var src = script.getAttribute("src");
 			if (!src) {
@@ -134,7 +134,7 @@
 			return null;
 		}
 		var exportKeys = Object.keys(moduleObject);
-		for (var i = 0; i < exportKeys.length; i += 1) {
+		for (var i = 0; i < exportKeys.length; i++) {
 			var candidate = moduleObject[exportKeys[i]];
 			if (!isFunction(candidate)) {
 				continue;
@@ -153,7 +153,7 @@
 
 	function hashPath(value) {
 		var hash = 2166136261 >>> 0;
-		for (var i = 0; i < value.length; i += 1) {
+		for (var i = 0; i < value.length; i++) {
 			hash ^= value.charCodeAt(i);
 			hash = Math.imul(hash, 16777619);
 		}
@@ -312,14 +312,14 @@
 
 		function setListButtonsEnabled(isEnabled) {
 			var listButtons = list.querySelectorAll("button[data-test-path]");
-			for (var i = 0; i < listButtons.length; i += 1) {
+			for (var i = 0; i < listButtons.length; i++) {
 				listButtons[i].disabled = !isEnabled;
 			}
 		}
 
 		function setScenarioButtonsEnabled(isEnabled) {
 			var scenarioButtons = popupScenariosList.querySelectorAll("button[data-scenario-method]");
-			for (var i = 0; i < scenarioButtons.length; i += 1) {
+			for (var i = 0; i < scenarioButtons.length; i++) {
 				scenarioButtons[i].disabled = !isEnabled;
 			}
 		}
@@ -346,7 +346,7 @@
 			var results = [];
 			var scenarios = runContext && Array.isArray(runContext.selectedScenarios) ? runContext.selectedScenarios : [];
 			var resultMap = runContext && runContext.scenarioResultByMethod ? runContext.scenarioResultByMethod : {};
-			for (var i = 0; i < scenarios.length; i += 1) {
+			for (var i = 0; i < scenarios.length; i++) {
 				var scenario = scenarios[i];
 				var methodName = String(scenario.methodName || "");
 				var resolvedResult = resultMap[methodName];
@@ -370,7 +370,7 @@
 		function buildTerminalReport(testReports, allPassed) {
 			var lines = [];
 			var reports = Array.isArray(testReports) ? testReports : [];
-			for (var i = 0; i < reports.length; i += 1) {
+			for (var i = 0; i < reports.length; i++) {
 				var report = reports[i];
 				var testPath = String((report && report.testPath) || "unknown-test");
 				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
@@ -378,7 +378,7 @@
 				if (scenarioResults.length === 0) {
 					lines.push("(no scenarios)");
 				} else {
-					for (var j = 0; j < scenarioResults.length; j += 1) {
+					for (var j = 0; j < scenarioResults.length; j++) {
 						var scenarioResult = scenarioResults[j];
 						var scenarioTitle = String((scenarioResult && scenarioResult.title) || "scenario");
 						var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
@@ -402,14 +402,14 @@
 			var reports = Array.isArray(testReports) ? testReports : [];
 			var passedScenarios = 0;
 			var failedScenarios = 0;
-			for (var i = 0; i < reports.length; i += 1) {
+			for (var i = 0; i < reports.length; i++) {
 				var scenarioResults = Array.isArray(reports[i] && reports[i].scenarioResults) ? reports[i].scenarioResults : [];
-				for (var j = 0; j < scenarioResults.length; j += 1) {
+				for (var j = 0; j < scenarioResults.length; j++) {
 					var scenarioState = String((scenarioResults[j] && scenarioResults[j].state) || "failed");
 					if (scenarioState === "passed") {
-						passedScenarios += 1;
+						passedScenarios++;
 					} else if (scenarioState === "failed") {
-						failedScenarios += 1;
+						failedScenarios++;
 					}
 				}
 			}
@@ -487,7 +487,7 @@
 			scenarioApi.markScenarioSelection(popupScenariosList, "");
 			try {
 				var hasFailures = false;
-				for (var i = 0; i < runContext.selectedScenarios.length; i += 1) {
+				for (var i = 0; i < runContext.selectedScenarios.length; i++) {
 					var result = await executeScenario(runContext, runContext.selectedScenarios[i]);
 					if (result === "stale") {
 						return {
@@ -531,7 +531,7 @@
 				activePreviewElement: null,
 				scenarioResultByMethod: {}
 			};
-			loadTokenCounter += 1;
+			loadTokenCounter++;
 			runContext.loadToken = loadTokenCounter;
 
 			scenarioApi.renderScenarioButtons(popupScenariosList, popupScenariosEmpty, runContext.selectedScenarios, async function (scenario) {
@@ -677,7 +677,7 @@
 			var hasFailures = false;
 			var testReports = [];
 			try {
-				for (var i = 0; i < tests.length; i += 1) {
+				for (var i = 0; i < tests.length; i++) {
 					setPanelResult("running", String(i + 1) + "/" + String(tests.length));
 					var testPath = String(tests[i] || "");
 					var testResult = await loadTestPreview(testPath, true);

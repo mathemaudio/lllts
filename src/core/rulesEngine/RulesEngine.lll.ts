@@ -19,6 +19,7 @@ import { BaseRule } from "../BaseRule.lll"
 import { DiagnosticObject } from "../DiagnosticObject"
 import { FileVariantSupport } from "../FileVariantSupport.lll"
 import { ProjectInitiator } from "../ProjectInitiator.lll"
+import { RuleCode } from "./RuleCode"
 
 @Spec("Loads and executes all rules against project files.")
 export class RulesEngine {
@@ -65,7 +66,7 @@ export class RulesEngine {
 						file: file.getBaseName(),
 						message: `Rule ${rule.id} crashed: ${String(err)}`,
 						severity: "error",
-						ruleCode: "no-export" as any
+						ruleCode: "no-export" as RuleCode
 					})
 				}
 			}
