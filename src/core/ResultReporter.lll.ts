@@ -37,7 +37,8 @@ export class ResultReporter {
 		"folder-too-many-files": "Folder contains too many source files",
 		"folder-too-many-folders": "Folder contains too many subfolders",
 		"assignment-in-conditions": "Assignments are forbidden inside conditions",
-		"no-loose-equality": "Loose equality operators are forbidden"
+		"no-loose-equality": "Loose equality operators are forbidden",
+		"no-implicit-truthiness": "Conditions cannot rely on implicit truthiness"
 	}
 
 	constructor(tsconfigPath: string) {
@@ -75,12 +76,12 @@ export class ResultReporter {
 		const hasErrors = results.some(r => r.severity === "error")
 
 		// Print notices first (informational)
-		if (notices.length) {
+		if (notices.length > 0) {
 			this.printGrouped(notices, "notice")
 		}
 
 		// Print warnings/errors next
-		if (issues.length) {
+		if (issues.length > 0) {
 			this.printGrouped(issues)
 		}
 
@@ -108,7 +109,7 @@ export class ResultReporter {
 			const coverageDebtMatch = ruleCode === "test-coverage"
 				? diagnostics[0]?.message.match(/^test coverage debt\s+([0-9]+(?:\.[0-9]+)?)%:/i)
 				: null
-			const description = coverageDebtMatch ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
+			const description = coverageDebtMatch !== null ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
 
 			console.log(`\n${color}${severity.toUpperCase()}: ${description}${reset}`)
 
@@ -130,7 +131,7 @@ export class ResultReporter {
 					const displayMessage = ruleCode === "test-coverage"
 						? diag.message.replace(/^test coverage debt\s+[0-9]+(?:\.[0-9]+)?%:\s*/i, "")
 						: diag.message || ""
-					const locationPrefix = diag.line
+					const locationPrefix = diag.line !== undefined
 						? single
 							? `${indent}${relativePath}:${diag.line}`
 							: `${indent}${indent}line ${diag.line}`

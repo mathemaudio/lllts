@@ -44,7 +44,7 @@ export class LlltsServerTest {
 		} finally {
 			await new Promise<void>((resolve, reject) => {
 				listener.close(error => {
-					if (error) {
+					if (error !== undefined) {
 						reject(error)
 						return
 					}
@@ -71,7 +71,7 @@ export class LlltsServerTest {
 			close: async () => {
 				await new Promise<void>((resolve, reject) => {
 					listener.close(error => {
-						if (error) {
+						if (error !== undefined) {
 							reject(error)
 							return
 						}

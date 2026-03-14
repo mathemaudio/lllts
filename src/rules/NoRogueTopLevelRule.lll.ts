@@ -111,7 +111,7 @@ export class NoRogueTopLevelRule {
 
 						const expressionStatement = statement.asKindOrThrow(SyntaxKind.ExpressionStatement)
 						const newExpression = expressionStatement.getExpression().asKind(SyntaxKind.NewExpression)
-						if (newExpression) {
+							if (newExpression !== undefined) {
 							const message = filePath.endsWith(".test.lll.ts")
 								? "Top-level class instantiation is forbidden in test files. Tests are instantiated automatically by the language."
 								: "Top-level class instantiation is allowed only as the final statement in the exact form `new ClassName()` matching the exported class."

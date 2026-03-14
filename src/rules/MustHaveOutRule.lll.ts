@@ -61,7 +61,7 @@ export class MustHaveOutRule {
 					}
 
 					// Case 3: If method has @Out, verify it has the required parameters
-					if (hasOut && outDecorator) {
+						if (hasOut && outDecorator !== undefined) {
 						const args = outDecorator.getArguments()
 						if (args.length < 2) {
 							diagnostics.push(
@@ -113,7 +113,7 @@ export class MustHaveOutRule {
 		// Check if any return statement has a value
 		for (const returnStmt of returnStatements) {
 			const expression = returnStmt.getExpression()
-			if (expression) {
+				if (expression !== undefined) {
 				// Has a return value
 				return true
 			}

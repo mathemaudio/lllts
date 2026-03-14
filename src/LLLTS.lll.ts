@@ -24,7 +24,7 @@ export class LLLTS {
 	@Out("result", "{ mode: 'compile', exitCode: number } | { mode: 'server', port: number }")
 	public static async main(args: string[]): Promise<MainResult> {
 		const serverModeResult = await this.tryRunServerMode(args)
-		if (serverModeResult) {
+		if (serverModeResult !== null) {
 			return serverModeResult
 		}
 
@@ -75,13 +75,13 @@ export class LLLTS {
 		}
 
 		const allDiagnostics = [...results, ...scenarioDiagnostics]
-		if (!noTests && inventory.hasBehavioralTests && !clientTunnelConfig.url) {
+		if (!noTests && inventory.hasBehavioralTests && clientTunnelConfig.url === null) {
 			allDiagnostics.push(this.createMissingClientTunnelDiagnostic(inventory))
 		}
 
 		let clientTunnelResult: ClientTunnelRunResult | null = null
 		const diagnosticsFailedBeforeClientTunnel = allDiagnostics.some(r => r.severity === "error")
-		if (!noTests && !diagnosticsFailedBeforeClientTunnel && inventory.hasBehavioralTests && clientTunnelConfig.url) {
+		if (!noTests && !diagnosticsFailedBeforeClientTunnel && inventory.hasBehavioralTests && clientTunnelConfig.url !== null) {
 			const runner = new ClientTunnelRunner()
 			clientTunnelResult = await runner.run({
 				url: clientTunnelConfig.url,
@@ -384,7 +384,7 @@ export class LLLTS {
 	private static printClientTunnelOutput(result: ClientTunnelRunResult, verbose: boolean) {
 		if (result.status === "passed") {
 			console.log("\n🌐 Client tunnel behavioral tests passed.")
-			if (verbose && result.reportText) {
+			if (verbose && typeof result.reportText === "string" && result.reportText.length > 0) {
 				console.log("\n📋 Client tunnel report")
 				console.log(result.reportText)
 			}
@@ -393,7 +393,7 @@ export class LLLTS {
 
 		if (result.status === "failed") {
 			console.log("\n🌐 Client tunnel behavioral tests failed.")
-			if (result.reportText) {
+			if (typeof result.reportText === "string" && result.reportText.length > 0) {
 				console.log("\n📋 Client tunnel report")
 				console.log(result.reportText)
 			}

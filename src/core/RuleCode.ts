@@ -40,3 +40,4 @@ export type RuleCode =
 	// Control-flow restrictions
 	| "assignment-in-conditions"    // Assignment expressions are forbidden inside supported condition positions
 	| "no-loose-equality"           // Loose equality operators are forbidden
+	| "no-implicit-truthiness"      // Conditions must be statically boolean instead of relying on truthiness

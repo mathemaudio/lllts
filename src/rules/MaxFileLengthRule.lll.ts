@@ -24,7 +24,7 @@ export class MaxFileLengthRule {
 
 				// Skip test files
 				const variant = FileVariantSupport.getVariantForFile(filePath)
-				if (variant && variant.isTest) {
+					if (variant !== null && variant.isTest) {
 					return []
 				}
 

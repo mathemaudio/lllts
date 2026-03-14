@@ -25,7 +25,7 @@ export class MaxMethodLengthRule {
 
 				// Skip test files
 				const variant = FileVariantSupport.getVariantForFile(filePath)
-				if (variant && variant.isTest) {
+					if (variant !== null && variant.isTest) {
 					return []
 				}
 
@@ -42,7 +42,7 @@ export class MaxMethodLengthRule {
 						// Get the method body
 						const body = method.getBody()
 
-						if (body) {
+							if (body !== undefined) {
 							// Count lines in the method body
 							const lineCount = body.getEndLineNumber() - body.getStartLineNumber() + 1
 

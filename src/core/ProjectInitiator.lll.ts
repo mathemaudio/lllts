@@ -46,13 +46,13 @@ export class ProjectInitiator {
 		const patterns: string[] = []
 
 		// Add include patterns
-		if (this.config.include?.length) {
-			patterns.push(...this.config.include)
+		if ((this.config.include?.length ?? 0) > 0) {
+			patterns.push(...(this.config.include ?? []))
 		}
 
 		// Add exclude patterns with ! prefix
-		if (this.config.exclude?.length) {
-			patterns.push(...this.config.exclude.map(pattern => `!${pattern}`))
+		if ((this.config.exclude?.length ?? 0) > 0) {
+			patterns.push(...(this.config.exclude ?? []).map(pattern => `!${pattern}`))
 		}
 
 		this.project.addSourceFilesAtPaths(patterns)
@@ -115,7 +115,7 @@ export class ProjectInitiator {
 			// Resolve the import path
 			const resolvedPath = this.resolveImportPath(sourceDir, moduleSpecifier)
 
-			if (resolvedPath) {
+			if (resolvedPath !== null) {
 				this.followImportsRecursively(resolvedPath, visited)
 			}
 		}
@@ -132,7 +132,7 @@ export class ProjectInitiator {
 			}
 
 			const resolvedPath = this.resolveImportPath(sourceDir, moduleSpecifier)
-			if (resolvedPath) {
+			if (resolvedPath !== null) {
 				this.followImportsRecursively(resolvedPath, visited)
 			}
 		}
@@ -141,7 +141,7 @@ export class ProjectInitiator {
 	@Spec("Ensures every primary .lll.ts file brings along its .test.lll.ts counterpart (and vice versa).")
 	private enqueueCompanionFile(filePath: string, visited: Set<string>) {
 		const companionPath = this.getCompanionPath(filePath)
-		if (!companionPath) {
+		if (companionPath === null) {
 			return
 		}
 		if (!fs.existsSync(companionPath)) {
@@ -171,7 +171,7 @@ export class ProjectInitiator {
 		let basePath = path.resolve(sourceDir, moduleSpecifier)
 
 		// If the module specifier already has an extension, try it directly first
-		if (path.extname(moduleSpecifier)) {
+		if (path.extname(moduleSpecifier).length > 0) {
 			if (fs.existsSync(basePath)) {
 				return basePath
 			}

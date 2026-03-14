@@ -23,9 +23,9 @@ export class MustHaveDescRule {
 
 				// Check class-level Spec decorator
 				const classSpecDecorator = BaseRule.findDecorator(exportedClass, "Spec")
-				if (classSpecDecorator) {
-					const args = classSpecDecorator.getArguments()
-					const hasDescription = args.length >= 1 && args[0] && args[0].getText().trim().length > 0
+					if (classSpecDecorator !== undefined) {
+						const args = classSpecDecorator.getArguments()
+						const hasDescription = args.length >= 1 && args[0] !== undefined && args[0].getText().trim().length > 0
 
 					if (!hasDescription) {
 						diagnostics.push(
@@ -42,9 +42,9 @@ export class MustHaveDescRule {
 				const methods = exportedClass.getMethods()
 				for (const method of methods) {
 					const methodSpecDecorator = BaseRule.findDecorator(method, "Spec")
-					if (methodSpecDecorator) {
-						const args = methodSpecDecorator.getArguments()
-						const hasDescription = args.length >= 1 && args[0] && args[0].getText().trim().length > 0
+						if (methodSpecDecorator !== undefined) {
+							const args = methodSpecDecorator.getArguments()
+							const hasDescription = args.length >= 1 && args[0] !== undefined && args[0].getText().trim().length > 0
 
 						if (!hasDescription) {
 							diagnostics.push(

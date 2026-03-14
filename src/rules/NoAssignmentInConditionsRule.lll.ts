@@ -64,7 +64,7 @@ export class NoAssignmentInConditionsRule {
 
 		for (const forStatement of sourceFile.getDescendantsOfKind(SyntaxKind.ForStatement)) {
 			const expression = forStatement.getCondition()
-			if (expression) {
+			if (expression !== undefined) {
 				conditions.push({ kind: "for", expression })
 			}
 		}

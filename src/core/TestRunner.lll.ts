@@ -108,7 +108,7 @@ export class TestRunner {
 			const renderMethod = this.getRenderMethod(exportedClass)
 			const staticRenderMethod = exportedClass.getStaticMethod("render")
 			const forbiddenRender = renderMethod ?? staticRenderMethod
-			if (testType === "unit" && forbiddenRender) {
+				if (testType === "unit" && forbiddenRender !== undefined) {
 				diagnostics.push(this.createRenderForbiddenDiag(relativeFile, className, forbiddenRender.getStartLineNumber()))
 				continue
 			}
@@ -139,12 +139,12 @@ export class TestRunner {
 					id: entry.metadata.id,
 					title: entry.metadata.title,
 					name: scenarioName,
-					status: failure ? "failed" : "passed"
-				})
+						status: failure === null ? "passed" : "failed"
+					})
 
-				if (failure) {
-					diagnostics.push(failure)
-				}
+					if (failure !== null) {
+						diagnostics.push(failure)
+					}
 			}
 
 			reports.push(report)
@@ -219,7 +219,7 @@ export class TestRunner {
 		const testTypeProp = classDecl.getProperties().find(prop => !prop.isStatic() && prop.getName() === "testType")
 		const init = testTypeProp?.getInitializer()
 		const text = init?.getText().trim()
-		const match = text ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
+		const match = text !== undefined && text.length > 0 ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
 		return (match?.[1] as TestType) ?? null
 	}
 
@@ -412,12 +412,12 @@ export class TestRunner {
 			`Reason: ${this.formatError(error)}`
 		]
 
-		const cleanedHtml = htmlSnapshot?.trim()
-		if (cleanedHtml) {
+		const cleanedHtml = htmlSnapshot.trim()
+		if (cleanedHtml.length > 0) {
 			messageLines.push(`DOM snapshot:\n${cleanedHtml.slice(0, 100)}...`)
 		}
 
-		if (logs.length) {
+		if (logs.length > 0) {
 			messageLines.push(`Captured logs:\n${logs.join("\n")}`)
 		}
 

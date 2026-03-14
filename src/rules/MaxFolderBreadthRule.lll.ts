@@ -60,7 +60,7 @@ export class MaxFolderBreadthRule {
 					ensureFolder(dir)
 					if (!isDotFolder(dir)) {
 						const info = folderInfo.get(dir)
-						if (info) {
+							if (info !== undefined) {
 							info.files += 1
 						}
 					}
@@ -77,7 +77,7 @@ export class MaxFolderBreadthRule {
 
 						if (!isDotFolder(current)) {
 							const parentInfo = folderInfo.get(parent)
-							if (parentInfo) {
+							if (parentInfo !== undefined) {
 								parentInfo.children.add(current)
 							}
 						}

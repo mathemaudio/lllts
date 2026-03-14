@@ -106,7 +106,7 @@ export class MustHaveTestRule {
 			const renderMethod = exportedClass.getInstanceMethod("render")
 			const staticRenderMethod = exportedClass.getStaticMethod("render")
 			const forbiddenMethod = renderMethod ?? staticRenderMethod
-			if (forbiddenMethod) {
+				if (forbiddenMethod !== undefined) {
 				diagnostics.push(
 					BaseRule.createError(
 						file,
@@ -200,7 +200,7 @@ export class MustHaveTestRule {
 
 		const renderMethod = exportedClass.getInstanceMethod("render")
 		const staticRenderMethod = exportedClass.getStaticMethod("render")
-		if (staticRenderMethod) {
+			if (staticRenderMethod !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
@@ -298,8 +298,8 @@ export class MustHaveTestRule {
 		}
 
 		const init = testTypeProp.getInitializer()
-		const text = init?.getText().trim()
-		const match = text ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
+			const text = init?.getText().trim()
+			const match = text !== undefined && text.length > 0 ? /^['"`](unit|behavioral)['"`]$/.exec(text) : null
 		const testType = match?.[1] as TestType | undefined
 		if (!testType) {
 			diagnostics.push(
@@ -331,7 +331,7 @@ export class MustHaveTestRule {
 			}
 
 			const defaultImport = importDecl.getDefaultImport()?.getText()
-			if (defaultImport && defaultImport === hostClassName) {
+				if (defaultImport !== undefined && defaultImport === hostClassName) {
 				importedHostAliases.add(defaultImport)
 			}
 
@@ -361,7 +361,7 @@ export class MustHaveTestRule {
 			if (!importedHostAliases.has(name)) {
 				continue
 			}
-			if (identifier.getFirstAncestorByKind(SyntaxKind.ImportDeclaration)) {
+				if (identifier.getFirstAncestorByKind(SyntaxKind.ImportDeclaration) !== undefined) {
 				continue
 			}
 			usedAliases.add(name)

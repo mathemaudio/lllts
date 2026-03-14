@@ -20,7 +20,7 @@ export class MustHaveSpecHeaderRule {
 				const diagnostics: DiagnosticObject[] = []
 				const exportedClass = BaseRule.getExportedClass(sourceFile)
 
-				if (exportedClass) {
+					if (exportedClass !== undefined) {
 					// Check class-level @Spec decorator
 					const hasClassSpec = BaseRule.hasDecorator(exportedClass, "Spec")
 					if (!hasClassSpec) {
@@ -38,9 +38,9 @@ export class MustHaveSpecHeaderRule {
 					const isTestFile = sourceFile.getFilePath().endsWith(".test.lll.ts")
 					const constructorDeclaration = exportedClass.getConstructors()[0]
 
-					if (constructorDeclaration) {
-						const body = constructorDeclaration.getBody()
-						const statements = body && Node.isBlock(body) ? body.getStatements() : []
+						if (constructorDeclaration !== undefined) {
+							const body = constructorDeclaration.getBody()
+							const statements = body !== undefined && Node.isBlock(body) ? body.getStatements() : []
 						const firstStatement = statements[0]
 						const hasParameters = constructorDeclaration.getParameters().length > 0
 						const hasBodyStatements = statements.length > 0
@@ -132,9 +132,9 @@ export class MustHaveSpecHeaderRule {
 	private static requiresSpecForTypeAlias(typeAlias: import("ts-morph").TypeAliasDeclaration) {
 		const lineCount = typeAlias.getEndLineNumber() - typeAlias.getStartLineNumber() + 1
 		const typeNode = typeAlias.getTypeNode()
-		const memberCount = typeNode && Node.isTypeLiteral(typeNode)
-			? typeNode.getMembers().length
-			: 0
+			const memberCount = typeNode !== undefined && Node.isTypeLiteral(typeNode)
+				? typeNode.getMembers().length
+				: 0
 		return lineCount > 10 || memberCount > 10
 	}
 }

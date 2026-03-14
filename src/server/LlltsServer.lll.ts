@@ -120,7 +120,7 @@ export class LlltsServer {
 			upstreamResponse = await fetch(upstreamUrl.toString(), {
 				method,
 				headers: requestHeaders,
-				body: requestBody ? new Uint8Array(requestBody) : undefined
+					body: requestBody !== undefined ? new Uint8Array(requestBody) : undefined
 			})
 		} catch (error) {
 			const reason = error instanceof Error ? error.message : String(error)
@@ -200,7 +200,7 @@ export class LlltsServer {
 			return null
 		}
 		const direct = this.tryParseUrl(trimmed)
-		if (direct) {
+			if (direct !== null) {
 			return direct
 		}
 		if (this.hasExplicitUrlScheme(trimmed)) {

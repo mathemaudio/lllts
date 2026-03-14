@@ -19,12 +19,12 @@ export class ClientTunnelRunnerTest {
 		let evaluateCount = 0
 		const page = {
 			goto: async function goto(_url: string, _gotoOptions: object) {
-				if (options.gotoError) {
+				if (options.gotoError !== undefined) {
 					throw options.gotoError
 				}
 			},
 			waitForFunction: async function waitForFunction(_predicate: Function, _waitOptions: object) {
-				if (options.waitError) {
+				if (options.waitError !== undefined) {
 					throw options.waitError
 				}
 			},
@@ -58,7 +58,7 @@ export class ClientTunnelRunnerTest {
 		const runner = new ClientTunnelRunner(() => ({
 			chromium: {
 				launch: async function launch(launchOptions: { headless: boolean }) {
-					if (options.launchError) {
+					if (options.launchError !== undefined) {
 						throw options.launchError
 					}
 					state.launchHeadless = launchOptions.headless
