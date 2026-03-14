@@ -39,3 +39,4 @@ export type RuleCode =
 	| "folder-too-many-folders"
 	// Control-flow restrictions
 	| "assignment-in-conditions"    // Assignment expressions are forbidden inside supported condition positions
+	| "no-loose-equality"           // Loose equality operators are forbidden

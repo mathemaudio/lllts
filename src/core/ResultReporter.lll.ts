@@ -36,7 +36,8 @@ export class ResultReporter {
 		"method-too-long": `Method body allowed maximum line limit is ${MaxMethodLengthRule.MAX_LINES} lines. Consider refactoring into smaller methods`,
 		"folder-too-many-files": "Folder contains too many source files",
 		"folder-too-many-folders": "Folder contains too many subfolders",
-		"assignment-in-conditions": "Assignments are forbidden inside conditions"
+		"assignment-in-conditions": "Assignments are forbidden inside conditions",
+		"no-loose-equality": "Loose equality operators are forbidden"
 	}
 
 	constructor(tsconfigPath: string) {
