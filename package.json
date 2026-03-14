@@ -10,7 +10,7 @@
 	"type": "commonjs",
 	"scripts": {
 		"watch": "TSC_NONPOLLING_WATCHER=1 tsc --watch",
-		"lll-check": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
+		"🪽lll-check": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
 		"lll-server": "lllts --server start --port 54300 --projectPath . --projectClientLink http://localhost:1",

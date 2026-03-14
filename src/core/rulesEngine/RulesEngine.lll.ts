@@ -14,6 +14,7 @@ import { NoFloatingPromisesRule } from "../../rules/safety/NoFloatingPromisesRul
 import { NoIgnoredPromisesRule } from "../../rules/safety/NoIgnoredPromisesRule.lll"
 import { NoLooseEqualityRule } from "../../rules/safety/NoLooseEqualityRule.lll"
 import { NoNonNullAssertionRule } from "../../rules/safety/NoNonNullAssertionRule.lll"
+import { NoParameterMutationRule } from "../../rules/safety/NoParameterMutationRule.lll"
 import { NoSwitchFallthroughRule } from "../../rules/safety/NoSwitchFallthroughRule.lll"
 import { NoImplicitPrimitiveCoercionRule } from "../../rules/safety/coercion/NoImplicitPrimitiveCoercionRule.lll"
 import { NoRogueTopLevelRule } from "../../rules/structure/NoRogueTopLevelRule.lll"
@@ -54,6 +55,7 @@ export class RulesEngine {
 			NoImplicitPrimitiveCoercionRule.getRule(),
 			NoAnyRule.getRule(),
 			NoNonNullAssertionRule.getRule(),
+			NoParameterMutationRule.getRule(),
 		]
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())

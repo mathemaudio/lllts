@@ -44,7 +44,8 @@ export class ResultReporter {
 		"no-floating-promises": "Promise values created in async code must be awaited, returned, or combined explicitly",
 		"no-implicit-primitive-coercion": "Arithmetic operators require statically numeric operands",
 		"no-any": "Explicit any is forbidden",
-		"no-non-null-assertion": "Non-null assertions are forbidden"
+		"no-non-null-assertion": "Non-null assertions are forbidden",
+		"no-parameter-mutation": "Function parameter bindings must not be reassigned or updated"
 	}
 
 	constructor(tsconfigPath: string) {

@@ -47,3 +47,4 @@ export type RuleCode =
 	| "no-implicit-primitive-coercion" // Arithmetic operators require operands statically known to be numeric
 	| "no-any"                      // Explicit any is forbidden
 	| "no-non-null-assertion"       // Postfix non-null assertions are forbidden
+	| "no-parameter-mutation"        // Function parameter bindings must not be reassigned or updated
