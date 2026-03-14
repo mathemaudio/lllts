@@ -42,6 +42,10 @@ export class MaxFolderBreadthRule {
 					return []
 				}
 
+				if (!MaxFolderBreadthRule.shouldRunForSourceFile(sourceFile.getFilePath(), relevantFiles)) {
+					return []
+				}
+
 				const directories = relevantFiles.map(f => path.dirname(f.getFilePath()))
 				const rootDir = MaxFolderBreadthRule.getCommonDir(directories)
 
@@ -162,5 +166,15 @@ export class MaxFolderBreadthRule {
 
 		const candidate = path.join(path.parse(first).root, ...commonParts)
 		return candidate === "" ? path.parse(first).root : candidate
+	}
+
+	@Spec("Determines whether the current file should own project-wide folder breadth diagnostics.")
+	@Out("shouldRun", "boolean")
+	private static shouldRunForSourceFile(currentFilePath: string, relevantFiles: import("ts-morph").SourceFile[]) {
+		const [firstFile] = relevantFiles
+			.map(file => file.getFilePath())
+			.sort((left, right) => left.localeCompare(right))
+
+		return firstFile === currentFilePath
 	}
 }
