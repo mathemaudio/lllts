@@ -3,9 +3,9 @@ import { BaseRule } from "../core/BaseRule.lll"
 import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import { Node, SyntaxKind } from "ts-morph"
-import type { BinaryExpression, Expression, IfStatement } from "ts-morph"
+import type { BinaryExpression, ConditionalExpression, DoStatement, Expression, ForStatement, IfStatement, SourceFile, WhileStatement } from "ts-morph"
 
-@Spec("Forbids assignment expressions anywhere inside if conditions.")
+@Spec("Forbids assignment expressions anywhere inside condition expressions.")
 export class NoAssignmentInIfRule {
 	@Spec("Returns the rule configuration object.")
 	@Out("rule", "Rule")
@@ -20,16 +20,16 @@ export class NoAssignmentInIfRule {
 				}
 
 				const diagnostics: import("../core/DiagnosticObject").DiagnosticObject[] = []
-				const ifStatements = sourceFile.getDescendantsOfKind(SyntaxKind.IfStatement)
+				const conditionContexts = NoAssignmentInIfRule.collectConditionContexts(sourceFile)
 
-				for (const ifStatement of ifStatements) {
-					const assignments = NoAssignmentInIfRule.findAssignmentsInCondition(ifStatement)
+				for (const conditionContext of conditionContexts) {
+					const assignments = NoAssignmentInIfRule.findAssignmentsInCondition(conditionContext.expression)
 					for (const assignment of assignments) {
 						const operator = assignment.getOperatorToken().getText()
 						diagnostics.push(
 							BaseRule.createError(
 								filePath,
-								`Assignments are forbidden inside if conditions. Found '${operator}'. Move the assignment before the if and keep the condition as a pure boolean check.`,
+								`Assignments are forbidden inside ${conditionContext.kind} conditions. Found '${operator}'. Move the assignment before the condition and keep the condition as a pure boolean check.`,
 								"assignment-in-if",
 								assignment.getStartLineNumber()
 							)
@@ -42,10 +42,56 @@ export class NoAssignmentInIfRule {
 		}
 	}
 
-	@Spec("Returns assignment binary expressions contained in the if condition subtree.")
+	@Spec("Collects condition expressions from supported control-flow and ternary positions.")
+	@Out("conditions", "object[]")
+	private static collectConditionContexts(sourceFile: SourceFile) {
+		const conditions: Array<{
+			kind: "if" | "while" | "do while" | "for" | "ternary"
+			expression: Expression
+		}> = []
+
+		for (const ifStatement of sourceFile.getDescendantsOfKind(SyntaxKind.IfStatement)) {
+			conditions.push(NoAssignmentInIfRule.createConditionContext("if", ifStatement))
+		}
+
+		for (const whileStatement of sourceFile.getDescendantsOfKind(SyntaxKind.WhileStatement)) {
+			conditions.push(NoAssignmentInIfRule.createConditionContext("while", whileStatement))
+		}
+
+		for (const doStatement of sourceFile.getDescendantsOfKind(SyntaxKind.DoStatement)) {
+			conditions.push(NoAssignmentInIfRule.createConditionContext("do while", doStatement))
+		}
+
+		for (const forStatement of sourceFile.getDescendantsOfKind(SyntaxKind.ForStatement)) {
+			const expression = forStatement.getCondition()
+			if (expression) {
+				conditions.push({ kind: "for", expression })
+			}
+		}
+
+		for (const conditionalExpression of sourceFile.getDescendantsOfKind(SyntaxKind.ConditionalExpression)) {
+			conditions.push(NoAssignmentInIfRule.createConditionContext("ternary", conditionalExpression))
+		}
+
+		return conditions
+	}
+
+	@Spec("Builds a condition context from a supported condition-bearing node.")
+	@Out("condition", "object")
+	private static createConditionContext(
+		kind: "if" | "while" | "do while" | "for" | "ternary",
+		node: IfStatement | WhileStatement | DoStatement | ConditionalExpression
+	) {
+		const expression = Node.isConditionalExpression(node) ? node.getCondition() : node.getExpression()
+		return {
+			kind,
+			expression
+		}
+	}
+
+	@Spec("Returns assignment binary expressions contained in the condition subtree.")
 	@Out("assignments", "BinaryExpression[]")
-	private static findAssignmentsInCondition(ifStatement: IfStatement) {
-		const condition = ifStatement.getExpression()
+	private static findAssignmentsInCondition(condition: Expression) {
 		const binaryExpressions = NoAssignmentInIfRule.collectBinaryExpressions(condition)
 		return binaryExpressions.filter(binaryExpression => {
 			const operatorKind = binaryExpression.getOperatorToken().getKind()

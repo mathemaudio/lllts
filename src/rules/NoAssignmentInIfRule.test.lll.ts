@@ -78,4 +78,80 @@ export class NoAssignmentInIfRuleTest {
 		)
 		assert(diagnostics.some(d => d.ruleCode === "assignment-in-if"), "Expected logical assignment inside if to fail")
 	}
+
+	@Scenario("Rejects assignment inside while condition")
+	static async rejectsAssignmentInsideWhileCondition(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		let value = 0
+		while ((value = value + 1) < 3) {
+			value = value + 1
+		}
+	}
+}`
+		)
+		assert(diagnostics.some(d => d.message.includes("while conditions")), "Expected assignment inside while condition to fail")
+	}
+
+	@Scenario("Rejects assignment inside do while condition")
+	static async rejectsAssignmentInsideDoWhileCondition(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		let value = 0
+		do {
+			value = value + 1
+		} while ((value += 1) < 4)
+	}
+}`
+		)
+		assert(diagnostics.some(d => d.message.includes("do while conditions")), "Expected assignment inside do while condition to fail")
+	}
+
+	@Scenario("Rejects assignment inside for condition")
+	static async rejectsAssignmentInsideForCondition(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		for (let value = 0; (value = value + 1) < 3; value = value + 1) {
+		}
+	}
+}`
+		)
+		assert(diagnostics.some(d => d.message.includes("for conditions")), "Expected assignment inside for condition to fail")
+	}
+
+	@Scenario("Rejects assignment inside ternary condition")
+	static async rejectsAssignmentInsideTernaryCondition(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		let ready = false
+		const result = (ready = true) ? 1 : 0
+		return result
+	}
+}`
+		)
+		assert(diagnostics.some(d => d.message.includes("ternary conditions")), "Expected assignment inside ternary condition to fail")
+	}
+
+	@Scenario("Allows assignments outside the ternary condition slot")
+	static async allowsAssignmentsOutsideTernaryConditionSlot(input: object = {}, assert: AssertFn) {
+		const diagnostics = NoAssignmentInIfRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`export class MathObject {
+	static main() {
+		let value = 0
+		const result = value === 0 ? (value = 1) : (value = 2)
+		return result
+	}
+}`
+		)
+		assert(diagnostics.length === 0, "Expected ternary branches to remain outside this rule")
+	}
 }
