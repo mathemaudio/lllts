@@ -15,12 +15,14 @@ export class ClientTunnelRunnerTest {
 		const state: FakeRunnerState = {
 			launchHeadless: null,
 			contextClosedCount: 0,
-			browserClosedCount: 0
+			browserClosedCount: 0,
+			visitedUrl: ""
 		}
 
 		let evaluateCount = 0
 		const page = {
-			goto: async function goto(_url: string, _gotoOptions?: Parameters<Page["goto"]>[1]) {
+			goto: async function goto(url: string, _gotoOptions?: Parameters<Page["goto"]>[1]) {
+				state.visitedUrl = url
 				if (options.gotoError !== undefined) {
 					throw options.gotoError
 				}
@@ -131,5 +133,25 @@ export class ClientTunnelRunnerTest {
 		assert(!!result.reportJson && typeof result.reportJson === "object", "Expected JSON mirror to be returned when present")
 		const summary = (result.reportJson as { summary?: { totalTests?: number } }).summary
 		assert(!!summary && summary.totalTests === 1, "Expected JSON mirror summary to preserve totalTests")
+	}
+
+	@Scenario("Appends automatic=true to tunnel URL before browser navigation")
+	static async appendsAutomaticQueryParam(input: object = {}, assert: AssertFn) {
+		const fixture = this.createRunner()
+		await fixture.runner.run({ url: "http://localhost:3000/tunnel", headed: false, timeoutMs: 60000 })
+		assert(
+			fixture.state.visitedUrl === "http://localhost:3000/tunnel?automatic=true",
+			"Expected tunnel runner to append automatic=true when query string is absent"
+		)
+	}
+
+	@Scenario("Preserves existing tunnel query parameters when adding automatic=true")
+	static async preservesExistingQueryParams(input: object = {}, assert: AssertFn) {
+		const fixture = this.createRunner()
+		await fixture.runner.run({ url: "http://localhost:3000/tunnel?foo=bar", headed: false, timeoutMs: 60000 })
+		assert(
+			fixture.state.visitedUrl === "http://localhost:3000/tunnel?foo=bar&automatic=true",
+			"Expected tunnel runner to preserve existing query params when adding automatic=true"
+		)
 	}
 }

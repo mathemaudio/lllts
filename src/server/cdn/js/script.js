@@ -26,6 +26,15 @@
 		return trimmed.length > 0 ? trimmed : FALLBACK_ASSETS_BASE_PATH;
 	}
 
+	function shouldAutoRunFromQuery() {
+		try {
+			var currentUrl = new URL(window.location.href);
+			return currentUrl.searchParams.get("automatic") === "true";
+		} catch (_error) {
+			return false;
+		}
+	}
+
 	function getScenarioApi() {
 		if (typeof window !== "undefined" && window.llltsOverlayScenarios) {
 			return window.llltsOverlayScenarios;
@@ -725,9 +734,11 @@
 			await runPanelPlayAllSequence(false);
 		});
 
-		setTimeout(function () {
-			void runPanelPlayAllSequence(true);
-		}, 0);
+		if (shouldAutoRunFromQuery()) {
+			setTimeout(function () {
+				void runPanelPlayAllSequence(true);
+			}, 0);
+		}
 	}
 
 	async function init() {

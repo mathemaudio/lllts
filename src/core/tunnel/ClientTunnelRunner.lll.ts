@@ -65,8 +65,9 @@ export class ClientTunnelRunner {
 			browser = browserInstance
 			context = await browserInstance.newContext()
 			const page = await context.newPage()
+			const automaticUrl = this.buildAutomaticTunnelUrl(input.url)
 
-			await page.goto(input.url, { waitUntil: "domcontentloaded" })
+			await page.goto(automaticUrl, { waitUntil: "domcontentloaded" })
 			await page.waitForFunction(
 				() => typeof (globalThis as typeof globalThis & { FIXED_llltsLastRunReport?: unknown }).FIXED_llltsLastRunReport === "string",
 				{ timeout: input.timeoutMs }
@@ -102,6 +103,20 @@ export class ClientTunnelRunner {
 			.filter(line => line.length > 0)
 		const lastLine = lines.length > 0 ? lines[lines.length - 1] : ""
 		return /failed/i.test(lastLine)
+	}
+
+	@Spec("Appends the browser auto-run query flag while preserving the rest of the tunnel URL.")
+	@Out("url", "string")
+	private buildAutomaticTunnelUrl(url: string): string {
+		const automatic_url_key = "automatic"
+		try {
+			const parsedUrl = new URL(url)
+			parsedUrl.searchParams.set(automatic_url_key, "true")
+			return parsedUrl.toString()
+		} catch {
+			const separator = url.includes("?") ? "&" : "?"
+			return `${url}${separator}${automatic_url_key}=true`
+		}
 	}
 
 	@Spec("Maps browser/runtime errors into deterministic tunnel statuses.")
