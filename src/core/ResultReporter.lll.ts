@@ -71,7 +71,7 @@ export class ResultReporter {
 		return grouped
 	}
 
-	@Spec("Pretty prints results with colors in grouped format.")
+	@Spec("Pretty prints results in grouped format without ANSI colors.")
 	public print(results: DiagnosticObject[], options: { suppressSuccessMessage?: boolean } = {}) {
 		const suppressSuccessMessage = options.suppressSuccessMessage === true
 		if (results.length === 0) {
@@ -107,21 +107,13 @@ export class ResultReporter {
 
 		for (const [ruleCode, diagnostics] of grouped) {
 			const severity = forcedSeverity ?? diagnostics[0].severity
-			const color = severity === "error"
-				? "\x1b[31m"
-				: severity === "warning"
-					? "\x1b[33m"
-					: severity === "notice"
-						? "\x1b[36m"
-						: "\x1b[37m"
-			const reset = "\x1b[0m"
 			const baseDescription = ResultReporter.RULE_DESCRIPTIONS[ruleCode as keyof typeof ResultReporter.RULE_DESCRIPTIONS] || ruleCode
 			const coverageDebtMatch = ruleCode === "test-coverage"
 				? diagnostics[0]?.message.match(/^test coverage debt\s+([0-9]+(?:\.[0-9]+)?)%:/i)
 				: null
 			const description = coverageDebtMatch !== null ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
 
-			console.log(`\n${color}${severity.toUpperCase()}: ${description}${reset}`)
+			console.log(`\n${this.getSeverityPrefix(severity)} ${severity.toUpperCase()}: ${description}`)
 
 			const byFile = new Map<string, DiagnosticObject[]>()
 			for (const diag of diagnostics) {
@@ -155,5 +147,20 @@ export class ResultReporter {
 				}
 			}
 		}
+	}
+
+	@Spec("Maps severities to plain-text emoji prefixes.")
+	@Out("prefix", "string")
+	private getSeverityPrefix(severity: Severity) {
+		if (severity === "error") {
+			return "❌"
+		}
+		if (severity === "warning") {
+			return "⚠️"
+		}
+		if (severity === "notice") {
+			return "ℹ️"
+		}
+		return "•"
 	}
 }
