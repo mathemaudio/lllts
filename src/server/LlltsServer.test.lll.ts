@@ -5,6 +5,7 @@ import * as path from "path"
 import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll.js"
 import { LlltsServer } from "./LlltsServer.lll.js"
 import type { ServerConfig } from "./ServerConfig"
+import "./LlltsServer.lll"
 
 @Spec("Unit scenarios for LlltsServer proxying, runtime checks, and injected test overlay behavior.")
 export class LlltsServerTest {

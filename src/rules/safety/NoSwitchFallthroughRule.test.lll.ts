@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { NoSwitchFallthroughRule } from "./NoSwitchFallthroughRule.lll"
+import "./NoSwitchFallthroughRule.lll"
 
 @Spec("Validates the ban on implicit switch fallthrough.")
 export class NoSwitchFallthroughRuleTest {

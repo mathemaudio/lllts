@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { NoIgnoredPromisesRule } from "./NoIgnoredPromisesRule.lll"
+import "./NoIgnoredPromisesRule.lll"
 
 @Spec("Validates the ban on ignored promises.")
 export class NoIgnoredPromisesRuleTest {

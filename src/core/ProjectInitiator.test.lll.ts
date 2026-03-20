@@ -5,6 +5,7 @@ import { ProjectInitiator } from "./ProjectInitiator.lll"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
+import "./ProjectInitiator.lll"
 
 @Spec("Verifies project loading strategies.")
 export class ProjectInitiatorTest {

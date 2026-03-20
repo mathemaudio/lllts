@@ -5,6 +5,7 @@ import { TestRunner } from "./core/testing/TestRunner.lll.js";
 import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
 import type { RuleCode } from "./core/rulesEngine/RuleCode.js";
+import "./LLLTS.lll"
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
 export class LLLTSTest {

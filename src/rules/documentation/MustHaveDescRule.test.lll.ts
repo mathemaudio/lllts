@@ -1,6 +1,7 @@
 import { Scenario } from "../../public/lll.lll.js"
 import { Spec } from "../../public/lll.lll.js"
 import { MustHaveDescRule } from "./MustHaveDescRule.lll"
+import "./MustHaveDescRule.lll"
 
 @Spec("Validates description enforcement for @Spec decorators.")
 export class MustHaveDescRuleTest {

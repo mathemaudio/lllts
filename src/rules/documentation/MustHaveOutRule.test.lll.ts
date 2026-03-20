@@ -2,6 +2,7 @@ import { AssertFn } from "../../public/lll.lll"
 import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { MustHaveOutRule } from "./MustHaveOutRule.lll"
+import "./MustHaveOutRule.lll"
 
 @Spec("Covers @Out decorator enforcement scenarios.")
 export class MustHaveOutRuleTest {

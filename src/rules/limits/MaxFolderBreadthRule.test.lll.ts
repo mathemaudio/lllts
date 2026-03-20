@@ -3,6 +3,7 @@ import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { Project } from "ts-morph"
 import { MaxFolderBreadthRule } from "./MaxFolderBreadthRule.lll"
+import "./MaxFolderBreadthRule.lll"
 
 @Spec("Covers MaxFolderBreadthRule registration basics.")
 export class MaxFolderBreadthRuleTest {

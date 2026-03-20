@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../../public/lll.lll"
 import { NoImplicitPrimitiveCoercionRule } from "./NoImplicitPrimitiveCoercionRule.lll"
+import "./NoImplicitPrimitiveCoercionRule.lll"
 
 @Spec("Validates the ban on implicit primitive coercion in arithmetic operators.")
 export class NoImplicitPrimitiveCoercionRuleTest {

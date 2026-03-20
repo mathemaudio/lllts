@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { NoNonNullAssertionRule } from "./NoNonNullAssertionRule.lll"
+import "./NoNonNullAssertionRule.lll"
 
 @Spec("Validates the ban on postfix non-null assertions.")
 export class NoNonNullAssertionRuleTest {

@@ -5,7 +5,6 @@ import { BaseRule } from "../../core/BaseRule.lll"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Out } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
-import { SyntaxKind } from "ts-morph"
 import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
 import type { TestType } from "../../core/testing/TestType"
 
@@ -78,7 +77,7 @@ export class MustHaveTestRule {
 		return diagnostics
 	}
 
-	@Spec("Verifies test files use '<Base>Test' naming, valid testType, host import/use, and scenario contract.")
+	@Spec("Verifies test files use '<Base>Test' naming, valid testType, host side-effect import, and scenario contract.")
 	@Out("diagnostics", "DiagnosticObject[]")
 	private static validateTestClass(sourceFile: SourceFile, exportedClass: ClassDeclaration) {
 		const diagnostics: DiagnosticObject[] = []
@@ -118,7 +117,7 @@ export class MustHaveTestRule {
 			}
 		}
 
-		MustHaveTestRule.validateHostImportAndUsage(sourceFile, diagnostics, expectedHostName)
+		MustHaveTestRule.validateHostSideEffectImport(sourceFile, diagnostics, expectedHostName)
 
 		const scenarioMethods = MustHaveTestRule.getScenarioMethods(exportedClass)
 		if (scenarioMethods.length === 0) {
@@ -314,12 +313,12 @@ export class MustHaveTestRule {
 		return testType ?? null
 	}
 
-	@Spec("Checks that test imports and uses its host production class.")
-	private static validateHostImportAndUsage(sourceFile: SourceFile, diagnostics: DiagnosticObject[], hostClassName: string) {
+	@Spec("Checks that test imports its host production module via side-effect import.")
+	private static validateHostSideEffectImport(sourceFile: SourceFile, diagnostics: DiagnosticObject[], hostClassName: string) {
 		const file = sourceFile.getFilePath()
 		const hostPath = MustHaveTestRule.getHostPathFromTestPath(file)
 		const expectedImportSpecifier = `./${hostClassName}.lll`
-		const importedHostAliases = new Set<string>()
+		let hasHostSideEffectImport = false
 
 		for (const importDecl of sourceFile.getImportDeclarations()) {
 			const specifier = importDecl.getModuleSpecifierValue()
@@ -330,48 +329,21 @@ export class MustHaveTestRule {
 				continue
 			}
 
-			const defaultImport = importDecl.getDefaultImport()?.getText()
-			if (defaultImport !== undefined && defaultImport === hostClassName) {
-				importedHostAliases.add(defaultImport)
-			}
-
-			for (const named of importDecl.getNamedImports()) {
-				if (named.getName() !== hostClassName) {
-					continue
-				}
-				importedHostAliases.add(named.getAliasNode()?.getText() ?? named.getName())
+			const hasBindings =
+				importDecl.getDefaultImport() !== undefined ||
+				importDecl.getNamespaceImport() !== undefined ||
+				importDecl.getNamedImports().length > 0
+			if (!hasBindings) {
+				hasHostSideEffectImport = true
+				break
 			}
 		}
 
-		if (importedHostAliases.size === 0) {
+		if (!hasHostSideEffectImport) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Test file must import host class '${hostClassName}' from './${hostClassName}.lll'.`,
-					"missing-test",
-					sourceFile.getStartLineNumber()
-				)
-			)
-			return
-		}
-
-		const usedAliases = new Set<string>()
-		for (const identifier of sourceFile.getDescendantsOfKind(SyntaxKind.Identifier)) {
-			const name = identifier.getText()
-			if (!importedHostAliases.has(name)) {
-				continue
-			}
-			if (identifier.getFirstAncestorByKind(SyntaxKind.ImportDeclaration) !== undefined) {
-				continue
-			}
-			usedAliases.add(name)
-		}
-
-		if (usedAliases.size === 0) {
-			diagnostics.push(
-				BaseRule.createError(
-					file,
-					`Test file must use imported host class '${hostClassName}' in scenario code.`,
+					`Test file must side-effect import host module './${hostClassName}.lll' via 'import "./${hostClassName}.lll"'.`,
 					"missing-test",
 					sourceFile.getStartLineNumber()
 				)

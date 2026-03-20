@@ -2,6 +2,7 @@ import { AssertFn } from "../../public/lll.lll"
 import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { MaxMethodLengthRule } from "./MaxMethodLengthRule.lll"
+import "./MaxMethodLengthRule.lll"
 
 @Spec("Covers MaxMethodLengthRule enforcement scenarios.")
 export class MaxMethodLengthRuleTest {

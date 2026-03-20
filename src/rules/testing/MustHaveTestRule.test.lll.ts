@@ -4,6 +4,7 @@ import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { MustHaveTestRule } from "./MustHaveTestRule.lll"
 import { Project, SourceFile } from "ts-morph"
+import "./MustHaveTestRule.lll"
 
 @Spec("Ensures the rule validates companion classes and schema.")
 export class MustHaveTestRuleTest {
@@ -26,11 +27,12 @@ export class MustHaveTestRuleTest {
 		return MustHaveTestRule.getRule().run(sourceFile)
 	}
 
-	@Scenario("Accept valid <Base>.test.lll.ts naming with <Base>Test and host import/use")
+	@Scenario("Accept valid companion with host side-effect import and optional named import")
 	static async acceptsValidTestNaming(input: object = {}, assert: AssertFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
+import "./MathObject.lll"
 import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "unit"
@@ -52,6 +54,7 @@ export class MathObjectTest {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
+import "./MathObject.lll"
 import { MathObject } from "./MathObject.lll"
 export class WrongName {
 	testType = "unit"
@@ -92,6 +95,7 @@ export class MathObject {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
+import "./MathObject.lll"
 import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "api"
@@ -113,6 +117,7 @@ export class MathObjectTest {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/App.test.lll.ts",
 			`
+import "./App.lll"
 import { App } from "./App.lll"
 export class AppTest extends LitElement {
 	testType = "behavioral"
@@ -141,6 +146,7 @@ export class AppTest extends LitElement {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/App.test.lll.ts",
 			`
+import "./App.lll"
 import { App } from "./App.lll"
 export class AppTest extends LitElement {
 	testType = "behavioral"
@@ -162,5 +168,50 @@ export class AppTest extends LitElement {
 			diagnostics.some(d => d.message.includes("must return string or TemplateResult")),
 			"Expected unsupported render return type to be rejected"
 		)
+	}
+
+	@Scenario("Reject named host import when side-effect import is missing")
+	static async rejectsNamedImportWithoutSideEffectImport(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.test.lll.ts",
+			`
+import { MathObject } from "./MathObject.lll"
+export class MathObjectTest {
+	testType = "unit"
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(!!MathObject, "host class should be available")
+	}
+}
+`,
+			{
+				"/src/MathObject.lll.ts": `export class MathObject {}`
+			}
+		)
+		assert(
+			diagnostics.some(d => d.message.includes("must side-effect import host module")),
+			"Expected symbol-only host import to be rejected"
+		)
+	}
+
+	@Scenario("Accept side-effect host import without named host usage")
+	static async acceptsSideEffectImportWithoutNamedHostImport(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.test.lll.ts",
+			`
+import "./MathObject.lll"
+export class MathObjectTest {
+	testType = "unit"
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(true, "side-effect import is enough to load host module")
+	}
+}
+`,
+			{
+				"/src/MathObject.lll.ts": `export class MathObject {}`
+			}
+		)
+		assert(diagnostics.length === 0, "Expected side-effect host import alone to satisfy the companion import rule")
 	}
 }

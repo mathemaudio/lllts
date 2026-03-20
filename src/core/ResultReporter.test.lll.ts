@@ -3,6 +3,7 @@ import { Scenario } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import { AssertFn } from "../public/lll.lll"
 import { ResultReporter } from "./ResultReporter.lll"
+import "./ResultReporter.lll"
 
 @Spec("Verifies formatting of diagnostics.")
 export class ResultReporterTest {

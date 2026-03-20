@@ -4,6 +4,7 @@ import type { Page } from "playwright"
 import { ClientTunnelRunner } from "./ClientTunnelRunner.lll"
 import type { FakeRunnerOptions } from "../FakeRunnerOptions"
 import type { FakeRunnerState } from "../FakeRunnerState"
+import "./ClientTunnelRunner.lll"
 
 @Spec("Unit coverage for client tunnel browser execution and status mapping.")
 export class ClientTunnelRunnerTest {

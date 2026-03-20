@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { NoImplicitTruthinessRule } from "./NoImplicitTruthinessRule.lll"
+import "./NoImplicitTruthinessRule.lll"
 
 @Spec("Validates the ban on implicit truthiness in condition positions.")
 export class NoImplicitTruthinessRuleTest {

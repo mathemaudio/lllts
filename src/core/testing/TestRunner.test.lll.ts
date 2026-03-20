@@ -3,6 +3,7 @@ import { Spec } from "../../public/lll.lll.js"
 import { AssertFn } from "../../public/lll.lll.js"
 import { TestRunner } from "./TestRunner.lll.js"
 import { ProjectInitiator } from "../ProjectInitiator.lll.js"
+import "./TestRunner.lll"
 @Spec("Smoke tests for the scenario execution pipeline.")
 export class TestRunnerTest {
 	testType = "unit"

@@ -1,6 +1,7 @@
 import { Project } from "ts-morph"
 import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
 import { NoFloatingPromisesRule } from "./NoFloatingPromisesRule.lll"
+import "./NoFloatingPromisesRule.lll"
 
 @Spec("Validates the ban on floating promises inside async code.")
 export class NoFloatingPromisesRuleTest {

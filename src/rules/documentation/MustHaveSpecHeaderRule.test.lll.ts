@@ -3,6 +3,7 @@ import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 import { Project } from "ts-morph"
+import "./MustHaveSpecHeaderRule.lll"
 
 @Spec("Ensures @Spec decorators exist on classes and methods.")
 export class MustHaveSpecHeaderRuleTest {

@@ -4,6 +4,7 @@ import { Scenario } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 import { OneClassPerFileRule } from "./OneClassPerFileRule.lll"
 import { Project } from "ts-morph"
+import "./OneClassPerFileRule.lll"
 
 @Spec("Demonstrates validation of single-export requirement.")
 
