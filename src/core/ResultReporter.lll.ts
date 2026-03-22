@@ -1,12 +1,11 @@
 
-import { DiagnosticObject } from "./DiagnosticObject"
-import { RuleCode } from "./rulesEngine/RuleCode"
-import { Severity } from "./Severity"
-import { Out } from "../public/lll.lll"
-import { Spec } from "../public/lll.lll"
 import * as path from "path"
+import { Spec } from "../public/lll.lll"
 import { MaxFileLengthRule } from "../rules/limits/MaxFileLengthRule.lll"
 import { MaxMethodLengthRule } from "../rules/limits/MaxMethodLengthRule.lll"
+import { DiagnosticObject } from "./DiagnosticObject"
+import { Severity } from "./Severity"
+import { RuleCode } from "./rulesEngine/RuleCode"
 
 @Spec("Formats and prints diagnostics to the console.")
 export class ResultReporter {
@@ -27,9 +26,7 @@ export class ResultReporter {
 		"missing-test-type": "Test must declare testType = 'unit' | 'behavioral'",
 		"bad-test-type": "Test testType must be literal 'unit' or 'behavioral'",
 		"test-import-boundary": "Production code cannot import test modules",
-		"missing-out": "Missing @Out when returning value",
-		"extra-out": "Has @Out but doesn't return value",
-		"bad-out": "Invalid @Out parameters",
+		"missing-explicit-return-type": "Value-returning declarations must declare explicit return types",
 		"test-coverage": "Test coverage debt",
 		"test-failure": "Test scenario failed",
 		"file-too-long": `File allowed maximum line limit is ${MaxFileLengthRule.MAX_LINES} lines. Consider splitting into smaller modules`,
@@ -54,10 +51,8 @@ export class ResultReporter {
 	}
 
 	@Spec("Groups diagnostics by their rule code for organized reporting.")
-
-	@Out("grouped", "Map<RuleCode, DiagnosticObject[]>")
-	private groupDiagnosticsByRuleCode(results: DiagnosticObject[]) {
-		const grouped = new Map<string, DiagnosticObject[]>()
+	private groupDiagnosticsByRuleCode(results: DiagnosticObject[]): Map<RuleCode, DiagnosticObject[]> {
+		const grouped = new Map<RuleCode, DiagnosticObject[]>()
 		for (const diagnostic of results) {
 			const ruleCode = diagnostic.ruleCode
 			if (!grouped.has(ruleCode)) {
@@ -150,8 +145,7 @@ export class ResultReporter {
 	}
 
 	@Spec("Maps severities to plain-text emoji prefixes.")
-	@Out("prefix", "string")
-	private getSeverityPrefix(severity: Severity) {
+	private getSeverityPrefix(severity: Severity): string {
 		if (severity === "error") {
 			return "❌"
 		}

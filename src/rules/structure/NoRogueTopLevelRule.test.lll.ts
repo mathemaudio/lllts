@@ -1,15 +1,14 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
-import { NoRogueTopLevelRule } from "./NoRogueTopLevelRule.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./NoRogueTopLevelRule.lll"
+import { NoRogueTopLevelRule } from "./NoRogueTopLevelRule.lll"
 
 @Spec("Validates no-rogue-top-level constraints.")
 export class NoRogueTopLevelRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoRogueTopLevelRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
 		return NoRogueTopLevelRule.getRule().run(sourceFile)
@@ -151,7 +150,6 @@ export class LLLTS {}`
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/public/lll.lll.ts",
 			`export function Spec() {}
-export function Out() {}
 export function Scenario() {}`
 		)
 		assert(diagnostics.length === 0, "Expected lll.lll.ts to be an explicit exception")

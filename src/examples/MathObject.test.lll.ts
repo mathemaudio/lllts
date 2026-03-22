@@ -1,6 +1,4 @@
-import { Scenario } from "../public/lll.lll.js"
-import { Spec } from "../public/lll.lll.js"
-import { AssertFn } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
 import { MathObject } from "./MathObject.lll"
 
 @Spec("Interactive calculator scenarios for MathObject.")

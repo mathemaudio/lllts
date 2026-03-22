@@ -22,10 +22,8 @@ export type RuleCode =
 	| "missing-test-type"    // Test companion missing testType flag
 	| "bad-test-type"        // testType flag not set to allowed literal
 	| "test-import-boundary" // Production code imported a test file
-	// MustHaveOutRule
-	| "missing-out"          // Missing @Out when returning value
-	| "extra-out"            // Extra @Out when not returning value
-	| "bad-out"              // Bad @Out parameters
+	// MustHaveExplicitReturnTypeRule
+	| "missing-explicit-return-type" // Value-returning declaration omitted an explicit return type annotation
 	// Test coverage
 	| "test-coverage"        // Project-wide test coverage debt
 	// Test runner

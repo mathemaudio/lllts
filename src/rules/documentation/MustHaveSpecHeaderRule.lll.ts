@@ -1,17 +1,14 @@
 
-import { Rule } from "../../core/rulesEngine/Rule"
+import { Node, Statement, SyntaxKind } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
 import { DiagnosticObject } from "../../core/DiagnosticObject"
-import { Out } from "../../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
-import { Node, SyntaxKind, Statement } from "ts-morph"
 
 @Spec("Verifies that each class and method has a @Spec decorator.")
 
 export class MustHaveSpecHeaderRule {
 	@Spec("Returns the rule configuration object.")
-
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R2",
@@ -112,8 +109,7 @@ export class MustHaveSpecHeaderRule {
 	}
 
 	@Spec("Returns true when a statement is a direct top-level Spec(...) or spec(...) call.")
-	@Out("hasSpecCall", "boolean")
-	private static isSpecCallStatement(statement: Statement | undefined) {
+	private static isSpecCallStatement(statement: Statement | undefined): boolean {
 		if (!statement || !Node.isExpressionStatement(statement)) {
 			return false
 		}
@@ -128,8 +124,7 @@ export class MustHaveSpecHeaderRule {
 	}
 
 	@Spec("Returns true when an exported type alias is complex enough to require Spec(...) call.")
-	@Out("required", "boolean")
-	private static requiresSpecForTypeAlias(typeAlias: import("ts-morph").TypeAliasDeclaration) {
+	private static requiresSpecForTypeAlias(typeAlias: import("ts-morph").TypeAliasDeclaration): boolean {
 		const lineCount = typeAlias.getEndLineNumber() - typeAlias.getStartLineNumber() + 1
 		const typeNode = typeAlias.getTypeNode()
 		const memberCount = typeNode !== undefined && Node.isTypeLiteral(typeNode)

@@ -1,17 +1,17 @@
 import * as fs from "fs"
 import * as path from "path"
-import { Out, Spec } from "../../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import { MustHaveDescRule } from "../../rules/documentation/MustHaveDescRule.lll"
-import { MustHaveOutRule } from "../../rules/documentation/MustHaveOutRule.lll"
+import { MustHaveExplicitReturnTypeRule } from "../../rules/documentation/MustHaveExplicitReturnTypeRule.lll"
 import { MustHaveSpecHeaderRule } from "../../rules/documentation/MustHaveSpecHeaderRule.lll"
 import { MaxFileLengthRule } from "../../rules/limits/MaxFileLengthRule.lll"
 import { MaxFolderBreadthRule } from "../../rules/limits/MaxFolderBreadthRule.lll"
 import { MaxMethodLengthRule } from "../../rules/limits/MaxMethodLengthRule.lll"
 import { NoAnyRule } from "../../rules/safety/NoAnyRule.lll"
 import { NoAssignmentInConditionsRule } from "../../rules/safety/NoAssignmentInConditionsRule.lll"
-import { NoImplicitTruthinessRule } from "../../rules/safety/NoImplicitTruthinessRule.lll"
 import { NoFloatingPromisesRule } from "../../rules/safety/NoFloatingPromisesRule.lll"
 import { NoIgnoredPromisesRule } from "../../rules/safety/NoIgnoredPromisesRule.lll"
+import { NoImplicitTruthinessRule } from "../../rules/safety/NoImplicitTruthinessRule.lll"
 import { NoLooseEqualityRule } from "../../rules/safety/NoLooseEqualityRule.lll"
 import { NoNonNullAssertionRule } from "../../rules/safety/NoNonNullAssertionRule.lll"
 import { NoParameterMutationRule } from "../../rules/safety/NoParameterMutationRule.lll"
@@ -33,8 +33,7 @@ export class RulesEngine {
 	}
 
 	@Spec("Executes all registered rules and returns diagnostics.")
-	@Out("diagnostics", "Diagnostic[]")
-	public runAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}) {
+	public runAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}): DiagnosticObject[] {
 		const skipTestRules = options.skipTestRules === true
 		const skipTestCoverageDebt = options.skipTestCoverageDebt === true
 		const files = this.loader.getFiles()
@@ -60,7 +59,7 @@ export class RulesEngine {
 		if (!skipTestRules) {
 			rules.push(MustHaveTestRule.getRule())
 		}
-		rules.push(MustHaveOutRule.getRule())
+		rules.push(MustHaveExplicitReturnTypeRule.getRule())
 
 		const all: DiagnosticObject[] = []
 		for (const file of files) {
@@ -88,7 +87,6 @@ export class RulesEngine {
 	}
 
 	@Spec("Calculates project-wide test coverage debt and emits warning/error diagnostics.")
-	@Out("diagnostics", "DiagnosticObject[]")
 	private computeTestCoverage(): DiagnosticObject[] {
 		const files = this.loader.getFiles()
 		const fileByPath = new Map<string, import("ts-morph").SourceFile>()
@@ -184,8 +182,7 @@ export class RulesEngine {
 	}
 
 	@Spec("Determines whether a file should be skipped from coverage calculations.")
-	@Out("ignore", "boolean")
-	private shouldIgnore(filePath: string) {
+	private shouldIgnore(filePath: string): boolean {
 		return filePath.endsWith(".old.ts")
 			|| filePath.endsWith(".d.old.ts")
 			|| filePath.endsWith("decorators.ts")
@@ -193,8 +190,15 @@ export class RulesEngine {
 	}
 
 	@Spec("Builds linear test coverage debt status details from class/test counts.")
-	@Out("status", "object")
-	private coverageStatus(classCount: number, covered = 0) {
+	private coverageStatus(classCount: number, covered = 0): {
+		totalClasses: number
+		coveredClasses: number
+		coveragePercent: number
+		uncoveredPercent: number
+		displayDebtPercent: number
+		band: "notice" | "warning" | "alert" | "error"
+		severity: "notice" | "warning" | "error"
+	} {
 		const classes = Math.max(0, classCount)
 		const effectiveCovered = Math.min(Math.max(0, covered), classes)
 		const coveragePercent = classes === 0 ? 100 : (effectiveCovered / classes) * 100

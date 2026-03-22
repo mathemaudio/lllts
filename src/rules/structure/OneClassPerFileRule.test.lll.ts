@@ -1,10 +1,7 @@
-import { AssertFn } from "../../public/lll.lll"
-import { Out } from "../../public/lll.lll"
-import { Scenario } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { OneClassPerFileRule } from "./OneClassPerFileRule.lll"
 import { Project } from "ts-morph"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./OneClassPerFileRule.lll"
+import { OneClassPerFileRule } from "./OneClassPerFileRule.lll"
 
 @Spec("Demonstrates validation of single-export requirement.")
 
@@ -12,8 +9,7 @@ export class OneClassPerFileRuleTest {
 	testType = "unit"
 
 	@Spec("Runs OneClassPerFileRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
 		return OneClassPerFileRule.getRule().run(sourceFile)

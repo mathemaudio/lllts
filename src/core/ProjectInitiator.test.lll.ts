@@ -1,11 +1,9 @@
-import { Scenario } from "../public/lll.lll.js"
-import { Spec } from "../public/lll.lll.js"
-import { AssertFn } from "../public/lll.lll.js"
-import { ProjectInitiator } from "./ProjectInitiator.lll"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
+import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
 import "./ProjectInitiator.lll"
+import { ProjectInitiator } from "./ProjectInitiator.lll"
 
 @Spec("Verifies project loading strategies.")
 export class ProjectInitiatorTest {

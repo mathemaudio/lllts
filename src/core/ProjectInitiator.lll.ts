@@ -1,10 +1,9 @@
 
-import { Project, SourceFile } from "ts-morph"
-import { Out } from "../public/lll.lll.js"
-import { Spec } from "../public/lll.lll.js"
 import * as fs from "fs"
 import * as path from "path"
+import { Project, SourceFile } from "ts-morph"
 import { LoadStrategy } from "../LoadStrategy"
+import { Spec } from "../public/lll.lll.js"
 import type { tsconfig_type } from "./tsconfig_type"
 
 
@@ -35,8 +34,7 @@ export class ProjectInitiator {
 	}
 
 	@Spec("Reads and parses the tsconfig.json file to get include/exclude patterns.")
-	@Out("config", "tsconfig_type")
-	private loadTsConfig(configPath: string) {
+	private loadTsConfig(configPath: string): tsconfig_type {
 		const configContent = fs.readFileSync(configPath, "utf-8")
 		return JSON.parse(configContent)
 	}
@@ -152,8 +150,6 @@ export class ProjectInitiator {
 	}
 
 	@Spec("Derives the paired .test.lll.ts or primary .lll.ts file path.")
-
-	@Out("path", "string | null")
 	private getCompanionPath(filePath: string): string | null {
 		if (filePath.endsWith(".test.lll.ts")) {
 			return filePath.replace(/\.test\.lll\.ts$/, ".lll.ts")
@@ -165,8 +161,7 @@ export class ProjectInitiator {
 	}
 
 	@Spec("Resolves a relative import to an absolute file path, handling .ts/.lll.ts extensions.")
-	@Out("path", "string | null")
-	private resolveImportPath(sourceDir: string, moduleSpecifier: string) {
+	private resolveImportPath(sourceDir: string, moduleSpecifier: string): string | null {
 		const possibleExtensions = [".ts", ".lll.ts", ".old.ts", ".d.ts", ".d.old.ts"]
 		let basePath = path.resolve(sourceDir, moduleSpecifier)
 
@@ -204,9 +199,7 @@ export class ProjectInitiator {
 	}
 
 	@Spec("Returns all source files matching the include/exclude patterns from tsconfig.")
-
-	@Out("files", "SourceFile[]")
-	public getFiles() {
+	public getFiles(): SourceFile[] {
 		return this.project.getSourceFiles()
 	}
 }

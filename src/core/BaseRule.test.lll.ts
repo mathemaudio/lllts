@@ -1,8 +1,6 @@
-import { Scenario } from "../public/lll.lll.js"
-import { Spec } from "../public/lll.lll.js"
-import { AssertFn } from "../public/lll.lll.js"
-import { BaseRule } from "./BaseRule.lll"
+import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
 import "./BaseRule.lll"
+import { BaseRule } from "./BaseRule.lll"
 
 @Spec("Exercises diagnostic helper utilities.")
 export class BaseRuleTest {

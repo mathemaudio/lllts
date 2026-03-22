@@ -1,14 +1,12 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
+import type { BinaryExpression } from "ts-morph"
 import { SyntaxKind } from "ts-morph"
-import type { BinaryExpression, SourceFile } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids loose equality operators anywhere in supported source files.")
 export class NoLooseEqualityRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R11",
@@ -43,8 +41,7 @@ export class NoLooseEqualityRule {
 	}
 
 	@Spec("Checks whether a binary expression uses a loose equality operator.")
-	@Out("looseEquality", "boolean")
-	private static isLooseEquality(binaryExpression: BinaryExpression) {
+	private static isLooseEquality(binaryExpression: BinaryExpression): boolean {
 		const operatorKind = binaryExpression.getOperatorToken().getKind()
 		return operatorKind === SyntaxKind.EqualsEqualsToken
 			|| operatorKind === SyntaxKind.ExclamationEqualsToken

@@ -1,14 +1,12 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { Node, SyntaxKind, ts } from "ts-morph"
 import type { CallExpression, Expression, ExpressionStatement, PropertyAccessExpression, Type } from "ts-morph"
+import { Node, SyntaxKind, ts } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids promise-valued expression statements whose result is silently ignored.")
 export class NoIgnoredPromisesRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R17",
@@ -44,8 +42,7 @@ export class NoIgnoredPromisesRule {
 	}
 
 	@Spec("Checks whether an expression statement silently drops a promise-like result.")
-	@Out("ignored", "boolean")
-	private static isIgnoredPromiseExpressionStatement(expressionStatement: ExpressionStatement) {
+	private static isIgnoredPromiseExpressionStatement(expressionStatement: ExpressionStatement): boolean {
 		const expression = expressionStatement.getExpression()
 		if (Node.isAwaitExpression(expression) || Node.isVoidExpression(expression)) {
 			return false
@@ -57,7 +54,6 @@ export class NoIgnoredPromisesRule {
 	}
 
 	@Spec("Checks whether the expression already includes an explicit rejection-handling promise chain.")
-	@Out("handled", "boolean")
 	private static hasExplicitPromiseHandling(expression: Expression): boolean {
 		if (Node.isParenthesizedExpression(expression)) {
 			return NoIgnoredPromisesRule.hasExplicitPromiseHandling(expression.getExpression())
@@ -82,8 +78,7 @@ export class NoIgnoredPromisesRule {
 	}
 
 	@Spec("Returns the property access for method-style promise handling calls.")
-	@Out("propertyAccess", "PropertyAccessExpression | undefined")
-	private static getPropertyAccess(expression: CallExpression) {
+	private static getPropertyAccess(expression: CallExpression): PropertyAccessExpression | undefined {
 		const callee = expression.getExpression()
 		if (!Node.isPropertyAccessExpression(callee)) {
 			return undefined
@@ -92,8 +87,7 @@ export class NoIgnoredPromisesRule {
 	}
 
 	@Spec("Returns true when the resolved type is or includes a Promise or PromiseLike value.")
-	@Out("promiseLike", "boolean")
-	private static isPromiseLikeType(type: Type, expression: Expression) {
+	private static isPromiseLikeType(type: Type, expression: Expression): boolean {
 		const pending = [type]
 		const visited = new Set<Type>()
 
@@ -123,8 +117,7 @@ export class NoIgnoredPromisesRule {
 	}
 
 	@Spec("Checks for Promise flags, symbols, or a callable then method on the apparent type.")
-	@Out("promiseLike", "boolean")
-	private static hasPromiseLikeShape(type: Type, expression: Expression) {
+	private static hasPromiseLikeShape(type: Type, expression: Expression): boolean {
 		const flags = type.getFlags()
 		if ((flags & ts.TypeFlags.Any) !== 0 || (flags & ts.TypeFlags.Unknown) !== 0) {
 			return false

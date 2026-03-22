@@ -1,5 +1,4 @@
 import * as path from "path"
-import { Out } from "../public/lll.lll"
 import { Spec } from "../public/lll.lll"
 import type { VariantMatch } from "./VariantMatch"
 
@@ -10,7 +9,6 @@ export class FileVariantSupport {
 	] as const
 
 	@Spec("Resolves whether a path matches a supported production/test file variant.")
-	@Out("variantMatch", "VariantMatch | null")
 	public static getVariantForFile(filePath: string): VariantMatch | null {
 		for (const variant of FileVariantSupport.FILE_VARIANTS) {
 			if (filePath.endsWith(variant.testSuffix)) {
@@ -26,8 +24,7 @@ export class FileVariantSupport {
 	}
 
 	@Spec("Builds companion test path for a production file path and optional class name override.")
-	@Out("testPath", "string | null")
-	public static getTestFilePath(filePath: string, className?: string) {
+	public static getTestFilePath(filePath: string, className?: string): string | null {
 		const variantMatch = FileVariantSupport.getVariantForFile(filePath)
 		if (!variantMatch || variantMatch.isTest) {
 			return null

@@ -1,23 +1,23 @@
-import { ProjectInitiator } from "../ProjectInitiator.lll"
-import { DiagnosticObject } from "../DiagnosticObject"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { BaseRule } from "../BaseRule.lll"
-import { RuleCode } from "../rulesEngine/RuleCode"
-import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import * as fs from "fs"
 import * as path from "path"
+import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import * as util from "util"
-import type { BehavioralTestReference } from "./BehavioralTestReference"
+import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../BaseRule.lll"
+import { DiagnosticObject } from "../DiagnosticObject"
 import type { Phase } from "../Phase"
+import { ProjectInitiator } from "../ProjectInitiator.lll"
+import { RuleCode } from "../rulesEngine/RuleCode"
 import type { ScenarioContext } from "../scenario/ScenarioContext"
 import type { ScenarioEntry } from "../scenario/ScenarioEntry"
 import type { ScenarioMetadata } from "../scenario/ScenarioMetadata"
+import type { BehavioralTestReference } from "./BehavioralTestReference"
 import type { TestClassRecord } from "./TestClassRecord"
 import type { TestInventorySummary } from "./TestInventorySummary"
 import type { TestReport } from "./TestReport"
 import type { TestRunnerResult } from "./TestRunnerResult"
 import type { TestType } from "./TestType"
+import type { TsConfig } from "../TsConfig"
 //
 @Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
 export class TestRunner {
@@ -75,7 +75,6 @@ export class TestRunner {
 	}
 
 	@Spec("Executes every discovered test class and returns diagnostics.")
-	@Out("result", "{ diagnostics: Diagnostic[]; reports: TestReport[] }")
 	public async runAll(): Promise<TestRunnerResult> {
 		const diagnostics: DiagnosticObject[] = []
 		const reports: TestReport[] = []
@@ -153,7 +152,6 @@ export class TestRunner {
 	}
 
 	@Spec("Builds deterministic inventory data for behavioral test classes.")
-	@Out("summary", "TestInventorySummary")
 	public summarizeInventory(): TestInventorySummary {
 		const behavioralTests: BehavioralTestReference[] = []
 		const testClasses = this.listTestClasses()
@@ -189,14 +187,12 @@ export class TestRunner {
 	}
 
 	@Spec("Reads compiler options for locating compiled files.")
-	@Out("config", "TsConfig")
-	private loadTsConfig(configPath: string) {
+	private loadTsConfig(configPath: string): TsConfig {
 		const raw = fs.readFileSync(configPath, "utf-8")
 		return JSON.parse(raw)
 	}
 
 	@Spec("Returns static scenario methods decorated with @Scenario.")
-	@Out("scenarios", "ScenarioEntry[]")
 	private getScenarioMethods(classDecl: ClassDeclaration): ScenarioEntry[] {
 		return classDecl.getMethods()
 			.filter(method => method.isStatic() && BaseRule.hasDecorator(method, "Scenario"))
@@ -207,13 +203,11 @@ export class TestRunner {
 	}
 
 	@Spec("Returns the instance render() method if it exists.")
-	@Out("render", "MethodDeclaration | undefined")
-	private getRenderMethod(classDecl: ClassDeclaration) {
+	private getRenderMethod(classDecl: ClassDeclaration): MethodDeclaration | undefined {
 		return classDecl.getInstanceMethod("render")
 	}
 
 	@Spec("Reads testType literal from the source class.")
-	@Out("testType", "TestType | null")
 	private getTestTypeLiteral(classDecl: ClassDeclaration): TestType | null {
 		const testTypeProp = classDecl.getProperties().find(prop => !prop.isStatic() && prop.getName() === "testType")
 		const init = testTypeProp?.getInitializer()
@@ -223,7 +217,6 @@ export class TestRunner {
 	}
 
 	@Spec("Collects executable test classes from discovered '.test.lll.ts' files in deterministic order.")
-	@Out("records", "TestClassRecord[]")
 	private listTestClasses(): TestClassRecord[] {
 		const records: TestClassRecord[] = []
 		const files = this.loader.getFiles()
@@ -265,8 +258,7 @@ export class TestRunner {
 	}
 
 	@Spec("Requires the compiled JS module and returns the exported class reference.")
-	@Out("classRef", "Record<string, unknown> | null")
-	private loadRuntimeClass(sourceFile: SourceFile, className: string) {
+	private loadRuntimeClass(sourceFile: SourceFile, className: string): Record<string, unknown> | null {
 		const compiledPath = this.getCompiledPath(sourceFile.getFilePath())
 		if (!compiledPath || !fs.existsSync(compiledPath)) {
 			return null
@@ -280,8 +272,7 @@ export class TestRunner {
 	}
 
 	@Spec("Maps a source file path to its compiled JavaScript output.")
-	@Out("compiledPath", "string | null")
-	private getCompiledPath(sourcePath: string) {
+	private getCompiledPath(sourcePath: string): string | null {
 		const relative = path.relative(this.rootDir, sourcePath)
 		if (relative.startsWith("..")) {
 			return null
@@ -292,8 +283,7 @@ export class TestRunner {
 	}
 
 	@Spec("Executes a scenario method in unit mode, returning diagnostic on failure.")
-	@Out("diagnostic", "Diagnostic | null")
-	private async runScenarioUnit(context: ScenarioContext, runtimeClass: Record<string, unknown>) {
+	private async runScenarioUnit(context: ScenarioContext, runtimeClass: Record<string, unknown>): Promise<DiagnosticObject | null> {
 		const capturedLogs: string[] = []
 		const restoreConsole = this.hookConsole(capturedLogs)
 		const assert = this.createAssert()
@@ -321,7 +311,6 @@ export class TestRunner {
 	}
 
 	@Spec("Extracts decorator arguments for reporting.")
-	@Out("metadata", "ScenarioMetadata")
 	private getScenarioMetadata(method: MethodDeclaration): ScenarioMetadata {
 		const decorator = BaseRule.findDecorator(method, "Scenario")
 		if (!decorator) {
@@ -335,8 +324,7 @@ export class TestRunner {
 	}
 
 	@Spec("Converts a decorator argument text into a usable string.")
-	@Out("value", "string | undefined")
-	private getArgumentString(text?: string) {
+	private getArgumentString(text?: string): string | undefined {
 		if (!text) {
 			return undefined
 		}
@@ -349,8 +337,7 @@ export class TestRunner {
 	}
 
 	@Spec("Derives a project-relative path when possible for reporting.")
-	@Out("path", "string")
-	private toProjectRelativePath(filePath: string) {
+	private toProjectRelativePath(filePath: string): string {
 		const relative = path.relative(this.projectRoot, filePath)
 		if (!relative || relative.startsWith("..")) {
 			return filePath
@@ -359,7 +346,6 @@ export class TestRunner {
 	}
 
 	@Spec("Reports missing compiled module for a class.")
-	@Out("diagnostic", "Diagnostic")
 	private createModuleDiagnostic(file: string, className: string): DiagnosticObject {
 		const relativeOutDir = path.relative(this.projectRoot, this.outDir)
 		return {
@@ -372,8 +358,7 @@ export class TestRunner {
 	}
 
 	@Spec("Reports when a scenario method is undefined at runtime.")
-	@Out("diagnostic", "DiagnosticObject")
-	private createMissingScenarioDiagnostic(context: ScenarioContext) {
+	private createMissingScenarioDiagnostic(context: ScenarioContext): DiagnosticObject {
 		return BaseRule.createError(
 			context.filePath,
 			`Scenario method '${context.scenarioMethodName}' on '${context.className}' was not found at runtime.`,
@@ -383,8 +368,7 @@ export class TestRunner {
 	}
 
 	@Spec("Reports missing testType declaration at runtime.")
-	@Out("diagnostic", "DiagnosticObject")
-	private createMissingTestTypeDiagnostic(file: string, className: string, line: number) {
+	private createMissingTestTypeDiagnostic(file: string, className: string, line: number): DiagnosticObject {
 		return BaseRule.createError(
 			file,
 			`Test class '${className}' must declare testType = 'unit' | 'behavioral'.`,
@@ -394,8 +378,7 @@ export class TestRunner {
 	}
 
 	@Spec("Reports render forbidden in unit mode.")
-	@Out("diagnostic", "DiagnosticObject")
-	private createRenderForbiddenDiag(file: string, className: string, line: number) {
+	private createRenderForbiddenDiag(file: string, className: string, line: number): DiagnosticObject {
 		return BaseRule.createError(
 			file,
 			`Test class '${className}' must not declare render() when testType is 'unit'.`,
@@ -405,7 +388,6 @@ export class TestRunner {
 	}
 
 	@Spec("Formats scenario failure details.")
-	@Out("diagnostic", "Diagnostic")
 	private buildDiagnostic(
 		context: ScenarioContext,
 		phase: Phase,
@@ -437,8 +419,7 @@ export class TestRunner {
 	}
 
 	@Spec("Produces a human-readable error message.")
-	@Out("message", "string")
-	private formatError(error: unknown) {
+	private formatError(error: unknown): string {
 		if (error instanceof Error) {
 			const stack = error.stack ?? error.message ?? String(error)
 			const lines = stack.split("\n").map(line => line.trimEnd())
@@ -459,8 +440,7 @@ export class TestRunner {
 	}
 
 	@Spec("Creates an assertion helper used inside scenarios.")
-	@Out("assertFn", "(condition:boolean,message?:string)=>void")
-	private createAssert() {
+	private createAssert(): (condition:boolean,message?:string)=>void {
 		return (condition: boolean, message = "Assertion failed"): asserts condition => {
 			if (!condition) {
 				throw new Error(message)
@@ -469,8 +449,7 @@ export class TestRunner {
 	}
 
 	@Spec("Captures console output during scenario execution.")
-	@Out("restore", "() => void")
-	private hookConsole(logs: string[]) {
+	private hookConsole(logs: string[]): () => void {
 		const originalLog = console.log
 		const originalWarn = console.warn
 		const originalError = console.error
@@ -493,14 +472,12 @@ export class TestRunner {
 	}
 
 	@Spec("Formats console output for diagnostics.")
-	@Out("entry", "string")
-	private formatLog(level: "log" | "warn" | "error", args: unknown[]) {
+	private formatLog(level: "log" | "warn" | "error", args: unknown[]): string {
 		const rendered = args.map(arg => typeof arg === "string" ? arg : util.inspect(arg, { depth: 4, colors: false }))
 		return `[${level}] ${rendered.join(" ")}`
 	}
 
 	@Spec("Returns the diagnostic rule code used by this runner.")
-	@Out("ruleCode", "RuleCode")
 	private getRuleCode(): RuleCode {
 		return "test-failure"
 	}

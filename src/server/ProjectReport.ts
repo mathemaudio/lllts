@@ -1,4 +1,3 @@
-import { Spec } from "../public/lll.lll"
 import type { ScenarioDescriptor } from "./ScenarioDescriptor"
 
 

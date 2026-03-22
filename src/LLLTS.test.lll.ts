@@ -1,24 +1,22 @@
+import "./LLLTS.lll";
 import { LLLTS } from "./LLLTS.lll.js";
-import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll.js";
+import type { RuleCode } from "./core/rulesEngine/RuleCode.js";
 import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll.js";
 import { TestRunner } from "./core/testing/TestRunner.lll.js";
-import { AssertFn, Out, Scenario, Spec } from "./public/lll.lll.js";
+import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll.js";
+import { AssertFn, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
-import type { RuleCode } from "./core/rulesEngine/RuleCode.js";
-import "./LLLTS.lll"
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
 export class LLLTSTest {
 	testType = "unit"
 
 	@Spec("Returns a stable compile argument set used by CLI scenarios in this suite.")
-	@Out("args", "string[]")
-	private static baseCompileArgs() {
+	private static baseCompileArgs(): string[] {
 		return ["--project", "./tsconfig.json", "--entry", "src/LLLTS.lll.ts"]
 	}
 
 	@Spec("Installs compile-mode stubs and restores prototypes after the callback.")
-	@Out("result", "void")
 	private static async withCompileStubs(
 		input: {
 			hasBehavioralTests: boolean
@@ -31,7 +29,7 @@ export class LLLTSTest {
 			}>
 		},
 		callback: () => Promise<void>
-	) {
+	): Promise<void> {
 		const originalRulesRunAll = RulesEngine.prototype.runAll
 		const originalInventory = TestRunner.prototype.summarizeInventory
 		const originalRunAll = TestRunner.prototype.runAll
@@ -88,8 +86,7 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral inventory without --clientTunnel returns compile failure")
-	@Out("result", "void")
-	static async behavioralTestsRequireClientTunnel(input: object = {}, assert: AssertFn) {
+	static async behavioralTestsRequireClientTunnel(input: object = {}, assert: AssertFn): Promise<void> {
 		let tunnelInvoked = false
 		await this.withCompileStubs(
 			{
@@ -194,8 +191,7 @@ export class LLLTSTest {
 	}
 
 	@Scenario("--noTests skips test execution/reporting and ignores test-only failures")
-	@Out("result", "void")
-	static async noTestsSkipsTestExecutionAndCoverageDebtErrors(input: object = {}, assert: AssertFn) {
+	static async noTestsSkipsTestExecutionAndCoverageDebtErrors(input: object = {}, assert: AssertFn): Promise<void> {
 		const originalRulesRunAll = RulesEngine.prototype.runAll
 		const originalInventory = TestRunner.prototype.summarizeInventory
 		const originalRunAll = TestRunner.prototype.runAll
@@ -314,8 +310,7 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel is skipped when local diagnostics already fail compile")
-	@Out("result", "void")
-	static async behavioralTunnelSkippedOnLocalErrors(input: object = {}, assert: AssertFn) {
+	static async behavioralTunnelSkippedOnLocalErrors(input: object = {}, assert: AssertFn): Promise<void> {
 		let tunnelInvoked = false
 		await this.withCompileStubs(
 			{
@@ -453,8 +448,7 @@ export class LLLTSTest {
 	}
 
 	@Scenario("--clientTunnelHeaded and --clientTunnelTimeoutMs are forwarded to tunnel runner")
-	@Out("result", "void")
-	static async tunnelFlagsAreForwarded(input: object = {}, assert: AssertFn) {
+	static async tunnelFlagsAreForwarded(input: object = {}, assert: AssertFn): Promise<void> {
 		const calls: Array<{ url: string; headed: boolean; timeoutMs: number }> = []
 		await this.withCompileStubs(
 			{
@@ -483,8 +477,7 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Server start with explicit valid port returns server mode")
-	@Out("result", "void")
-	static async serverStartMode(input: object = {}, assert: AssertFn) {
+	static async serverStartMode(input: object = {}, assert: AssertFn): Promise<void> {
 		const port = 54397
 		const projectPath = "."
 		const projectClientLink = "http://localhost:3000"

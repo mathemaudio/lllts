@@ -1,24 +1,19 @@
-import { AssertFn } from "../../public/lll.lll"
-import { Out } from "../../public/lll.lll"
-import { Scenario } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { MustHaveTestRule } from "./MustHaveTestRule.lll"
 import { Project, SourceFile } from "ts-morph"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./MustHaveTestRule.lll"
+import { MustHaveTestRule } from "./MustHaveTestRule.lll"
 
 @Spec("Ensures the rule validates companion classes and schema.")
 export class MustHaveTestRuleTest {
 	testType = "unit"
 
 	@Spec("Builds an in-memory source file for rule testing.")
-	@Out("sourceFile", "SourceFile")
 	private static buildSource(project: Project, filePath: string, body: string): SourceFile {
 		return project.createSourceFile(filePath, body)
 	}
 
 	@Spec("Runs the rule against one in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, source: string, supportFiles: Record<string, string> = {}) {
+	private static runRuleOn(filePath: string, source: string, supportFiles: Record<string, string> = {}): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { experimentalDecorators: true } })
 		for (const [supportPath, supportBody] of Object.entries(supportFiles)) {
 			MustHaveTestRuleTest.buildSource(project, supportPath, supportBody)

@@ -1,14 +1,14 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
+import type { ConditionalExpression, DoStatement, Expression, IfStatement, SourceFile, Type, WhileStatement } from "ts-morph"
 import { Node, SyntaxKind } from "ts-morph"
-import type { ConditionalExpression, DoStatement, Expression, ForStatement, IfStatement, SourceFile, Type, WhileStatement } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids implicit truthiness in supported condition positions unless the expression resolves to boolean.")
 export class NoImplicitTruthinessRule {
+	private static readonly condition_kind_values = ["if", "while", "do while", "for", "ternary"] as const
+
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R12",
@@ -44,10 +44,12 @@ export class NoImplicitTruthinessRule {
 	}
 
 	@Spec("Collects condition expressions from supported control-flow and ternary positions.")
-	@Out("conditions", "object[]")
-	private static collectConditionContexts(sourceFile: SourceFile) {
+	private static collectConditionContexts(sourceFile: SourceFile): Array<{
+		kind: (typeof NoImplicitTruthinessRule.condition_kind_values)[number]
+		expression: Expression
+	}> {
 		const conditions: Array<{
-			kind: "if" | "while" | "do while" | "for" | "ternary"
+			kind: (typeof NoImplicitTruthinessRule.condition_kind_values)[number]
 			expression: Expression
 		}> = []
 
@@ -78,11 +80,13 @@ export class NoImplicitTruthinessRule {
 	}
 
 	@Spec("Builds a condition context from a supported condition-bearing node.")
-	@Out("condition", "object")
 	private static createConditionContext(
-		kind: "if" | "while" | "do while" | "for" | "ternary",
+		kind: (typeof NoImplicitTruthinessRule.condition_kind_values)[number],
 		node: IfStatement | WhileStatement | DoStatement | ConditionalExpression
-	) {
+	): {
+		kind: (typeof NoImplicitTruthinessRule.condition_kind_values)[number]
+		expression: Expression
+	} {
 		const expression = Node.isConditionalExpression(node) ? node.getCondition() : node.getExpression()
 		return {
 			kind,
@@ -91,14 +95,12 @@ export class NoImplicitTruthinessRule {
 	}
 
 	@Spec("Checks whether the condition expression is statically boolean after resolving union members.")
-	@Out("explicitBoolean", "boolean")
-	private static isExplicitBooleanCondition(expression: Expression) {
+	private static isExplicitBooleanCondition(expression: Expression): boolean {
 		return NoImplicitTruthinessRule.isBooleanLikeType(expression.getType())
 	}
 
 	@Spec("Returns true when the type is boolean, a boolean literal, or a union of boolean members only.")
-	@Out("booleanLike", "boolean")
-	private static isBooleanLikeType(type: Type) {
+	private static isBooleanLikeType(type: Type): boolean {
 		if (type.isBoolean() || type.isBooleanLiteral()) {
 			return true
 		}

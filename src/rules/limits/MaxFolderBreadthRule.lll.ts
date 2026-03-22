@@ -1,8 +1,7 @@
 import * as path from "path"
-import { Rule } from "../../core/rulesEngine/Rule"
 import { BaseRule } from "../../core/BaseRule.lll"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
-import { Out } from "../../public/lll.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 
 @Spec("Enforces maximum counts of source files and subfolders per directory in the loaded source tree.")
@@ -11,7 +10,6 @@ export class MaxFolderBreadthRule {
 	static readonly MAX_FOLDERS = 8
 
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R9",
@@ -123,15 +121,13 @@ export class MaxFolderBreadthRule {
 	}
 
 	@Spec("Checks whether a directory name represents a dot-prefixed system folder.")
-	@Out("isSystem", "boolean")
-	private static isDotFolder(dir: string) {
+	private static isDotFolder(dir: string): boolean {
 		const base = path.basename(dir)
 		return base.startsWith(".")
 	}
 
 	@Spec("Verifies that a directory is within the computed root boundary.")
-	@Out("withinRoot", "boolean")
-	private static isWithinRoot(dir: string, root: string) {
+	private static isWithinRoot(dir: string, root: string): boolean {
 		if (dir === root) {
 			return true
 		}
@@ -140,8 +136,7 @@ export class MaxFolderBreadthRule {
 	}
 
 	@Spec("Computes the deepest common ancestor directory for the provided paths.")
-	@Out("commonDir", "string")
-	private static getCommonDir(dirs: string[]) {
+	private static getCommonDir(dirs: string[]): string {
 		const normalized = dirs.map(d => path.resolve(d))
 		const [first, ...rest] = normalized
 		let commonParts = first.split(path.sep).filter(Boolean)
@@ -164,8 +159,7 @@ export class MaxFolderBreadthRule {
 	}
 
 	@Spec("Determines whether the current file should own project-wide folder breadth diagnostics.")
-	@Out("shouldRun", "boolean")
-	private static shouldRunForSourceFile(currentFilePath: string, relevantFiles: import("ts-morph").SourceFile[]) {
+	private static shouldRunForSourceFile(currentFilePath: string, relevantFiles: import("ts-morph").SourceFile[]): boolean {
 		const [firstFile] = relevantFiles
 			.map(file => file.getFilePath())
 			.sort((left, right) => left.localeCompare(right))
@@ -174,14 +168,12 @@ export class MaxFolderBreadthRule {
 	}
 
 	@Spec("Checks whether the file is a TypeScript source file counted by folder breadth.")
-	@Out("isCounted", "boolean")
-	private static isCountedSourceFile(filePath: string) {
+	private static isCountedSourceFile(filePath: string): boolean {
 		return filePath.endsWith(".ts") && !filePath.endsWith(".d.ts")
 	}
 
 	@Spec("Checks whether the file path represents a test file that should be excluded from breadth counts.")
-	@Out("isTest", "boolean")
-	private static isTestFile(filePath: string) {
+	private static isTestFile(filePath: string): boolean {
 		const variant = FileVariantSupport.getVariantForFile(filePath)
 		if (variant !== null) {
 			return variant.isTest

@@ -1,9 +1,7 @@
-import { AssertFn } from "../../public/lll.lll"
-import { Scenario } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
 import { Project } from "ts-morph"
-import { MaxFolderBreadthRule } from "./MaxFolderBreadthRule.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./MaxFolderBreadthRule.lll"
+import { MaxFolderBreadthRule } from "./MaxFolderBreadthRule.lll"
 
 @Spec("Covers MaxFolderBreadthRule registration basics.")
 export class MaxFolderBreadthRuleTest {

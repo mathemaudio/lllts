@@ -1,15 +1,14 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
-import { NoFloatingPromisesRule } from "./NoFloatingPromisesRule.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./NoFloatingPromisesRule.lll"
+import { NoFloatingPromisesRule } from "./NoFloatingPromisesRule.lll"
 
 @Spec("Validates the ban on floating promises inside async code.")
 export class NoFloatingPromisesRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoFloatingPromisesRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({
 			useInMemoryFileSystem: true,
 			compilerOptions: {

@@ -1,13 +1,11 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
 import { Statement, SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids rogue top-level declarations; allows one final if, or one final new of exported class in production files.")
 export class NoRogueTopLevelRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R6",
@@ -169,8 +167,7 @@ export class NoRogueTopLevelRule {
 	}
 
 	@Spec("Checks if statement kind is a declaration that can exist at top level.")
-	@Out("allowed", "boolean")
-	private static isAllowedDeclarationKind(kind: SyntaxKind) {
+	private static isAllowedDeclarationKind(kind: SyntaxKind): boolean {
 		return kind === SyntaxKind.ImportDeclaration
 			|| kind === SyntaxKind.ExportDeclaration
 			|| kind === SyntaxKind.ClassDeclaration
@@ -179,20 +176,18 @@ export class NoRogueTopLevelRule {
 	}
 
 	@Spec("Checks whether a statement has declare modifier.")
-	@Out("declared", "boolean")
-	private static isDeclaredStatement(statement: Statement) {
+	private static isDeclaredStatement(statement: Statement): boolean {
 		const withModifiers = statement as Statement & { getModifiers?: () => import("ts-morph").Node[] }
 		const modifiers = withModifiers.getModifiers?.() ?? []
 		return modifiers.some(modifier => modifier.getKind() === SyntaxKind.DeclareKeyword)
 	}
 
 	@Spec("Checks whether statement is the single allowed final top-level `new ExportedClass()` in non-test files.")
-	@Out("allowed", "boolean")
 	private static isAllowedFinalClassInstantiationStatement(
 		sourceFile: import("ts-morph").SourceFile,
 		statement: Statement,
 		statements: Statement[]
-	) {
+	): boolean {
 		if (sourceFile.getFilePath().endsWith(".test.lll.ts")) {
 			return false
 		}
@@ -222,8 +217,7 @@ export class NoRogueTopLevelRule {
 	}
 
 	@Spec("Checks whether statement is a top-level Spec(...) call immediately before an exported type alias.")
-	@Out("allowed", "boolean")
-	private static isAllowedSpecCallBeforeExportedType(statement: Statement, statements: Statement[], index: number) {
+	private static isAllowedSpecCallBeforeExportedType(statement: Statement, statements: Statement[], index: number): boolean {
 		const expressionStatement = statement.asKind(SyntaxKind.ExpressionStatement)
 		const expression = expressionStatement?.getExpression()
 		const callExpression = expression?.asKind(SyntaxKind.CallExpression)
@@ -278,8 +272,7 @@ export class NoRogueTopLevelRule {
 	}
 
 	@Spec("Detects files that only re-export from other modules (barrel files).")
-	@Out("barrelOnly", "boolean")
-	private static isPureReExportBarrel(sourceFile: import("ts-morph").SourceFile) {
+	private static isPureReExportBarrel(sourceFile: import("ts-morph").SourceFile): boolean {
 		const statements = sourceFile.getStatements()
 		if (statements.length === 0) {
 			return false
@@ -291,8 +284,7 @@ export class NoRogueTopLevelRule {
 	}
 
 	@Spec("Checks whether file is the explicit decorators/public API exception.")
-	@Out("isException", "boolean")
-	private static isLllPublicDecoratorsFile(filePath: string) {
+	private static isLllPublicDecoratorsFile(filePath: string): boolean {
 		return filePath.endsWith("/lll.lll.ts") || filePath.endsWith("\\lll.lll.ts")
 	}
 }

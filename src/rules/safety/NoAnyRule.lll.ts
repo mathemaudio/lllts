@@ -1,14 +1,12 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { SyntaxKind } from "ts-morph"
 import type { Node } from "ts-morph"
+import { SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids explicit any type usage anywhere in supported source files.")
 export class NoAnyRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R14",
@@ -39,8 +37,7 @@ export class NoAnyRule {
 	}
 
 	@Spec("Builds a diagnostic message that describes the explicit any usage shape.")
-	@Out("message", "string")
-	private static buildMessage(anyKeyword: Node) {
+	private static buildMessage(anyKeyword: Node): string {
 		const parentKind = anyKeyword.getParentOrThrow().getKind()
 		const context = parentKind === SyntaxKind.TypeReference
 			? "type reference"

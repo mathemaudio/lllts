@@ -1,28 +1,27 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out, Spec } from "../../public/lll.lll"
-import { Node, SyntaxKind } from "ts-morph"
 import type {
-	ArrayBindingPattern,
-	ArrowFunction,
-	BinaryExpression,
-	ConstructorDeclaration,
-	Expression,
-	FunctionDeclaration,
-	FunctionExpression,
-	Identifier,
-	MethodDeclaration,
-	ObjectBindingPattern,
-	ParameterDeclaration,
-	PostfixUnaryExpression,
-	PrefixUnaryExpression,
-	SourceFile
+    ArrayBindingPattern,
+    ArrowFunction,
+    BinaryExpression,
+    ConstructorDeclaration,
+    Expression,
+    FunctionDeclaration,
+    FunctionExpression,
+    Identifier,
+    MethodDeclaration,
+    ObjectBindingPattern,
+    ParameterDeclaration,
+    PostfixUnaryExpression,
+    PrefixUnaryExpression,
+    SourceFile
 } from "ts-morph"
+import { Node, SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids reassignment or update of function parameter bindings.")
 export class NoParameterMutationRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R19",
@@ -46,8 +45,7 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Collects function-like declarations with bodies that can contain parameter mutations.")
-	@Out("functions", "object[]")
-	private static collectFunctionLikeDeclarations(sourceFile: SourceFile) {
+	private static collectFunctionLikeDeclarations(sourceFile: SourceFile): Array<MethodDeclaration | FunctionDeclaration | FunctionExpression | ArrowFunction | ConstructorDeclaration> {
 		const functions: Array<MethodDeclaration | FunctionDeclaration | FunctionExpression | ArrowFunction | ConstructorDeclaration> = []
 		const addIfWithBody = (candidate: MethodDeclaration | FunctionDeclaration | FunctionExpression | ArrowFunction | ConstructorDeclaration) => {
 			if (candidate.getBody() === undefined) {
@@ -76,11 +74,10 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Returns diagnostics for mutated parameter bindings inside one function-like declaration.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
 	private static validateFunction(
 		filePath: string,
 		currentFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | ArrowFunction | ConstructorDeclaration
-	) {
+	): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const parameterBindings = NoParameterMutationRule.collectParameterBindings(currentFunction.getParameters())
 		if (parameterBindings.length === 0) {
 			return []
@@ -178,11 +175,10 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Checks whether the mutation belongs to the current function instead of a nested function.")
-	@Out("belongs", "boolean")
 	private static belongsToCurrentFunction(
 		node: BinaryExpression | PrefixUnaryExpression | PostfixUnaryExpression,
 		currentFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | ArrowFunction | ConstructorDeclaration
-	) {
+	): boolean {
 		const owner = node.getFirstAncestor(ancestor =>
 			Node.isMethodDeclaration(ancestor)
 			|| Node.isFunctionDeclaration(ancestor)
@@ -194,8 +190,7 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Collects identifier bindings introduced by function parameters, including destructuring names.")
-	@Out("bindings", "Identifier[]")
-	private static collectParameterBindings(parameters: ParameterDeclaration[]) {
+	private static collectParameterBindings(parameters: ParameterDeclaration[]): Identifier[] {
 		const bindings: Identifier[] = []
 
 		for (const parameter of parameters) {
@@ -213,14 +208,12 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Collects identifiers declared inside a binding pattern.")
-	@Out("identifiers", "Identifier[]")
-	private static collectBindingIdentifiers(bindingPattern: ObjectBindingPattern | ArrayBindingPattern) {
+	private static collectBindingIdentifiers(bindingPattern: ObjectBindingPattern | ArrayBindingPattern): Identifier[] {
 		return bindingPattern.getDescendantsOfKind(SyntaxKind.Identifier)
 	}
 
 	@Spec("Checks whether a binary expression uses an assignment operator.")
-	@Out("assignment", "boolean")
-	private static isAssignmentExpression(binaryExpression: BinaryExpression) {
+	private static isAssignmentExpression(binaryExpression: BinaryExpression): boolean {
 		const operatorKind = binaryExpression.getOperatorToken().getKind()
 		return operatorKind === SyntaxKind.EqualsToken
 			|| operatorKind === SyntaxKind.PlusEqualsToken
@@ -241,8 +234,7 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Collects identifiers directly rebound by the left-hand side of an assignment.")
-	@Out("identifiers", "Identifier[]")
-	private static collectAssignedIdentifiers(leftExpression: Expression) {
+	private static collectAssignedIdentifiers(leftExpression: Expression): Identifier[] {
 		if (Node.isIdentifier(leftExpression)) {
 			return [leftExpression]
 		}
@@ -253,8 +245,7 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Returns the matching parameter binding name when the identifier refers to a parameter.")
-	@Out("parameterName", "string | undefined")
-	private static getMatchingParameterName(identifier: Identifier, parameterBindings: Identifier[]) {
+	private static getMatchingParameterName(identifier: Identifier, parameterBindings: Identifier[]): string | undefined {
 		const identifierSymbol = identifier.getSymbol()
 		if (identifierSymbol === undefined) {
 			return undefined
@@ -274,22 +265,19 @@ export class NoParameterMutationRule {
 	}
 
 	@Spec("Checks whether a prefix unary expression updates its operand.")
-	@Out("update", "boolean")
-	private static isUpdateExpression(prefixUnaryExpression: PrefixUnaryExpression) {
+	private static isUpdateExpression(prefixUnaryExpression: PrefixUnaryExpression): boolean {
 		const operatorKind = prefixUnaryExpression.getOperatorToken()
 		return operatorKind === SyntaxKind.PlusPlusToken || operatorKind === SyntaxKind.MinusMinusToken
 	}
 
 	@Spec("Builds a diagnostic message for assignment-style parameter mutation.")
-	@Out("message", "string")
-	private static buildAssignmentMessage(parameterName: string, assignment: BinaryExpression) {
+	private static buildAssignmentMessage(parameterName: string, assignment: BinaryExpression): string {
 		const operator = assignment.getOperatorToken().getText()
 		return `Parameter '${parameterName}' is reassigned with '${operator}'. Create a new local variable instead of mutating the parameter binding.`
 	}
 
 	@Spec("Builds a diagnostic message for increment and decrement parameter mutation.")
-	@Out("message", "string")
-	private static buildUpdateMessage(parameterName: string, expressionText: string) {
+	private static buildUpdateMessage(parameterName: string, expressionText: string): string {
 		return `Parameter '${parameterName}' is updated by '${expressionText}'. Create a new local variable instead of mutating the parameter binding.`
 	}
 }

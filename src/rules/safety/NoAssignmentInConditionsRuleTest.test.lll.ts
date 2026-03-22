@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import { NoAssignmentInConditionsRule } from "./NoAssignmentInConditionsRule.lll"
 
 @Spec("Validates the ban on assignment expressions inside if conditions.")
@@ -7,8 +7,7 @@ export class NoAssignmentInConditionsRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoAssignmentInIfRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
 		return NoAssignmentInConditionsRule.getRule().run(sourceFile)

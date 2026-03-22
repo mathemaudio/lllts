@@ -1,14 +1,12 @@
-import { Rule } from "../../../core/rulesEngine/Rule"
-import { BaseRule } from "../../../core/BaseRule.lll"
-import { Out } from "../../../public/lll.lll"
-import { Spec } from "../../../public/lll.lll"
-import { SyntaxKind, ts } from "ts-morph"
 import type { PrefixUnaryExpression, SourceFile, Type } from "ts-morph"
+import { SyntaxKind, ts } from "ts-morph"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids arithmetic operators when operands are not statically known to be numeric.")
 export class NoImplicitPrimitiveCoercionRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R13",
@@ -28,8 +26,7 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Collects diagnostics for binary arithmetic operators whose operands are not both numeric.")
-	@Out("diagnostics", "import('../../../core/DiagnosticObject').DiagnosticObject[]")
-	private static collectBinaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string) {
+	private static collectBinaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string): import('../../../core/DiagnosticObject').DiagnosticObject[] {
 		const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 		const binaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.BinaryExpression)
 
@@ -67,8 +64,7 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Collects diagnostics for unary plus or minus when the operand is not statically numeric.")
-	@Out("diagnostics", "import('../../../core/DiagnosticObject').DiagnosticObject[]")
-	private static collectUnaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string) {
+	private static collectUnaryOperatorDiagnostics(sourceFile: SourceFile, filePath: string): import('../../../core/DiagnosticObject').DiagnosticObject[] {
 		const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 		const unaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.PrefixUnaryExpression)
 
@@ -99,8 +95,7 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Checks whether a binary operator is one of the arithmetic operators covered by this rule.")
-	@Out("checked", "boolean")
-	private static isCheckedBinaryOperator(operatorKind: SyntaxKind) {
+	private static isCheckedBinaryOperator(operatorKind: SyntaxKind): boolean {
 		return operatorKind === SyntaxKind.MinusToken
 			|| operatorKind === SyntaxKind.AsteriskToken
 			|| operatorKind === SyntaxKind.SlashToken
@@ -108,21 +103,18 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Checks whether a prefix unary expression uses unary plus or unary minus.")
-	@Out("checked", "boolean")
-	private static isCheckedUnaryOperator(unaryExpression: PrefixUnaryExpression) {
+	private static isCheckedUnaryOperator(unaryExpression: PrefixUnaryExpression): boolean {
 		const operatorKind = unaryExpression.getOperatorToken()
 		return operatorKind === SyntaxKind.PlusToken || operatorKind === SyntaxKind.MinusToken
 	}
 
 	@Spec("Returns the source-text operator symbol for a checked unary arithmetic expression.")
-	@Out("operator", "string")
-	private static getUnaryOperatorText(unaryExpression: PrefixUnaryExpression) {
+	private static getUnaryOperatorText(unaryExpression: PrefixUnaryExpression): string {
 		return unaryExpression.getOperatorToken() === SyntaxKind.PlusToken ? "+" : "-"
 	}
 
 	@Spec("Returns true when the provided type is statically numeric, including numeric unions and branded numbers.")
-	@Out("numeric", "boolean")
-	private static isStaticallyNumericType(type: Type) {
+	private static isStaticallyNumericType(type: Type): boolean {
 		const pending = [type]
 		const visited = new Set<Type>()
 
@@ -169,8 +161,7 @@ export class NoImplicitPrimitiveCoercionRule {
 	}
 
 	@Spec("Checks numeric-related TypeScript flags for primitive numbers, literals, and numeric enums.")
-	@Out("numeric", "boolean")
-	private static hasNumericFlags(type: Type) {
+	private static hasNumericFlags(type: Type): boolean {
 		const flags = type.getFlags()
 		const numericFlags = ts.TypeFlags.Number
 			| ts.TypeFlags.NumberLiteral

@@ -1,9 +1,9 @@
-import "./BadTopLevelFunction"
 import "./BadTopLevelConstants"
 import "./BadTopLevelEnum"
+import "./BadTopLevelFunction"
 import "./BadTopLevelMultipleIf"
-import "./BadTopLevelNonFinalIf"
 import "./BadTopLevelNamespaceOrDeclare"
+import "./BadTopLevelNonFinalIf"
 
 export class RogueTopLevelViolationsEntry {
 }

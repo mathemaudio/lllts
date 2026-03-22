@@ -1,15 +1,14 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
-import { NoParameterMutationRule } from "./NoParameterMutationRule.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./NoParameterMutationRule.lll"
+import { NoParameterMutationRule } from "./NoParameterMutationRule.lll"
 
 @Spec("Validates the ban on parameter mutation.")
 export class NoParameterMutationRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoParameterMutationRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
 		return NoParameterMutationRule.getRule().run(sourceFile)

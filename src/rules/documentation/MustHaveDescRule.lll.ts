@@ -1,16 +1,13 @@
 
+import { BaseRule } from "../../core/BaseRule.lll"
 import { DiagnosticObject } from "../../core/DiagnosticObject"
 import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
 import { Spec } from "../../public/lll.lll"
 
 @Spec("Verifies that each class has a description in @Spec decorator.")
 
 export class MustHaveDescRule {
 	@Spec("Returns the rule configuration object.")
-
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R3",

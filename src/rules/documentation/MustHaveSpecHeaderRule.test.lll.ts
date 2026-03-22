@@ -1,9 +1,7 @@
-import { AssertFn } from "../../public/lll.lll"
-import { Scenario } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 import { Project } from "ts-morph"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./MustHaveSpecHeaderRule.lll"
+import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 
 @Spec("Ensures @Spec decorators exist on classes and methods.")
 export class MustHaveSpecHeaderRuleTest {

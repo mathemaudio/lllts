@@ -1,13 +1,15 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out, Spec } from "../../public/lll.lll"
-import { Node, SyntaxKind, ts } from "ts-morph"
 import type { ArrayLiteralExpression, CallExpression, Expression, FunctionDeclaration, FunctionExpression, Identifier, MethodDeclaration, Node as MorphNode, SourceFile, Type } from "ts-morph"
+import { Node, SyntaxKind, ts } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids promise values created inside async functions from floating without await, return, or Promise combinator handling.")
 export class NoFloatingPromisesRule {
+	private static readonly async_function_kinds = ["method", "function", "function-expression", "arrow-function"] as const
+	private static readonly tracked_value_kinds = ["promise", "promise-collection"] as const
+
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R18",
@@ -31,8 +33,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Collects async function-like declarations with block bodies.")
-	@Out("functions", "object[]")
-	private static collectAsyncFunctions(sourceFile: SourceFile) {
+	private static collectAsyncFunctions(sourceFile: SourceFile): Array<MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction> {
 		const asyncFunctions: Array<MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction> = []
 		const addIfAsync = (candidate: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction) => {
 			if (!candidate.isAsync()) {
@@ -61,8 +62,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Returns diagnostics for floating promise values declared inside an async function.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static validateAsyncFunction(filePath: string, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction) {
+	private static validateAsyncFunction(filePath: string, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 		const trackedDeclarations = NoFloatingPromisesRule.collectTrackedDeclarations(asyncFunction)
 
@@ -88,8 +88,11 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Collects variable declarations in the current async function whose initializer is a promise or a collection of promises.")
-	@Out("tracked", "object[]")
-	private static collectTrackedDeclarations(asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction) {
+	private static collectTrackedDeclarations(asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): Array<{
+		expression: Expression
+		kind: (typeof NoFloatingPromisesRule.tracked_value_kinds)[number]
+		nameNode: Identifier
+	}> {
 		const body = asyncFunction.getBody()
 		if (body === undefined || !Node.isBlock(body)) {
 			return []
@@ -97,7 +100,7 @@ export class NoFloatingPromisesRule {
 
 		const tracked: Array<{
 			expression: Expression
-			kind: "promise" | "promise-collection"
+			kind: (typeof NoFloatingPromisesRule.tracked_value_kinds)[number]
 			nameNode: Identifier
 		}> = []
 
@@ -128,8 +131,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Returns the tracked kind when an expression evaluates to a Promise or collection of promises.")
-	@Out("kind", "'promise' | 'promise-collection' | undefined")
-	private static getTrackedValueKind(expression: Expression) {
+	private static getTrackedValueKind(expression: Expression): 'promise' | 'promise-collection' | undefined {
 		if (Node.isAwaitExpression(expression) || Node.isVoidExpression(expression)) {
 			return undefined
 		}
@@ -147,8 +149,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether the tracked declaration is later awaited, returned, voided, or combined explicitly inside the same async function.")
-	@Out("handled", "boolean")
-	private static isTrackedDeclarationHandled(nameNode: Identifier, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction) {
+	private static isTrackedDeclarationHandled(nameNode: Identifier, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): boolean {
 		const references = nameNode.findReferencesAsNodes()
 			.filter(reference => reference !== nameNode)
 			.filter(reference => NoFloatingPromisesRule.belongsToFunction(reference, asyncFunction))
@@ -161,8 +162,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether the reference participates in an explicit handling pattern.")
-	@Out("handled", "boolean")
-	private static isHandledReference(reference: MorphNode) {
+	private static isHandledReference(reference: MorphNode): boolean {
 		let current: MorphNode | undefined = reference
 
 		while (current !== undefined) {
@@ -209,8 +209,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether a call expression explicitly handles a promise or a promise collection.")
-	@Out("handled", "boolean")
-	private static isExplicitPromiseHandlingCall(callExpression: CallExpression, current: MorphNode) {
+	private static isExplicitPromiseHandlingCall(callExpression: CallExpression, current: MorphNode): boolean {
 		if (NoFloatingPromisesRule.isPromiseCombinatorCall(callExpression) && callExpression.getArguments().includes(current as Expression)) {
 			return true
 		}
@@ -232,8 +231,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether an array literal is directly supplied to a Promise combinator call.")
-	@Out("handled", "boolean")
-	private static isPromiseCollectionHandler(arrayLiteralExpression: ArrayLiteralExpression) {
+	private static isPromiseCollectionHandler(arrayLiteralExpression: ArrayLiteralExpression): boolean {
 		const parent = arrayLiteralExpression.getParent()
 		if (parent === undefined) {
 			return false
@@ -242,8 +240,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether the call expression is Promise.all, Promise.allSettled, Promise.any, or Promise.race.")
-	@Out("combinator", "boolean")
-	private static isPromiseCombinatorCall(callExpression: CallExpression) {
+	private static isPromiseCombinatorCall(callExpression: CallExpression): boolean {
 		const callee = callExpression.getExpression()
 		if (!Node.isPropertyAccessExpression(callee)) {
 			return false
@@ -260,14 +257,12 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether the current node belongs to the target function instead of a nested function.")
-	@Out("belongs", "boolean")
-	private static belongsToFunction(node: MorphNode, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction) {
+	private static belongsToFunction(node: MorphNode, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): boolean {
 		return NoFloatingPromisesRule.getOwningFunction(node) === asyncFunction
 	}
 
 	@Spec("Returns the nearest function-like ancestor that owns the node.")
-	@Out("function", "object | undefined")
-	private static getOwningFunction(node: MorphNode) {
+	private static getOwningFunction(node: MorphNode): object | undefined {
 		let current: MorphNode | undefined = node
 
 		while (current !== undefined) {
@@ -286,8 +281,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Returns true when the resolved type is or includes a Promise or PromiseLike value.")
-	@Out("promiseLike", "boolean")
-	private static isPromiseLikeType(type: Type, expression: Expression) {
+	private static isPromiseLikeType(type: Type, expression: Expression): boolean {
 		const pending = [type]
 		const visited = new Set<Type>()
 
@@ -317,8 +311,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Returns true when the resolved type is a collection whose element type includes a Promise or PromiseLike value.")
-	@Out("promiseCollection", "boolean")
-	private static isPromiseCollectionType(type: Type, expression: Expression) {
+	private static isPromiseCollectionType(type: Type, expression: Expression): boolean {
 		const pending = [type]
 		const visited = new Set<Type>()
 
@@ -357,8 +350,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks whether an array literal contains at least one promise-like element.")
-	@Out("contains", "boolean")
-	private static arrayLiteralContainsPromiseLike(arrayLiteralExpression: ArrayLiteralExpression) {
+	private static arrayLiteralContainsPromiseLike(arrayLiteralExpression: ArrayLiteralExpression): boolean {
 		return arrayLiteralExpression.getElements().some(element => {
 			if (!Node.isExpression(element)) {
 				return false
@@ -368,8 +360,7 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Checks for Promise flags, symbols, or a callable then method on the apparent type.")
-	@Out("promiseLike", "boolean")
-	private static hasPromiseLikeShape(type: Type, expression: Expression) {
+	private static hasPromiseLikeShape(type: Type, expression: Expression): boolean {
 		const flags = type.getFlags()
 		if ((flags & ts.TypeFlags.Any) !== 0 || (flags & ts.TypeFlags.Unknown) !== 0) {
 			return false

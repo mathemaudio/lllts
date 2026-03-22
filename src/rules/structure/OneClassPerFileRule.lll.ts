@@ -1,16 +1,13 @@
 
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
 import { SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Ensures each file has exactly one exported primary class/type and no additional top-level class/type/interface declarations.")
 
 export class OneClassPerFileRule {
 	@Spec("Returns the rule configuration object.")
-
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		const old_tsNote = ``
 		return {
@@ -169,8 +166,7 @@ export class OneClassPerFileRule {
 	}
 
 	@Spec("Detects files that only re-export from other modules (barrel files).")
-	@Out("barrelOnly", "boolean")
-	private static isPureReExportBarrel(sourceFile: import("ts-morph").SourceFile) {
+	private static isPureReExportBarrel(sourceFile: import("ts-morph").SourceFile): boolean {
 		const statements = sourceFile.getStatements()
 		if (statements.length === 0) {
 			return false

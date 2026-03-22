@@ -1,27 +1,24 @@
 
+import type { ClientTunnelConfig } from "./ClientTunnelConfig"
+import { LoadStrategy } from "./LoadStrategy"
+import type { MainResult } from "./MainResult"
+import type { ServerModeConfig } from "./ServerModeConfig"
+import { BaseRule } from "./core/BaseRule.lll"
 import { ProjectInitiator } from "./core/ProjectInitiator.lll"
 import { ResultReporter } from "./core/ResultReporter.lll"
 import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll"
-import { BaseRule } from "./core/BaseRule.lll"
-import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll"
-import { LoadStrategy } from "./LoadStrategy"
-import { Out } from "./public/lll.lll"
-import { Spec } from "./public/lll.lll"
-import { TestRunner } from "./core/testing/TestRunner.lll"
-import { LlltsServer } from "./server/LlltsServer.lll"
-import type { ClientTunnelConfig } from "./ClientTunnelConfig"
-import type { MainResult } from "./MainResult"
-import type { ServerModeConfig } from "./ServerModeConfig"
-import type { ClientTunnelRunResult } from "./core/tunnel/ClientTunnelRunResult"
 import type { TestInventorySummary } from "./core/testing/TestInventorySummary"
 import type { TestReport } from "./core/testing/TestReport"
+import { TestRunner } from "./core/testing/TestRunner.lll"
+import type { ClientTunnelRunResult } from "./core/tunnel/ClientTunnelRunResult"
+import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll"
+import { Spec } from "./public/lll.lll"
+import { LlltsServer } from "./server/LlltsServer.lll"
 // import { BadExample2 } from "./examples/intentionallyBadExampleTests/badExample2"
 
 @Spec("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
 export class LLLTS {
 	@Spec("Reads CLI args and runs LLLTS checks on the target project.")
-
-	@Out("result", "{ mode: 'compile', exitCode: number } | { mode: 'server', port: number }")
 	public static async main(args: string[]): Promise<MainResult> {
 		const serverModeResult = await this.tryRunServerMode(args)
 		if (serverModeResult !== null) {
@@ -109,7 +106,6 @@ export class LLLTS {
 	}
 
 	@Spec("Runs server mode when '--server' is present; returns null for compile mode.")
-	@Out("result", "MainResult | null")
 	private static async tryRunServerMode(args: string[]): Promise<MainResult | null> {
 		const serverFlagIndex = args.indexOf("--server")
 		if (serverFlagIndex < 0) {
@@ -140,7 +136,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses and validates '--port' for server mode.")
-	@Out("portResult", "{ valid: true; port: number } | { valid: false; error: string }")
 	private static parseServerPort(args: string[]): { valid: true; port: number } | { valid: false; error: string } {
 		const defaultPort = 54300
 		const i = args.indexOf("--port")
@@ -165,7 +160,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses required server runtime config flags.")
-	@Out("configResult", "{ valid: true; config: ServerModeConfig } | { valid: false; error: string }")
 	private static parseServerConfig(args: string[]): { valid: true; config: ServerModeConfig } | { valid: false; error: string } {
 		const projectPathResult = this.parseRequiredServerArg(args, "--projectPath")
 		if (!projectPathResult.valid) {
@@ -185,7 +179,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses one required server argument and validates that it has a non-empty value.")
-	@Out("argumentResult", "{ valid: true; value: string } | { valid: false; error: string }")
 	private static parseRequiredServerArg(args: string[], flag: string): { valid: true; value: string } | { valid: false; error: string } {
 		const i = args.indexOf(flag)
 		if (i < 0) {
@@ -202,7 +195,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses optional client tunnel flags used for behavioral browser execution.")
-	@Out("configResult", "{ valid: true; config: ClientTunnelConfig } | { valid: false; error: string }")
 	private static parseClientTunnelConfig(args: string[]): { valid: true; config: ClientTunnelConfig } | { valid: false; error: string } {
 		const urlResult = this.parseOptionalArgValue(args, "--clientTunnel")
 		if (!urlResult.valid) {
@@ -225,7 +217,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses an optional flag value and validates non-empty argument text.")
-	@Out("valueResult", "{ valid: true; value: string | null } | { valid: false; error: string }")
 	private static parseOptionalArgValue(args: string[], flag: string): { valid: true; value: string | null } | { valid: false; error: string } {
 		const i = args.indexOf(flag)
 		if (i < 0) {
@@ -242,7 +233,6 @@ export class LLLTS {
 	}
 
 	@Spec("Parses an optional positive integer flag with fallback default.")
-	@Out("valueResult", "{ valid: true; value: number } | { valid: false; error: string }")
 	private static parseOptionalPositiveIntegerArg(
 		args: string[],
 		flag: string,
@@ -269,8 +259,7 @@ export class LLLTS {
 	}
 
 	@Spec("Builds compile diagnostics when behavioral tests require a client tunnel URL.")
-	@Out("diagnostic", "import('./core/DiagnosticObject').DiagnosticObject")
-	private static createMissingClientTunnelDiagnostic(inventory: TestInventorySummary) {
+	private static createMissingClientTunnelDiagnostic(inventory: TestInventorySummary): import('./core/DiagnosticObject').DiagnosticObject {
 		const first = inventory.behavioralTests[0]
 		if (!first) {
 			return BaseRule.createError(
@@ -292,8 +281,7 @@ export class LLLTS {
 	}
 
 	@Spec("Maps client tunnel results to compile diagnostics.")
-	@Out("diagnostics", "import('./core/DiagnosticObject').DiagnosticObject[]")
-	private static mapClientTunnelResultToDiagnostics(result: ClientTunnelRunResult, inventory: TestInventorySummary) {
+	private static mapClientTunnelResultToDiagnostics(result: ClientTunnelRunResult, inventory: TestInventorySummary): import('./core/DiagnosticObject').DiagnosticObject[] {
 		if (result.status === "passed") {
 			return []
 		}
@@ -328,27 +316,21 @@ export class LLLTS {
 	}
 
 	@Spec("Retrieves a required CLI argument by flag or throws error.")
-
-	@Out("argument", "string")
-	private static getArg(args: string[], flag: string) {
+	private static getArg(args: string[], flag: string): string {
 		const i = args.indexOf(flag)
 		if (i >= 0 && i + 1 < args.length) return args[i + 1]
 		throw new Error(`Missing argument: ${flag}`)
 	}
 
 	@Spec("Retrieves an optional CLI argument by flag or returns default value.")
-
-	@Out("argument", "string")
-	private static getOptionalArg(args: string[], flag: string, defaultValue: string) {
+	private static getOptionalArg(args: string[], flag: string, defaultValue: string): string {
 		const i = args.indexOf(flag)
 		if (i >= 0 && i + 1 < args.length) return args[i + 1]
 		return defaultValue
 	}
 
 	@Spec("Checks if the CLI args include the flag (no value expected).")
-
-	@Out("present", "boolean")
-	private static hasFlag(args: string[], flag: string) {
+	private static hasFlag(args: string[], flag: string): boolean {
 		return args.includes(flag)
 	}
 

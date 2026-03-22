@@ -1,14 +1,14 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
+import type { BinaryExpression, ConditionalExpression, DoStatement, Expression, IfStatement, SourceFile, WhileStatement } from "ts-morph"
 import { Node, SyntaxKind } from "ts-morph"
-import type { BinaryExpression, ConditionalExpression, DoStatement, Expression, ForStatement, IfStatement, SourceFile, WhileStatement } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids assignment expressions anywhere inside supported condition expressions.")
 export class NoAssignmentInConditionsRule {
+	private static readonly condition_kind_values = ["if", "while", "do while", "for", "ternary"] as const
+
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R10",
@@ -43,10 +43,12 @@ export class NoAssignmentInConditionsRule {
 	}
 
 	@Spec("Collects condition expressions from supported control-flow and ternary positions.")
-	@Out("conditions", "object[]")
-	private static collectConditionContexts(sourceFile: SourceFile) {
+	private static collectConditionContexts(sourceFile: SourceFile): Array<{
+		kind: (typeof NoAssignmentInConditionsRule.condition_kind_values)[number]
+		expression: Expression
+	}> {
 		const conditions: Array<{
-			kind: "if" | "while" | "do while" | "for" | "ternary"
+			kind: (typeof NoAssignmentInConditionsRule.condition_kind_values)[number]
 			expression: Expression
 		}> = []
 
@@ -77,11 +79,13 @@ export class NoAssignmentInConditionsRule {
 	}
 
 	@Spec("Builds a condition context from a supported condition-bearing node.")
-	@Out("condition", "object")
 	private static createConditionContext(
-		kind: "if" | "while" | "do while" | "for" | "ternary",
+		kind: (typeof NoAssignmentInConditionsRule.condition_kind_values)[number],
 		node: IfStatement | WhileStatement | DoStatement | ConditionalExpression
-	) {
+	): {
+		kind: (typeof NoAssignmentInConditionsRule.condition_kind_values)[number]
+		expression: Expression
+	} {
 		const expression = Node.isConditionalExpression(node) ? node.getCondition() : node.getExpression()
 		return {
 			kind,
@@ -90,8 +94,7 @@ export class NoAssignmentInConditionsRule {
 	}
 
 	@Spec("Returns assignment binary expressions contained in the condition subtree.")
-	@Out("assignments", "BinaryExpression[]")
-	private static findAssignmentsInCondition(condition: Expression) {
+	private static findAssignmentsInCondition(condition: Expression): BinaryExpression[] {
 		const binaryExpressions = NoAssignmentInConditionsRule.collectBinaryExpressions(condition)
 		return binaryExpressions.filter(binaryExpression => {
 			const operatorKind = binaryExpression.getOperatorToken().getKind()
@@ -100,8 +103,7 @@ export class NoAssignmentInConditionsRule {
 	}
 
 	@Spec("Collects the current expression when binary plus all nested binary expressions.")
-	@Out("binaryExpressions", "BinaryExpression[]")
-	private static collectBinaryExpressions(expression: Expression) {
+	private static collectBinaryExpressions(expression: Expression): BinaryExpression[] {
 		const binaryExpressions: BinaryExpression[] = []
 		if (Node.isBinaryExpression(expression)) {
 			binaryExpressions.push(expression)
@@ -111,8 +113,7 @@ export class NoAssignmentInConditionsRule {
 	}
 
 	@Spec("Checks whether a binary operator token is an assignment operator.")
-	@Out("assignmentOperator", "boolean")
-	private static isAssignmentOperator(kind: SyntaxKind) {
+	private static isAssignmentOperator(kind: SyntaxKind): boolean {
 		return kind === SyntaxKind.EqualsToken
 			|| kind === SyntaxKind.PlusEqualsToken
 			|| kind === SyntaxKind.MinusEqualsToken

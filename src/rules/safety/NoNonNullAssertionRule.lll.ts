@@ -1,14 +1,12 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { SyntaxKind } from "ts-morph"
 import type { NonNullExpression } from "ts-morph"
+import { SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids postfix non-null assertions because they suppress unresolved nullability.")
 export class NoNonNullAssertionRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R15",
@@ -39,8 +37,7 @@ export class NoNonNullAssertionRule {
 	}
 
 	@Spec("Builds a diagnostic message describing the banned non-null assertion.")
-	@Out("message", "string")
-	private static buildMessage(nonNullExpression: NonNullExpression) {
+	private static buildMessage(nonNullExpression: NonNullExpression): string {
 		const operandText = nonNullExpression.getExpression().getText()
 		return `Non-null assertion '${operandText}!' is forbidden. Narrow the value with an explicit null check or redesign the type so the uncertainty is resolved.`
 	}

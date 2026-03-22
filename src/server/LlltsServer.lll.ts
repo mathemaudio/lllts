@@ -1,9 +1,9 @@
 import express, { Express, Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
-import { Project } from "ts-morph"
 import type { MethodDeclaration } from "ts-morph"
-import { Out, Spec } from "../public/lll.lll"
+import { Project } from "ts-morph"
+import { Spec } from "../public/lll.lll"
 import type { ProjectReport } from "./ProjectReport"
 import type { ScenarioDescriptor } from "./ScenarioDescriptor"
 import type { ServerConfig } from "./ServerConfig"
@@ -19,7 +19,6 @@ export class LlltsServer {
 	private static readonly overlayStyleAssetPath = "css/style.css"
 
 	@Spec("Starts an express server that proxies a configured client and overlays discovered project tests.")
-	@Out("port", "number")
 	public async start(port: number, config: ServerConfig): Promise<number> {
 		const app = this.createApp(config)
 		return new Promise((resolve, reject) => {
@@ -29,7 +28,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Creates and configures the express application.")
-	@Out("app", "Express")
 	public createApp(config: ServerConfig): Express {
 		const app = express()
 		this.registerOverlayAssetRoutes(app)
@@ -73,7 +71,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Resolves CDN root for overlay assets in both ts-source and built-dist executions.")
-	@Out("rootPath", "string | null")
 	private resolveOverlayAssetsRootPath(): string | null {
 		const candidatePaths = [
 			path.resolve(__dirname, "cdn"),
@@ -132,7 +129,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Resolves a project path and captures file-system facts plus discovered tests.")
-	@Out("report", "ProjectReport")
 	public inspectProjectPath(projectPathInput: string): ProjectReport {
 		const resolvedPath = path.resolve(process.cwd(), projectPathInput)
 		const exists = fs.existsSync(resolvedPath)
@@ -153,7 +149,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Builds deterministic plain-text output when project path preconditions are not satisfied.")
-	@Out("text", "string")
 	public buildProjectPathStateResponse(report: ProjectReport, projectClientLink: string, reason: string): string {
 		const lines = [
 			reason,
@@ -168,7 +163,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Builds deterministic plain-text output when configured client link cannot be reached.")
-	@Out("text", "string")
 	public buildProjectClientLinkUnavailableResponse(report: ProjectReport, projectClientLink: string, reason: string): string {
 		const lines = [
 			"Project client link is unavailable.",
@@ -193,7 +187,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Resolves loose project client link input into a URL; defaults to http:// when scheme is omitted.")
-	@Out("url", "URL | null")
 	private resolveProjectClientLink(projectClientLinkInput: string): URL | null {
 		const trimmed = projectClientLinkInput.trim()
 		if (trimmed.length === 0) {
@@ -210,7 +203,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Parses a URL and returns null instead of throwing.")
-	@Out("url", "URL | null")
 	private tryParseUrl(urlInput: string): URL | null {
 		try {
 			return new URL(urlInput)
@@ -220,13 +212,11 @@ export class LlltsServer {
 	}
 
 	@Spec("Checks whether an input string starts with a URL scheme.")
-	@Out("hasScheme", "boolean")
 	private hasExplicitUrlScheme(urlInput: string): boolean {
 		return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(urlInput)
 	}
 
 	@Spec("Builds request headers for upstream fetch while removing hop-by-hop values.")
-	@Out("headers", "Record<string, string>")
 	private buildProxyRequestHeaders(req: Request): Record<string, string> {
 		const headers: Record<string, string> = {}
 		for (const [name, value] of Object.entries(req.headers)) {
@@ -244,7 +234,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Reads the full incoming request body into a buffer.")
-	@Out("body", "Buffer")
 	private async readRequestBody(req: Request): Promise<Buffer> {
 		return await new Promise((resolve, reject) => {
 			const chunks: Buffer[] = []
@@ -299,7 +288,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Injects overlay UI into HTML by inserting before closing body tag when present.")
-	@Out("html", "string")
 	private injectOverlayIntoHtml(html: string, report: ProjectReport): string {
 		const overlayMarkup = this.buildTestOverlayMarkup(report.testFiles, report.testScenarios)
 		if (/<\/body>/i.test(html)) {
@@ -309,7 +297,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Builds minimal inline overlay config plus loader that pulls CDN-hosted UI assets.")
-	@Out("markup", "string")
 	private buildTestOverlayMarkup(testFiles: string[], testScenarios: Record<string, ScenarioDescriptor[]>): string {
 		const serializedConfig = JSON.stringify({
 			tests: testFiles,
@@ -353,7 +340,6 @@ export class LlltsServer {
 		}
 
 	@Spec("Recursively scans for '.test.lll.ts' files and extracts static @Scenario metadata.")
-	@Out("tests", "TestDescriptor[]")
 	private findTestsWithScenarios(projectPath: string): TestDescriptor[] {
 		const relativeToAbsolute = new Map<string, string>()
 		const stack: string[] = [projectPath]
@@ -387,7 +373,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Builds a path-keyed map of scenario metadata for overlay config delivery.")
-	@Out("map", "Record<string, ScenarioDescriptor[]>")
 	private mapScenariosByTest(tests: TestDescriptor[]): Record<string, ScenarioDescriptor[]> {
 		const map: Record<string, ScenarioDescriptor[]> = {}
 		for (const test of tests) {
@@ -400,7 +385,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Parses one test source file and returns static methods decorated with @Scenario.")
-	@Out("scenarios", "ScenarioDescriptor[]")
 	private findScenariosInTestFile(project: Project, absoluteTestFilePath: string): ScenarioDescriptor[] {
 		if (absoluteTestFilePath.trim().length === 0) {
 			return []
@@ -441,7 +425,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Reads display title from @Scenario decorator or falls back to method name.")
-	@Out("title", "string")
 	private getScenarioTitle(method: MethodDeclaration): string {
 		const decorator = method.getDecorators().find(candidate => candidate.getName() === "Scenario")
 		if (!decorator) {
@@ -452,7 +435,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Converts decorator argument text into an end-user string.")
-	@Out("text", "string")
 	private normalizeDecoratorString(rawText?: string): string {
 		if (!rawText) {
 			return ""
@@ -470,7 +452,6 @@ export class LlltsServer {
 	}
 
 	@Spec("Normalizes path separators for stable plain-text output across platforms.")
-	@Out("normalizedPath", "string")
 	private toPosixPath(inputPath: string): string {
 		return inputPath.split(path.sep).join("/")
 	}

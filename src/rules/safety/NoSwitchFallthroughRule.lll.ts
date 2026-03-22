@@ -1,14 +1,12 @@
-import { Rule } from "../../core/rulesEngine/Rule"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import { Node, SyntaxKind } from "ts-morph"
 import type { CaseOrDefaultClause, SwitchStatement } from "ts-morph"
+import { Node, SyntaxKind } from "ts-morph"
+import { BaseRule } from "../../core/BaseRule.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Forbids switch fallthrough from clauses with executable statements.")
 export class NoSwitchFallthroughRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R16",
@@ -32,8 +30,7 @@ export class NoSwitchFallthroughRule {
 	}
 
 	@Spec("Returns diagnostics for non-final clauses with executable statements that can fall through.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static validateSwitch(filePath: string, switchStatement: SwitchStatement) {
+	private static validateSwitch(filePath: string, switchStatement: SwitchStatement): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
 		const clauses = switchStatement.getCaseBlock().getClauses()
 
@@ -63,8 +60,7 @@ export class NoSwitchFallthroughRule {
 	}
 
 	@Spec("Checks whether the clause ends with a statement that cannot continue into the next clause.")
-	@Out("terminates", "boolean")
-	private static clauseTerminates(clause: CaseOrDefaultClause) {
+	private static clauseTerminates(clause: CaseOrDefaultClause): boolean {
 		const statements = clause.getStatements()
 		if (statements.length === 0) {
 			return false
@@ -73,14 +69,12 @@ export class NoSwitchFallthroughRule {
 	}
 
 	@Spec("Checks whether the clause is only a grouping label with no executable statements.")
-	@Out("empty", "boolean")
-	private static clauseHasNoStatements(clause: CaseOrDefaultClause) {
+	private static clauseHasNoStatements(clause: CaseOrDefaultClause): boolean {
 		return clause.getStatements().length === 0
 	}
 
 	@Spec("Checks whether the statement prevents normal completion of the current switch clause.")
-	@Out("terminates", "boolean")
-	private static statementTerminates(statement: import("ts-morph").Statement) {
+	private static statementTerminates(statement: import("ts-morph").Statement): boolean {
 		const blockTerminates: (block: import("ts-morph").Node & { getStatements(): import("ts-morph").Statement[] }) => boolean = block => {
 			const statements = block.getStatements()
 			if (statements.length === 0) {

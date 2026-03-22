@@ -10,14 +10,8 @@ export function Spec(description: string): any {
 		return target
 	} as any
 }
-export function Out(description: string, type: string) {
-	return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
-		// No-op: metadata is processed by LLLTS compiler
-	}
-}
 export function Scenario(description: string) {
 	return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
 		// No-op: metadata is processed by LLLTS compiler
 	};
 }
-

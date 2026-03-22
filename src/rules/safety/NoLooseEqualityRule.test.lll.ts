@@ -1,15 +1,14 @@
 import { Project } from "ts-morph"
-import { AssertFn, Out, Scenario, Spec } from "../../public/lll.lll"
-import { NoLooseEqualityRule } from "./NoLooseEqualityRule.lll"
+import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
 import "./NoLooseEqualityRule.lll"
+import { NoLooseEqualityRule } from "./NoLooseEqualityRule.lll"
 
 @Spec("Validates the ban on loose equality operators.")
 export class NoLooseEqualityRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoLooseEqualityRule on an in-memory source file.")
-	@Out("diagnostics", "import('../../core/DiagnosticObject').DiagnosticObject[]")
-	private static runRuleOn(filePath: string, body: string) {
+	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(filePath, body)
 		return NoLooseEqualityRule.getRule().run(sourceFile)

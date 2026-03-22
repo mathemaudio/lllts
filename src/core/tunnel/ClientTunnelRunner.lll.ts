@@ -1,10 +1,6 @@
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
+import type { Browser, BrowserContext, BrowserType, Page } from "playwright"
 import * as util from "util"
-import type { Browser } from "playwright"
-import type { BrowserContext } from "playwright"
-import type { BrowserType } from "playwright"
-import type { Page } from "playwright"
+import { Spec } from "../../public/lll.lll"
 import type { ClientTunnelRunInput } from "./ClientTunnelRunInput"
 import type { ClientTunnelRunResult } from "./ClientTunnelRunResult"
 
@@ -31,7 +27,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Launches browser, waits for the fixed report variable, and returns parsed behavioral status.")
-	@Out("result", "ClientTunnelRunResult")
 	public async run(input: ClientTunnelRunInput): Promise<ClientTunnelRunResult> {
 		let browser: {
 			newContext: (...args: Parameters<Browser["newContext"]>) => Promise<{
@@ -95,7 +90,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Returns true when the final report line indicates a failed run.")
-	@Out("failed", "boolean")
 	private reportIndicatesFailure(reportText: string): boolean {
 		const lines = String(reportText || "")
 			.split(/\r?\n/)
@@ -106,7 +100,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Appends the browser auto-run query flag while preserving the rest of the tunnel URL.")
-	@Out("url", "string")
 	private buildAutomaticTunnelUrl(url: string): string {
 		const automatic_url_key = "automatic"
 		try {
@@ -120,7 +113,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Maps browser/runtime errors into deterministic tunnel statuses.")
-	@Out("result", "ClientTunnelRunResult")
 	private mapRuntimeError(error: unknown): ClientTunnelRunResult {
 		const message = this.formatError(error)
 		if (this.isTimeoutError(error)) {
@@ -136,7 +128,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Returns true when an error originates from a timeout boundary.")
-	@Out("isTimeout", "boolean")
 	private isTimeoutError(error: unknown): boolean {
 		if (!(error instanceof Error)) {
 			return false
@@ -145,7 +136,6 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Converts unknown errors into readable text.")
-	@Out("text", "string")
 	private formatError(error: unknown): string {
 		if (error instanceof Error) {
 			return error.stack ?? error.message ?? String(error)

@@ -1,8 +1,7 @@
-import { Rule } from "../../core/rulesEngine/Rule"
 import { BaseRule } from "../../core/BaseRule.lll"
-import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { DiagnosticObject } from "../../core/DiagnosticObject"
-import { Out } from "../../public/lll.lll"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
+import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 
 @Spec("Enforces a maximum method body length in lines for all methods in LLLTS classes.")
@@ -10,7 +9,6 @@ export class MaxMethodLengthRule {
 	static readonly MAX_LINES = 200
 
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R8",

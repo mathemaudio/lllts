@@ -1,17 +1,15 @@
 import * as path from "path"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { DiagnosticObject } from "../../core/DiagnosticObject"
+import type { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
+import { DiagnosticObject } from "../../core/DiagnosticObject"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
-import { Out } from "../../public/lll.lll"
-import { Spec } from "../../public/lll.lll"
-import type { SourceFile, ClassDeclaration, MethodDeclaration } from "ts-morph"
+import { Rule } from "../../core/rulesEngine/Rule"
 import type { TestType } from "../../core/testing/TestType"
+import { Spec } from "../../public/lll.lll"
 
 @Spec("Enforces dedicated '.test.lll.ts' test classes with valid test structure and boundaries.")
 export class MustHaveTestRule {
 	@Spec("Returns the rule configuration object.")
-	@Out("rule", "Rule")
 	public static getRule(): Rule {
 		return {
 			id: "R4",
@@ -36,8 +34,7 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Ensures production classes keep scenarios in test files and do not import tests.")
-	@Out("diagnostics", "DiagnosticObject[]")
-	private static validatePrimaryClass(sourceFile: SourceFile, exportedClass: ClassDeclaration) {
+	private static validatePrimaryClass(sourceFile: SourceFile, exportedClass: ClassDeclaration): DiagnosticObject[] {
 		const diagnostics: DiagnosticObject[] = []
 		const file = sourceFile.getFilePath()
 
@@ -78,8 +75,7 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Verifies test files use '<Base>Test' naming, valid testType, host side-effect import, and scenario contract.")
-	@Out("diagnostics", "DiagnosticObject[]")
-	private static validateTestClass(sourceFile: SourceFile, exportedClass: ClassDeclaration) {
+	private static validateTestClass(sourceFile: SourceFile, exportedClass: ClassDeclaration): DiagnosticObject[] {
 		const diagnostics: DiagnosticObject[] = []
 		const file = sourceFile.getFilePath()
 		const className = exportedClass.getName() ?? "(anonymous)"
@@ -261,19 +257,16 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Returns true when a styles type matches the supported behavioral contract.")
-	@Out("allowed", "boolean")
-	private static isAllowedStylesType(typeText: string) {
+	private static isAllowedStylesType(typeText: string): boolean {
 		return /\bstring\b/.test(typeText) || /\bCSSResult\b/.test(typeText)
 	}
 
 	@Spec("Returns true when a render return type matches the supported behavioral contract.")
-	@Out("allowed", "boolean")
-	private static isAllowedRenderType(typeText: string) {
+	private static isAllowedRenderType(typeText: string): boolean {
 		return /\bstring\b/.test(typeText) || /\bTemplateResult\b/.test(typeText)
 	}
 
 	@Spec("Ensures testType literal is present on test classes.")
-	@Out("testType", "'unit' | 'behavioral' | null")
 	private static validateTestType(
 		exportedClass: ClassDeclaration,
 		diagnostics: DiagnosticObject[],
@@ -352,14 +345,12 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Builds the host file path from a test file path.")
-	@Out("hostPath", "string")
-	private static getHostPathFromTestPath(testFilePath: string) {
+	private static getHostPathFromTestPath(testFilePath: string): string {
 		return testFilePath.replace(/\.test\.lll\.ts$/, ".lll.ts")
 	}
 
 	@Spec("Extracts expected host class name from a '.test.lll.ts' file path.")
-	@Out("className", "string")
-	private static getExpectedHostClassName(filePath: string) {
+	private static getExpectedHostClassName(filePath: string): string {
 		const baseName = path.basename(filePath)
 		if (baseName.endsWith(".test.lll.ts")) {
 			return baseName.slice(0, -".test.lll.ts".length)
@@ -368,14 +359,12 @@ export class MustHaveTestRule {
 	}
 
 	@Spec("Determines if a file is a supported primary or test variant.")
-	@Out("variantMatch", "{ variant: { primarySuffix: string; testSuffix: string }; isTest: boolean } | null")
-	private static getVariantForFile(filePath: string) {
+	private static getVariantForFile(filePath: string): { variant: { primarySuffix: string; testSuffix: string }; isTest: boolean } | null {
 		return FileVariantSupport.getVariantForFile(filePath)
 	}
 
 	@Spec("Returns static methods decorated with @Scenario.")
-	@Out("scenarioMethods", "Array<{ method: MethodDeclaration }>")
-	private static getScenarioMethods(classDecl: ClassDeclaration) {
+	private static getScenarioMethods(classDecl: ClassDeclaration): Array<{ method: MethodDeclaration }> {
 		return classDecl.getMethods()
 			.filter(method => method.isStatic() && BaseRule.hasDecorator(method, "Scenario"))
 			.map(method => ({ method }))

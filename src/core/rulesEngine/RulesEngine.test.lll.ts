@@ -1,7 +1,7 @@
 import { AssertFn, Scenario, Spec } from "../../public/lll.lll.js"
 import { ProjectInitiator } from "../ProjectInitiator.lll.js"
-import { RulesEngine } from "./RulesEngine.lll.js"
 import "./RulesEngine.lll"
+import { RulesEngine } from "./RulesEngine.lll.js"
 
 @Spec("Runs registered rules over the project graph.")
 export class RulesEngineTest {

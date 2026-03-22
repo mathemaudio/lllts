@@ -2,22 +2,21 @@ import * as fs from "fs"
 import * as http from "http"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Out, Scenario, Spec } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
+import "./LlltsServer.lll"
 import { LlltsServer } from "./LlltsServer.lll.js"
 import type { ServerConfig } from "./ServerConfig"
-import "./LlltsServer.lll"
 
 @Spec("Unit scenarios for LlltsServer proxying, runtime checks, and injected test overlay behavior.")
 export class LlltsServerTest {
 	testType = "unit"
 
 	@Spec("Runs a single request against an ephemeral listener and returns status/body.")
-	@Out("response", "{ status: number; contentType: string; body: string }")
 	private static async request(
 		app: ReturnType<LlltsServer["createApp"]>,
 		requestPath: string,
 		options: { method?: string; headers?: Record<string, string>; body?: string | Uint8Array } = {}
-	) {
+	): Promise<{ status: number; contentType: string; body: string }> {
 		const listener = http.createServer(app)
 		await new Promise<void>((resolve, reject) => {
 			listener.listen(0, "127.0.0.1", () => resolve())
@@ -56,7 +55,6 @@ export class LlltsServerTest {
 	}
 
 	@Spec("Starts an ephemeral upstream server and returns its URL plus a close callback.")
-	@Out("upstream", "{ url: string; close: () => Promise<void> }")
 	private static async startUpstreamServer(handler: (req: http.IncomingMessage, res: http.ServerResponse) => void): Promise<{ url: string; close: () => Promise<void> }> {
 		const listener = http.createServer(handler)
 		await new Promise<void>((resolve, reject) => {
