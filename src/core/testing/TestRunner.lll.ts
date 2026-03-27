@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import * as ts from "typescript"
 import { ClassDeclaration, MethodDeclaration, SourceFile } from "ts-morph"
 import * as util from "util"
 import { Spec } from "../../public/lll.lll"
@@ -30,7 +31,7 @@ export class TestRunner {
 		TestRunner.populateFakeBrowserClassesForDecorators()
 		this.projectRoot = path.dirname(tsconfigPath)
 		const config = this.loadTsConfig(tsconfigPath)
-		this.rootDir = path.resolve(this.projectRoot, config.compilerOptions?.rootDir ?? "src")
+		this.rootDir = this.resolveRootDir(tsconfigPath, config)
 		this.outDir = path.resolve(this.projectRoot, config.compilerOptions?.outDir ?? "dist")
 	}
 
@@ -190,6 +191,39 @@ export class TestRunner {
 	private loadTsConfig(configPath: string): TsConfig {
 		const raw = fs.readFileSync(configPath, "utf-8")
 		return JSON.parse(raw)
+	}
+
+	@Spec("Resolves the effective source root, matching TypeScript when rootDir is omitted.")
+	private resolveRootDir(configPath: string, config: TsConfig): string {
+		const configuredRootDir = config.compilerOptions?.rootDir
+		if (configuredRootDir !== undefined && configuredRootDir.length > 0) {
+			return path.resolve(this.projectRoot, configuredRootDir)
+		}
+
+		const configFile = ts.readConfigFile(configPath, ts.sys.readFile)
+		if (configFile.error !== undefined) {
+			return path.resolve(this.projectRoot, "src")
+		}
+
+		const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, this.projectRoot)
+		const commonSourceDirectory = (ts as unknown as {
+			getCommonSourceDirectory: (
+				options: ts.CompilerOptions,
+				emittedFiles: () => string[],
+				currentDirectory: string,
+				getCanonicalFileName: (fileName: string) => string
+			) => string
+		}).getCommonSourceDirectory(
+			parsed.options,
+			() => parsed.fileNames,
+			this.projectRoot,
+			ts.sys.useCaseSensitiveFileNames ? fileName => fileName : fileName => fileName.toLowerCase()
+		)
+		if (commonSourceDirectory.length > 0) {
+			return path.resolve(commonSourceDirectory)
+		}
+
+		return path.resolve(this.projectRoot, "src")
 	}
 
 	@Spec("Returns static scenario methods decorated with @Scenario.")
