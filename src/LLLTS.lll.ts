@@ -63,12 +63,15 @@ export class LLLTS {
 		}
 		let scenarioDiagnostics: import("./core/DiagnosticObject").DiagnosticObject[] = []
 		let reports: TestReport[] = []
+		const skipNodeTestExecution = clientTunnelConfig.url !== null
 		if (!noTests) {
 			const testRunner = new TestRunner(loader, projectPath)
 			inventory = testRunner.summarizeInventory()
-			const testRunResult = await testRunner.runAll()
-			scenarioDiagnostics = testRunResult.diagnostics
-			reports = testRunResult.reports
+			if (!skipNodeTestExecution) {
+				const testRunResult = await testRunner.runAll()
+				scenarioDiagnostics = testRunResult.diagnostics
+				reports = testRunResult.reports
+			}
 		}
 
 		const allDiagnostics = [...results, ...scenarioDiagnostics]
@@ -94,7 +97,7 @@ export class LLLTS {
 		const reporter = new ResultReporter(projectPath)
 		const tunnelFailed = clientTunnelResult?.status === "failed"
 		if (verbose && !noTests) {
-			this.printTestSummary(reports, inventory.hasBehavioralTests)
+			this.printTestSummary(reports, inventory.hasBehavioralTests, skipNodeTestExecution)
 		}
 		reporter.print(allDiagnostics, { suppressSuccessMessage: tunnelFailed })
 		if (tunnelFailed) {
@@ -376,9 +379,9 @@ export class LLLTS {
 	}
 
 	@Spec("Logs test and scenario details when --verbose is provided.")
-	private static printTestSummary(reports: TestReport[], hasBehavioralTests: boolean) {
+	private static printTestSummary(reports: TestReport[], hasBehavioralTests: boolean, skippedForClientTunnel: boolean) {
 		if (reports.length === 0) {
-			if (hasBehavioralTests) {
+			if (hasBehavioralTests || skippedForClientTunnel) {
 				return
 			}
 			console.log("\n🧪 Test Execution Details")

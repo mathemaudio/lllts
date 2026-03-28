@@ -305,6 +305,57 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("Client tunnel skips Node-side test runner even when no behavioral tests exist")
+	static async clientTunnelSkipsNodeTests(input: object = {}, assert: AssertFn): Promise<void> {
+		const originalRulesRunAll = RulesEngine.prototype.runAll
+		const originalInventory = TestRunner.prototype.summarizeInventory
+		const originalRunAll = TestRunner.prototype.runAll
+		const originalLog = console.log
+		const logLines: string[] = []
+		let summarizeInventoryCalled = false
+		let runAllCalled = false
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		RulesEngine.prototype.runAll = function stubRulesRunAll() {
+			return []
+		}
+		TestRunner.prototype.summarizeInventory = function stubInventory() {
+			summarizeInventoryCalled = true
+			return {
+				hasBehavioralTests: false,
+				behavioralTests: []
+			}
+		}
+		TestRunner.prototype.runAll = async function stubRunAll() {
+			runAllCalled = true
+			return { diagnostics: [], reports: [] }
+		}
+
+		try {
+			const result = await LLLTS.main([
+				...this.baseCompileArgs(),
+				"--clientTunnel", "http://localhost:3000",
+				"--verbose"
+			])
+			assert(result.mode === "compile", "Compile mode should run for tunnel args")
+			assert(result.exitCode === 0, "Client tunnel alone should not fail compile when local diagnostics pass")
+		} finally {
+			RulesEngine.prototype.runAll = originalRulesRunAll
+			TestRunner.prototype.summarizeInventory = originalInventory
+			TestRunner.prototype.runAll = originalRunAll
+			console.log = originalLog
+		}
+
+		assert(summarizeInventoryCalled, "Inventory should still be collected when client tunnel mode is enabled")
+		assert(!runAllCalled, "Node-side test runner should be skipped when client tunnel mode is enabled")
+		assert(
+			!logLines.some(line => line.includes("(no tests were executed)")),
+			"Verbose client tunnel mode should not print a misleading no-tests placeholder"
+		)
+	}
+
 	@Scenario("Behavioral tunnel is skipped when local diagnostics already fail compile")
 	static async behavioralTunnelSkippedOnLocalErrors(input: object = {}, assert: AssertFn): Promise<void> {
 		let tunnelInvoked = false
