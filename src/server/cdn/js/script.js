@@ -382,22 +382,32 @@
 			for (var i = 0; i < reports.length; i++) {
 				var report = reports[i];
 				var testPath = String((report && report.testPath) || "unknown-test");
+				var testStatus = String((report && report.status) || "failed");
 				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
+				var failedScenarioLines = [];
+				for (var j = 0; j < scenarioResults.length; j++) {
+					var scenarioResult = scenarioResults[j];
+					var scenarioTitle = String((scenarioResult && scenarioResult.title) || "scenario");
+					var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
+					var scenarioDetails = String((scenarioResult && scenarioResult.details) || "").trim();
+					if (scenarioState === "passed") {
+						continue;
+					}
+					if (scenarioState === "failed" && scenarioDetails.length > 0) {
+						failedScenarioLines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": failed: " + scenarioDetails);
+						continue;
+					}
+					failedScenarioLines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": " + scenarioState);
+				}
+				if (failedScenarioLines.length === 0 && (testStatus === "passed" || testStatus === "no-scenarios")) {
+					continue;
+				}
 				lines.push("## " + testPath);
-				if (scenarioResults.length === 0) {
-					lines.push("(no scenarios)");
+				if (failedScenarioLines.length === 0) {
+					lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded");
 				} else {
-					for (var j = 0; j < scenarioResults.length; j++) {
-						var scenarioResult = scenarioResults[j];
-						var scenarioTitle = String((scenarioResult && scenarioResult.title) || "scenario");
-						var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
-						var scenarioDetails = String((scenarioResult && scenarioResult.details) || "").trim();
-						if (scenarioState === "failed" && scenarioDetails.length > 0) {
-							lines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": failed: " + scenarioDetails);
-						} else {
-							var stateEmoji = scenarioState === "passed" ? `- ` : TEST_STATUS_EMOJI_FAILED;
-							lines.push(stateEmoji + " " + scenarioTitle + ": " + scenarioState);
-						}
+					for (var k = 0; k < failedScenarioLines.length; k++) {
+						lines.push(failedScenarioLines[k]);
 					}
 				}
 				lines.push("");
@@ -694,6 +704,7 @@
 					var scenarioResults = testResult && Array.isArray(testResult.scenarioResults) ? testResult.scenarioResults : [];
 					testReports.push({
 						testPath: testPath,
+						status: status,
 						scenarioResults: scenarioResults
 					});
 					if (status !== "passed" && status !== "no-scenarios") {
@@ -704,6 +715,7 @@
 				hasFailures = true;
 				testReports.push({
 					testPath: "<overlay-runner>",
+					status: "failed",
 					scenarioResults: [
 						{
 							title: "Play All runtime",

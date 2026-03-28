@@ -406,30 +406,88 @@ export class LLLTS {
 		}
 	}
 
+	@Spec("Reduces tunnel terminal output to failed sections plus the final summary line.")
+	private static sanitizeClientTunnelReport(reportText: string): string {
+		const lines = reportText.split("\n")
+		const nonEmptyLines = lines.filter(line => line.trim().length > 0)
+		const summaryLine = nonEmptyLines.length === 0 ? "" : nonEmptyLines[nonEmptyLines.length - 1]
+		const sanitizedSections: string[] = []
+		let currentHeader = ""
+		let currentBody: string[] = []
+
+		const flushSection = (): void => {
+			if (currentHeader.length === 0) {
+				return
+			}
+			const failedLines = currentBody.filter(line => {
+				const trimmed = line.trim()
+				if (trimmed.length === 0) {
+					return false
+				}
+				if (trimmed === "(no scenarios)") {
+					return false
+				}
+				if (trimmed.includes(": passed")) {
+					return false
+				}
+				if (trimmed.startsWith("- ")) {
+					return false
+				}
+				return true
+			})
+			if (failedLines.length > 0) {
+				sanitizedSections.push(currentHeader, ...failedLines, "")
+			}
+			currentHeader = ""
+			currentBody = []
+		}
+
+		for (const line of lines) {
+			if (line.startsWith("## ")) {
+				flushSection()
+				currentHeader = line
+				continue
+			}
+			if (currentHeader.length > 0) {
+				currentBody.push(line)
+			}
+		}
+		flushSection()
+
+		if (summaryLine.length > 0) {
+			sanitizedSections.push("", summaryLine)
+		}
+
+		return sanitizedSections.join("\n").trim()
+	}
+
 	@Spec("Prints tunnel summary plus full report based on status and verbosity.")
-	private static printClientTunnelOutput(result: ClientTunnelRunResult, verbose: boolean) {
+	private static printClientTunnelOutput(result: ClientTunnelRunResult, verbose: boolean): void {
+		const sanitizedReport = typeof result.reportText === "string" && result.reportText.length > 0
+			? this.sanitizeClientTunnelReport(result.reportText)
+			: null
 		if (result.status === "passed") {
 			console.log("\n🌐 Client tunnel behavioral tests passed.")
-			if (verbose && typeof result.reportText === "string" && result.reportText.length > 0) {
+			if (verbose && typeof sanitizedReport === "string" && sanitizedReport.length > 0) {
 				console.log("\n📋 Client tunnel report")
-				console.log(result.reportText)
+				console.log(sanitizedReport)
 			}
 			return
 		}
 
 		if (result.status === "failed") {
 			console.log("\n🌐 Client tunnel behavioral tests failed.")
-			if (typeof result.reportText === "string" && result.reportText.length > 0) {
+			if (typeof sanitizedReport === "string" && sanitizedReport.length > 0) {
 				console.log("\n📋 Client tunnel report")
-				console.log(result.reportText)
+				console.log(sanitizedReport)
 			}
 			return
 		}
 
 		if (result.status === "console_error") {
-			if (typeof result.reportText === "string" && result.reportText.length > 0) {
+			if (typeof sanitizedReport === "string" && sanitizedReport.length > 0) {
 				console.log("\n📋 Client tunnel report")
-				console.log(result.reportText)
+				console.log(sanitizedReport)
 			}
 			return
 		}

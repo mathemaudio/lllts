@@ -410,6 +410,58 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("Behavioral tunnel failure output can omit passing files and passing scenarios")
+	static async behavioralTunnelFailureOnlyPrintsFailedSections(input: object = {}, assert: AssertFn): Promise<void> {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "failed",
+						reportText: [
+							"## src/App.test.lll.ts",
+							"- The app shell loads: passed",
+							"",
+							"## src/ImageEqualizerWorkbench.test.lll.ts",
+							"- Demo image metadata updates: passed",
+							"⛔️ Reset EQ returns visible difference label to zero: failed: expected 0%",
+							"",
+							"some failed"
+						].join("\n")
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Failing tunnel run should fail compile mode")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		const printedReport = logLines.join("\n")
+		assert(!printedReport.includes("## src/App.test.lll.ts"), "Fully passing test files should be omitted from the terminal report")
+		assert(
+			!printedReport.includes("Demo image metadata updates: passed"),
+			"Passing scenarios inside a failing test file should be omitted from the terminal report"
+		)
+		assert(
+			printedReport.includes("## src/ImageEqualizerWorkbench.test.lll.ts"),
+			"Failed test files should remain in the terminal report"
+		)
+		assert(
+			printedReport.includes("Reset EQ returns visible difference label to zero: failed: expected 0%"),
+			"Failed scenarios should remain in the terminal report"
+		)
+	}
+
 	@Scenario("Behavioral tunnel failure does not print duplicate test-failure diagnostic block")
 	static async behavioralTunnelFailureHasNoDuplicateDiagnostic(input: object = {}, assert: AssertFn) {
 		const originalLog = console.log
