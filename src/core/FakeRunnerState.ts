@@ -3,4 +3,5 @@ export type FakeRunnerState = {
 	contextClosedCount: number
 	browserClosedCount: number
 	visitedUrl?: string
+	waitForFunctionCallCount?: number
 }

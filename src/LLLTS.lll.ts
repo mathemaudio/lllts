@@ -39,7 +39,7 @@ export class LLLTS {
 
 
 
-		console.log(`LLLTS Compiler v0.1.2`)
+		console.log(`LLLTS Compiler v0.1.3`)
 		// console.log(`Project: ${projectPath}`)
 		console.log(`Entry: ${entryFile}`)
 
@@ -294,6 +294,17 @@ export class LLLTS {
 		const file = anchor?.filePath ?? "(behavioral-tests)"
 		const line = anchor?.line
 
+		if (result.status === "console_error") {
+			return [
+				BaseRule.createError(
+					file,
+					this.formatClientTunnelConsoleErrorDiagnostic(result.consoleErrors ?? []),
+					"test-failure",
+					line
+				)
+			]
+		}
+
 		if (result.status === "timeout") {
 			return [
 				BaseRule.createError(
@@ -313,6 +324,36 @@ export class LLLTS {
 				line
 			)
 		]
+	}
+
+	@Spec("Formats browser-side runtime errors captured during tunnel execution.")
+	private static formatClientTunnelConsoleErrorDiagnostic(consoleErrors: NonNullable<ClientTunnelRunResult["consoleErrors"]>): string {
+		const scenarioPhaseDetected = consoleErrors.some(error => error.phase === "scenario")
+		const header = scenarioPhaseDetected
+			? "Behavioral client runtime errors occurred while scenarios were running."
+			: "Behavioral client runtime errors prevented test execution."
+		if (consoleErrors.length === 0) {
+			return `${header}\n- No browser runtime error details were captured.`
+		}
+		const details = consoleErrors.map(error => this.formatClientTunnelConsoleErrorLine(error)).join("\n")
+		return `${header}\n${details}`
+	}
+
+	@Spec("Formats one browser runtime error entry for compiler diagnostics.")
+	private static formatClientTunnelConsoleErrorLine(error: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]): string {
+		const location = error.location
+		const segments = [`- [${error.source}] ${error.text}`]
+		if (typeof location?.url === "string" && location.url.length > 0) {
+			let suffix = location.url
+			if (typeof location.lineNumber === "number") {
+				suffix += `:${location.lineNumber}`
+				if (typeof location.columnNumber === "number") {
+					suffix += `:${location.columnNumber}`
+				}
+			}
+			segments.push(`(${suffix})`)
+		}
+		return segments.join(" ")
 	}
 
 	@Spec("Retrieves a required CLI argument by flag or throws error.")
@@ -375,6 +416,14 @@ export class LLLTS {
 
 		if (result.status === "failed") {
 			console.log("\n🌐 Client tunnel behavioral tests failed.")
+			if (typeof result.reportText === "string" && result.reportText.length > 0) {
+				console.log("\n📋 Client tunnel report")
+				console.log(result.reportText)
+			}
+			return
+		}
+
+		if (result.status === "console_error") {
 			if (typeof result.reportText === "string" && result.reportText.length > 0) {
 				console.log("\n📋 Client tunnel report")
 				console.log(result.reportText)

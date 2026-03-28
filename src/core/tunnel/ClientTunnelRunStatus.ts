@@ -1,1 +1,1 @@
-export type ClientTunnelRunStatus = "passed" | "failed" | "timeout" | "runtime_error"
+export type ClientTunnelRunStatus = "passed" | "failed" | "console_error" | "timeout" | "runtime_error"

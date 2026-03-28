@@ -4,6 +4,7 @@ import type { RuleCode } from "./core/rulesEngine/RuleCode.js";
 import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll.js";
 import { TestRunner } from "./core/testing/TestRunner.lll.js";
 import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll.js";
+import type { ClientTunnelRunResult } from "./core/tunnel/ClientTunnelRunResult.js";
 import { AssertFn, Scenario, Spec } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
 
@@ -21,12 +22,7 @@ export class LLLTSTest {
 		input: {
 			hasBehavioralTests: boolean
 			ruleDiagnostics?: Array<{ severity: "error" | "warning" | "notice"; file: string; message: string; ruleCode: RuleCode; line?: number }>
-			tunnelRunner?: (runInput: { url: string; headed: boolean; timeoutMs: number }) => Promise<{
-				status: "passed" | "failed" | "timeout" | "runtime_error"
-				reportText?: string
-				reportJson?: unknown
-				message?: string
-			}>
+			tunnelRunner?: (runInput: { url: string; headed: boolean; timeoutMs: number }) => Promise<ClientTunnelRunResult>
 		},
 		callback: () => Promise<void>
 	): Promise<void> {
@@ -407,6 +403,96 @@ export class LLLTSTest {
 		assert(
 			errorLines.some(line => line.includes("Behavioral tests failed")),
 			"Behavioral tunnel failure should print a clear final failure line"
+		)
+	}
+
+	@Scenario("Preflight browser runtime errors become compile diagnostics and stop test execution")
+	static async behavioralTunnelPreflightConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "console_error",
+						consoleErrors: [{
+							phase: "preflight",
+							source: "console.error",
+							text: "Cannot assign to read only property",
+							location: { url: "http://localhost:60123/src/ImageEqualizerWorkbench.lll.ts", lineNumber: 327, columnNumber: 19 }
+						}]
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Preflight browser runtime errors should fail compile mode")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			logLines.some(line => line.includes("Behavioral client runtime errors prevented test execution")),
+			"Preflight browser runtime errors should produce the preflight diagnostic message"
+		)
+		assert(
+			logLines.some(line => line.includes("Cannot assign to read only property")),
+			"Preflight browser runtime errors should include browser error details"
+		)
+		assert(
+			!logLines.some(line => line.includes("Client tunnel behavioral tests passed")),
+			"Preflight browser runtime errors should suppress normal tunnel summary output"
+		)
+	}
+
+	@Scenario("Scenario browser runtime errors print diagnostics and preserve tunnel report text")
+	static async behavioralTunnelScenarioConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		const consoleErrors: NonNullable<ClientTunnelRunResult["consoleErrors"]> = [{
+			phase: "scenario",
+			source: "pageerror",
+			text: "Preview crashed while running scenario"
+		}]
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "console_error",
+						reportText: "## src/BehavioralSuite.test.lll.ts\n- one: passed\n\nAll client behavioral tests passed",
+						consoleErrors
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Scenario browser runtime errors should fail compile mode")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			logLines.some(line => line.includes("Behavioral client runtime errors occurred while scenarios were running")),
+			"Scenario browser runtime errors should produce the scenario diagnostic message"
+		)
+		assert(
+			logLines.some(line => line.includes("All client behavioral tests passed")),
+			"Scenario browser runtime errors should still print the tunnel report text"
 		)
 	}
 
