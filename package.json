@@ -22,7 +22,8 @@
 		"playwright-setup": "pnpm exec playwright install chromium",
 		"playwright-list": "pnpm exec playwright install --list",
 		"i": "pnpm i",
-		"install-lllts-global": "pnpm link --global"
+		"install-lllts-global": "pnpm link --global",
+		"uninstall-lllts-global": "pnpm remove --global lllts"
 	},
 	"keywords": [
 		"typescript",
