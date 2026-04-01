@@ -256,14 +256,9 @@ export class ClientTunnelRunner {
 			if (!this.isMissingPlaywrightExecutableError(error)) {
 				throw error
 			}
-			this.logRecoveryStep("Detected missing Playwright Chromium executable during browser launch.")
-			this.logRecoveryStep(`Launch error summary:\n${this.formatError(error)}`)
 			try {
-				this.logRecoveryStep("Starting automatic Playwright Chromium install.")
 				await this.installChromium()
-				this.logRecoveryStep("Automatic Playwright Chromium install finished. Retrying browser launch.")
 			} catch (installError) {
-				this.logRecoveryStep(`Automatic install failed:\n${this.formatError(installError)}`)
 				return {
 					status: "runtime_error",
 					message: this.buildChromiumInstallFailureMessage(installError)
@@ -272,7 +267,6 @@ export class ClientTunnelRunner {
 			try {
 				return await browserType.launch({ headless: !headed })
 			} catch (retryError) {
-				this.logRecoveryStep(`Browser launch after automatic install still failed:\n${this.formatError(retryError)}`)
 				if (this.isMissingPlaywrightExecutableError(retryError)) {
 					return {
 						status: "runtime_error",
@@ -298,12 +292,6 @@ export class ClientTunnelRunner {
 	@Spec("Installs the Playwright Chromium browser through the package-local CLI.")
 	private async installChromiumWithPlaywrightCli(): Promise<void> {
 		const cliPath = this.resolvePlaywrightCliPath()
-		this.logRecoveryStep(`Resolved Playwright CLI path: ${cliPath}`)
-		this.logRecoveryStep(`Installer cwd: ${process.cwd()}`)
-		this.logRecoveryStep(`Node executable: ${process.execPath}`)
-		this.logRecoveryStep(`PLAYWRIGHT_BROWSERS_PATH=${process.env.PLAYWRIGHT_BROWSERS_PATH ?? "(unset)"}`)
-		this.logRecoveryStep(`HOME=${process.env.HOME ?? "(unset)"}`)
-		this.logRecoveryStep(`Launching installer command: ${process.execPath} ${cliPath} install chromium`)
 		const output = await new Promise<string>((resolve, reject) => {
 			const child = childProcess.spawn(
 				process.execPath,
@@ -320,18 +308,13 @@ export class ClientTunnelRunner {
 			child.on("error", reject)
 			child.on("close", code => {
 				if (code === 0) {
-					this.logRecoveryStep(`Installer exited successfully with code ${code}.`)
 					resolve(collected)
 					return
 				}
-				this.logRecoveryStep(`Installer exited with code ${code ?? "unknown"}.`)
 				const detail = this.truncateStack(collected.trim())
 				reject(new Error(detail.length > 0 ? detail : `Playwright install exited with code ${code ?? "unknown"}.`))
 			})
 		})
-		if (output.trim().length > 0) {
-			this.logRecoveryStep(`Installer combined output:\n${output.trim()}`)
-		}
 		if (output.trim().length === 0) {
 			return
 		}
@@ -341,12 +324,10 @@ export class ClientTunnelRunner {
 	private resolvePlaywrightCliPath(): string {
 		const packageJsonPath = require.resolve("playwright/package.json")
 		const packageDir = path.dirname(packageJsonPath)
-		this.logRecoveryStep(`Resolved Playwright package.json: ${packageJsonPath}`)
 		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
 			version?: string
 			bin?: string | { playwright?: string }
 		}
-		this.logRecoveryStep(`Resolved Playwright version: ${packageJson.version ?? "(unknown)"}`)
 		const cliRelativePath = typeof packageJson.bin === "string"
 			? packageJson.bin
 			: packageJson.bin?.playwright
@@ -358,11 +339,6 @@ export class ClientTunnelRunner {
 			throw new Error(`Resolved Playwright CLI path does not exist: ${cliPath}`)
 		}
 		return cliPath
-	}
-
-	@Spec("Prints targeted diagnostics for the Playwright auto-recovery path.")
-	private logRecoveryStep(message: string): void {
-		console.error(`[LLLTS client tunnel] ${message}`)
 	}
 
 	@Spec("Builds a stable remediation message when Chromium could not be restored automatically.")
