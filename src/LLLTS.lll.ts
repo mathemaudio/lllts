@@ -39,7 +39,7 @@ export class LLLTS {
 
 
 
-		console.log(`LLLTS Compiler v0.1.3`)
+		console.log(`LLLTS Compiler v0.1.4`)
 		// console.log(`Project: ${projectPath}`)
 		console.log(`Entry: ${entryFile}`)
 

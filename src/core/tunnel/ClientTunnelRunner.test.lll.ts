@@ -14,6 +14,8 @@ export class ClientTunnelRunnerTest {
 	private static createRunner(options: FakeRunnerOptions = {}): { runner: ClientTunnelRunner; state: FakeRunnerState } {
 		const state: FakeRunnerState = {
 			launchHeadless: null,
+			launchAttemptCount: 0,
+			installAttemptCount: 0,
 			contextClosedCount: 0,
 			browserClosedCount: 0,
 			visitedUrl: "",
@@ -116,17 +118,27 @@ export class ClientTunnelRunnerTest {
 			}
 		}
 
-		const runner = new ClientTunnelRunner(() => ({
-			chromium: {
-				launch: async function launch(launchOptions?: Parameters<BrowserType["launch"]>[0]) {
-					if (options.launchError !== undefined) {
-						throw options.launchError
+		const runner = new ClientTunnelRunner(
+			() => ({
+				chromium: {
+					launch: async function launch(launchOptions?: Parameters<BrowserType["launch"]>[0]) {
+						state.launchAttemptCount = (state.launchAttemptCount ?? 0) + 1
+						const launchErrorCount = options.launchErrorCount ?? (options.launchError !== undefined ? 1 : 0)
+						if (options.launchError !== undefined && (state.launchAttemptCount ?? 0) <= launchErrorCount) {
+							throw options.launchError
+						}
+						state.launchHeadless = launchOptions?.headless ?? true
+						return browser
 					}
-					state.launchHeadless = launchOptions?.headless ?? true
-					return browser
+				}
+			}) as unknown as typeof import("playwright"),
+			async () => {
+				state.installAttemptCount = (state.installAttemptCount ?? 0) + 1
+				if (options.installError !== undefined) {
+					throw options.installError
 				}
 			}
-		}) as unknown as typeof import("playwright"))
+		)
 
 		return { runner, state }
 	}
@@ -170,6 +182,40 @@ export class ClientTunnelRunnerTest {
 		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: true, timeoutMs: 60000 })
 		assert(result.status === "runtime_error", "Non-timeout runtime exceptions should map to runtime_error")
 		assert(fixture.state.launchHeadless === false, "Runner should launch headed browser when headed=true")
+	}
+
+	@Scenario("Repairs a missing Chromium executable by installing once and retrying the launch")
+	static async repairsMissingChromiumInstall(input: object = {}, assert: AssertFn) {
+		const launchError = new Error(
+			"browserType.launch: Executable doesn't exist at /tmp/chromium\nLooks like Playwright was just installed or updated."
+		)
+		const fixture = this.createRunner({
+			launchError,
+			launchErrorCount: 1
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
+		assert(result.status === "passed", "Expected runner to recover after installing Chromium")
+		assert((fixture.state.installAttemptCount ?? 0) === 1, "Expected runner to install Chromium once")
+		assert((fixture.state.launchAttemptCount ?? 0) === 2, "Expected browser launch to retry once after installation")
+	}
+
+	@Scenario("Returns runtime_error with remediation when Chromium auto-install fails")
+	static async returnsRemediationWhenChromiumAutoInstallFails(input: object = {}, assert: AssertFn) {
+		const launchError = new Error(
+			"browserType.launch: Executable doesn't exist at /tmp/chromium\nLooks like Playwright was just installed or updated."
+		)
+		const installError = new Error("network unreachable")
+		const fixture = this.createRunner({
+			launchError,
+			installError
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
+		assert(result.status === "runtime_error", "Expected install failure to remain a runtime error")
+		assert(
+			(result.message ?? "").includes("project environment is blocking the Playwright installer"),
+			"Expected install failure to explain that the environment blocked automatic repair"
+		)
+		assert((fixture.state.installAttemptCount ?? 0) === 1, "Expected exactly one install attempt")
 	}
 
 	@Scenario("Includes JSON mirror payload when report JSON exists")
