@@ -31,7 +31,7 @@ export class LLLTSTest {
 		const originalRunAll = TestRunner.prototype.runAll
 		const originalTunnelRun = ClientTunnelRunner.prototype.run
 
-		RulesEngine.prototype.runAll = function stubRulesRunAll() {
+		RulesEngine.prototype.runAll = function stubRulesRunAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean } = {}) {
 			return input.ruleDiagnostics ?? []
 		}
 		TestRunner.prototype.summarizeInventory = function stubInventory() {
@@ -197,12 +197,12 @@ export class LLLTSTest {
 		let summarizeInventoryCalled = false
 		let runAllTestsCalled = false
 		let tunnelRunCalled = false
-		const observedSkipSettings: Array<{ skipTestRules?: boolean; skipTestCoverageDebt?: boolean }> = []
+		const observedSkipSettings: Array<{ skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean }> = []
 		console.log = (...args: unknown[]) => {
 			logLines.push(args.map(arg => String(arg)).join(" "))
 		}
 
-		RulesEngine.prototype.runAll = function stubRulesRunAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}) {
+		RulesEngine.prototype.runAll = function stubRulesRunAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean } = {}) {
 			observedSkipSettings.push(options)
 			if (options.skipTestCoverageDebt === true) {
 				return []
@@ -266,6 +266,42 @@ export class LLLTSTest {
 			!logLines.some(line => line.includes("Client tunnel behavioral tests")),
 			"--noTests should not print client tunnel test status"
 		)
+	}
+
+	@Scenario("--fail-safe forwards fail-safe mode into the rules engine")
+	static async failSafeFlagForwardsToRulesEngine(input: object = {}, assert: AssertFn): Promise<void> {
+		const originalRulesRunAll = RulesEngine.prototype.runAll
+		const originalInventory = TestRunner.prototype.summarizeInventory
+		const originalRunAll = TestRunner.prototype.runAll
+		const observedOptions: Array<{ skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean }> = []
+
+		RulesEngine.prototype.runAll = function stubRulesRunAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean } = {}) {
+			observedOptions.push(options)
+			return []
+		}
+		TestRunner.prototype.summarizeInventory = function stubInventory() {
+			return {
+				hasBehavioralTests: false,
+				behavioralTests: []
+			}
+		}
+		TestRunner.prototype.runAll = async function stubRunAll() {
+			return { diagnostics: [], reports: [] }
+		}
+
+		try {
+			const result = await LLLTS.main([...this.baseCompileArgs(), "--fail-safe"])
+			assert(result.mode === "compile", "Fail-safe compile should still use compile mode")
+			assert(result.exitCode === 0, "Synthetic fail-safe run without diagnostics should succeed")
+		} finally {
+			RulesEngine.prototype.runAll = originalRulesRunAll
+			TestRunner.prototype.summarizeInventory = originalInventory
+			TestRunner.prototype.runAll = originalRunAll
+		}
+
+		assert(observedOptions.length === 1, "Rules engine should be called once for fail-safe compile")
+		assert(observedOptions[0].failSafeMode === true, "--fail-safe should forward failSafeMode=true")
+		assert(observedOptions[0].skipTestCoverageDebt !== true, "--fail-safe alone should not behave like --noTests")
 	}
 
 	@Scenario("Behavioral tunnel pass returns compile success without full report by default")

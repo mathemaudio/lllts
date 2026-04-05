@@ -66,6 +66,48 @@ export class WrongName {
 		assert(diagnostics.some(d => d.ruleCode === "missing-test"), "Expected missing-test for invalid class naming")
 	}
 
+	@Scenario("Accept valid second companion naming")
+	static async acceptsValidSecondCompanionNaming(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.test2.lll.ts",
+			`
+import "./MathObject.lll"
+import { MathObject } from "./MathObject.lll"
+export class MathObjectTest2 {
+	testType = "unit"
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(!!MathObject, "host class should be available")
+	}
+}
+`,
+			{
+				"/src/MathObject.lll.ts": `export class MathObject {}`,
+			}
+		)
+		assert(diagnostics.length === 0, "Expected valid second companion naming to pass MustHaveTestRule")
+	}
+
+	@Scenario("Reject second companion without exported class")
+	static async rejectsSecondCompanionWithoutExportedClass(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.test2.lll.ts",
+			`
+import "./MathObject.lll"
+class MathObjectTest2 {
+	testType = "unit"
+}
+`,
+			{
+				"/src/MathObject.lll.ts": `export class MathObject {}`,
+			}
+		)
+		assert(
+			diagnostics.some(d => d.message.includes("MathObjectTest2")),
+			"Expected second companion without exported class to mention the expected test class name"
+		)
+	}
+
 	@Scenario("Reject production import from test module")
 	static async rejectsProductionImportFromTest(input: object = {}, assert: AssertFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
@@ -80,6 +122,25 @@ export class MathObject {
 `,
 			{
 				"/src/MathObject.test.lll.ts": `export class MathObjectTest {}`
+			}
+		)
+		assert(diagnostics.some(d => d.ruleCode === "test-import-boundary"), "Expected test-import-boundary diagnostic")
+	}
+
+	@Scenario("Reject production import from second companion module")
+	static async rejectsProductionImportFromSecondCompanion(input: object = {}, assert: AssertFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.lll.ts",
+			`
+import { MathObjectTest2 } from "./MathObject.test2.lll"
+export class MathObject {
+	static touch() {
+		return MathObjectTest2
+	}
+}
+`,
+			{
+				"/src/MathObject.test2.lll.ts": `export class MathObjectTest2 {}`
 			}
 		)
 		assert(diagnostics.some(d => d.ruleCode === "test-import-boundary"), "Expected test-import-boundary diagnostic")

@@ -7,7 +7,7 @@ import { Rule } from "../../core/rulesEngine/Rule"
 import type { TestType } from "../../core/testing/TestType"
 import { Spec } from "../../public/lll.lll"
 
-@Spec("Enforces dedicated '.test.lll.ts' test classes with valid test structure and boundaries.")
+@Spec("Enforces dedicated '.test.lll.ts' and '.test2.lll.ts' test classes with valid structure and boundaries.")
 export class MustHaveTestRule {
 	@Spec("Returns the rule configuration object.")
 	public static getRule(): Rule {
@@ -15,9 +15,6 @@ export class MustHaveTestRule {
 			id: "R4",
 			title: "Must have test companion",
 			run(sourceFile) {
-				const exportedClass = BaseRule.getExportedClass(sourceFile)
-				if (!exportedClass) return []
-
 				const filePath = sourceFile.getFilePath()
 				const variantMatch = MustHaveTestRule.getVariantForFile(filePath)
 				if (!variantMatch) {
@@ -25,8 +22,15 @@ export class MustHaveTestRule {
 				}
 
 				if (variantMatch.isTest) {
+					const exportedClass = BaseRule.getExportedClass(sourceFile)
+					if (!exportedClass) {
+						return MustHaveTestRule.validateMissingExportedTestClass(sourceFile)
+					}
 					return MustHaveTestRule.validateTestClass(sourceFile, exportedClass)
 				}
+
+				const exportedClass = BaseRule.getExportedClass(sourceFile)
+				if (!exportedClass) return []
 
 				return MustHaveTestRule.validatePrimaryClass(sourceFile, exportedClass)
 			}
@@ -46,7 +50,7 @@ export class MustHaveTestRule {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Scenario method '${method.getName()}' must live in a '.test.lll.ts' companion, not inside production class code.`,
+					`Scenario method '${method.getName()}' must live in a '.test.lll.ts' or '.test2.lll.ts' companion, not inside production class code.`,
 					"missing-test",
 					method.getStartLineNumber()
 				)
@@ -56,7 +60,10 @@ export class MustHaveTestRule {
 		for (const importDecl of sourceFile.getImportDeclarations()) {
 			const specifier = importDecl.getModuleSpecifierValue()
 			const targetFile = importDecl.getModuleSpecifierSourceFile()?.getFilePath()
-			const importsTestFile = specifier.includes(".test.lll") || !!targetFile?.endsWith(".test.lll.ts")
+			const importsTestFile =
+				specifier.includes(".test.lll")
+				|| specifier.includes(".test2.lll")
+				|| (targetFile !== undefined && FileVariantSupport.isTestFilePath(targetFile))
 			if (!importsTestFile) {
 				continue
 			}
@@ -80,7 +87,7 @@ export class MustHaveTestRule {
 		const file = sourceFile.getFilePath()
 		const className = exportedClass.getName() ?? "(anonymous)"
 		const expectedHostName = MustHaveTestRule.getExpectedHostClassName(file)
-		const expectedTestClassName = `${expectedHostName}Test`
+		const expectedTestClassName = FileVariantSupport.getExpectedTestClassName(file) ?? `${expectedHostName}Test`
 
 		if (className !== expectedTestClassName) {
 			diagnostics.push(
@@ -142,6 +149,20 @@ export class MustHaveTestRule {
 		}
 
 		return diagnostics
+	}
+
+	@Spec("Rejects test companion files that fail to export a class at all.")
+	private static validateMissingExportedTestClass(sourceFile: SourceFile): DiagnosticObject[] {
+		const file = sourceFile.getFilePath()
+		const expectedTestClassName = FileVariantSupport.getExpectedTestClassName(file) ?? "(unknown)"
+		return [
+			BaseRule.createError(
+				file,
+				`Test file must export class '${expectedTestClassName}'. No exported class was found.`,
+				"missing-test",
+				sourceFile.getStartLineNumber()
+			)
+		]
 	}
 
 	@Spec("Enforces behavioral test render() requirements.")
@@ -346,20 +367,16 @@ export class MustHaveTestRule {
 
 	@Spec("Builds the host file path from a test file path.")
 	private static getHostPathFromTestPath(testFilePath: string): string {
-		return testFilePath.replace(/\.test\.lll\.ts$/, ".lll.ts")
+		return FileVariantSupport.getPrimaryFilePath(testFilePath) ?? testFilePath
 	}
 
-	@Spec("Extracts expected host class name from a '.test.lll.ts' file path.")
+	@Spec("Extracts expected host class name from a supported companion test file path.")
 	private static getExpectedHostClassName(filePath: string): string {
-		const baseName = path.basename(filePath)
-		if (baseName.endsWith(".test.lll.ts")) {
-			return baseName.slice(0, -".test.lll.ts".length)
-		}
-		return path.parse(filePath).name
+		return FileVariantSupport.getHostClassNameFromTestPath(filePath) ?? path.parse(filePath).name
 	}
 
 	@Spec("Determines if a file is a supported primary or test variant.")
-	private static getVariantForFile(filePath: string): { variant: { primarySuffix: string; testSuffix: string }; isTest: boolean } | null {
+	private static getVariantForFile(filePath: string): { variant: { primarySuffix: string; testSuffix: string; testClassSuffix: string }; isTest: boolean } | null {
 		return FileVariantSupport.getVariantForFile(filePath)
 	}
 

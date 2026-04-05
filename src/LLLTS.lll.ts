@@ -30,6 +30,7 @@ export class LLLTS {
 		const loadStrategy = this.getOptionalArg(args, "--load-strategy", "from_imports") as LoadStrategy
 		const verbose = this.hasFlag(args, "--verbose")
 		const noTests = this.hasFlag(args, "--noTests")
+		const failSafeMode = this.hasFlag(args, "--fail-safe")
 		const clientTunnelConfigResult = this.parseClientTunnelConfig(args)
 		if (!clientTunnelConfigResult.valid) {
 			console.error(`\n❌ ${clientTunnelConfigResult.error}`)
@@ -54,7 +55,8 @@ export class LLLTS {
 		const ruleEngine = new RulesEngine(loader)
 		const results = ruleEngine.runAll({
 			skipTestRules: noTests,
-			skipTestCoverageDebt: noTests
+			skipTestCoverageDebt: noTests,
+			failSafeMode
 		})
 
 		let inventory: TestInventorySummary = {

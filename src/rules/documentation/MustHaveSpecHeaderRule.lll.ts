@@ -2,6 +2,7 @@
 import { Node, Statement, SyntaxKind } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
 import { DiagnosticObject } from "../../core/DiagnosticObject"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 
@@ -32,7 +33,7 @@ export class MustHaveSpecHeaderRule {
 
 					// Check method-level @Spec decorators
 					const methods = exportedClass.getMethods()
-					const isTestFile = sourceFile.getFilePath().endsWith(".test.lll.ts")
+					const isTestFile = FileVariantSupport.isTestFilePath(sourceFile.getFilePath())
 					const constructorDeclaration = exportedClass.getConstructors()[0]
 
 					if (constructorDeclaration !== undefined) {

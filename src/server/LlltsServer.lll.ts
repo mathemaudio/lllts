@@ -3,6 +3,7 @@ import * as fs from "fs"
 import * as path from "path"
 import type { MethodDeclaration } from "ts-morph"
 import { Project } from "ts-morph"
+import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { Spec } from "../public/lll.lll"
 import type { ProjectReport } from "./ProjectReport"
 import type { ScenarioDescriptor } from "./ScenarioDescriptor"
@@ -339,7 +340,7 @@ export class LlltsServer {
 </script>`
 		}
 
-	@Spec("Recursively scans for '.test.lll.ts' files and extracts static @Scenario metadata.")
+	@Spec("Recursively scans for supported companion test files and extracts static @Scenario metadata.")
 	private findTestsWithScenarios(projectPath: string): TestDescriptor[] {
 		const relativeToAbsolute = new Map<string, string>()
 		const stack: string[] = [projectPath]
@@ -356,7 +357,7 @@ export class LlltsServer {
 					stack.push(fullPath)
 					continue
 				}
-				if (!entry.isFile() || !fullPath.endsWith(".test.lll.ts")) {
+				if (!entry.isFile() || !FileVariantSupport.isTestFilePath(fullPath)) {
 					continue
 				}
 				const relativePath = this.toPosixPath(path.relative(projectPath, fullPath))
@@ -399,7 +400,10 @@ export class LlltsServer {
 				return []
 			}
 			const exportedClasses = classes.filter(classDecl => classDecl.isExported())
-			const preferredClass = exportedClasses.find(classDecl => String(classDecl.getName() ?? "").endsWith("Test"))
+			const preferredClass = exportedClasses.find(classDecl => {
+				const className = String(classDecl.getName() ?? "")
+				return className.endsWith("Test") || className.endsWith("Test2")
+			})
 			const testClass = preferredClass ?? exportedClasses[0] ?? classes[0]
 			if (!testClass) {
 				return []

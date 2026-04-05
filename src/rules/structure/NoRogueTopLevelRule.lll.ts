@@ -1,5 +1,6 @@
 import { Statement, SyntaxKind } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 
@@ -110,7 +111,7 @@ export class NoRogueTopLevelRule {
 						const expressionStatement = statement.asKindOrThrow(SyntaxKind.ExpressionStatement)
 						const newExpression = expressionStatement.getExpression().asKind(SyntaxKind.NewExpression)
 						if (newExpression !== undefined) {
-							const message = filePath.endsWith(".test.lll.ts")
+							const message = FileVariantSupport.isTestFilePath(filePath)
 								? "Top-level class instantiation is forbidden in test files. Tests are instantiated automatically by the language."
 								: "Top-level class instantiation is allowed only as the final statement in the exact form `new ClassName()` matching the exported class."
 							diagnostics.push(
@@ -188,7 +189,7 @@ export class NoRogueTopLevelRule {
 		statement: Statement,
 		statements: Statement[]
 	): boolean {
-		if (sourceFile.getFilePath().endsWith(".test.lll.ts")) {
+		if (FileVariantSupport.isTestFilePath(sourceFile.getFilePath())) {
 			return false
 		}
 

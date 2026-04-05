@@ -33,9 +33,10 @@ export class RulesEngine {
 	}
 
 	@Spec("Executes all registered rules and returns diagnostics.")
-	public runAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean } = {}): DiagnosticObject[] {
+	public runAll(options: { skipTestRules?: boolean; skipTestCoverageDebt?: boolean; failSafeMode?: boolean } = {}): DiagnosticObject[] {
 		const skipTestRules = options.skipTestRules === true
 		const skipTestCoverageDebt = options.skipTestCoverageDebt === true
+		const failSafeMode = options.failSafeMode === true
 		const files = this.loader.getFiles()
 		const rules = [
 			OneClassPerFileRule.getRule(),
@@ -78,12 +79,50 @@ export class RulesEngine {
 						ruleCode: "no-export" as RuleCode
 					})
 				}
-			}
 		}
-		if (!skipTestCoverageDebt) {
+		}
+		if (!skipTestRules && failSafeMode) {
+			all.push(...this.computeFailSafeCompanionRequirements())
+		}
+		if (!skipTestCoverageDebt && !failSafeMode) {
 			all.push(...this.computeTestCoverage())
 		}
 		return all
+	}
+
+	@Spec("Requires both supported companion test files for every primary class when fail-safe mode is active.")
+	private computeFailSafeCompanionRequirements(): DiagnosticObject[] {
+		const diagnostics: DiagnosticObject[] = []
+		const files = this.loader.getFiles()
+
+		for (const file of files) {
+			const filePath = file.getFilePath()
+			if (this.shouldIgnore(filePath)) continue
+
+			const variant = FileVariantSupport.getVariantForFile(filePath)
+			if (!variant || variant.isTest) continue
+
+			const exportedClass = BaseRule.getExportedClass(file)
+			if (!exportedClass) continue
+
+			for (const companionPath of FileVariantSupport.getTestFilePaths(filePath, exportedClass.getName())) {
+				if (fs.existsSync(companionPath)) {
+					continue
+				}
+				const relativePrimary = path.relative(process.cwd(), filePath)
+				const relativeCompanion = path.relative(process.cwd(), companionPath)
+				diagnostics.push(
+					BaseRule.createError(
+						filePath,
+						`Fail-safe mode requires companion test file '${relativeCompanion}' for primary class file '${relativePrimary}'.`,
+						"missing-test",
+						exportedClass.getStartLineNumber()
+					)
+				)
+			}
+		}
+
+		return diagnostics
 	}
 
 	@Spec("Calculates project-wide test coverage debt and emits warning/error diagnostics.")

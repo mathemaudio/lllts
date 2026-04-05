@@ -4,6 +4,7 @@ import * as path from "path"
 import { Project, SourceFile } from "ts-morph"
 import { LoadStrategy } from "../LoadStrategy"
 import { Spec } from "../public/lll.lll.js"
+import { FileVariantSupport } from "./FileVariantSupport.lll"
 import type { tsconfig_type } from "./tsconfig_type"
 
 
@@ -95,7 +96,7 @@ export class ProjectInitiator {
 			return
 		}
 
-		this.enqueueCompanionFile(normalizedPath, visited)
+		this.enqueueCompanionFiles(normalizedPath, visited)
 
 		// Get all import declarations
 		const importDeclarations = sourceFile.getImportDeclarations()
@@ -136,28 +137,27 @@ export class ProjectInitiator {
 		}
 	}
 
-	@Spec("Ensures every primary .lll.ts file brings along its .test.lll.ts counterpart (and vice versa).")
-	private enqueueCompanionFile(filePath: string, visited: Set<string>) {
-		const companionPath = this.getCompanionPath(filePath)
-		if (companionPath === null) {
+	@Spec("Ensures every primary file brings along all supported companions, and test files bring along their host.")
+	private enqueueCompanionFiles(filePath: string, visited: Set<string>) {
+		const variantMatch = FileVariantSupport.getVariantForFile(filePath)
+		if (!variantMatch) {
 			return
 		}
-		if (!fs.existsSync(companionPath)) {
-			return
-		}
-		const relative = path.relative(path.dirname(this.tsconfigPath), companionPath)
-		this.followImportsRecursively(companionPath, visited)
-	}
 
-	@Spec("Derives the paired .test.lll.ts or primary .lll.ts file path.")
-	private getCompanionPath(filePath: string): string | null {
-		if (filePath.endsWith(".test.lll.ts")) {
-			return filePath.replace(/\.test\.lll\.ts$/, ".lll.ts")
+		if (variantMatch.isTest) {
+			const primaryPath = FileVariantSupport.getPrimaryFilePath(filePath)
+			if (primaryPath !== null && fs.existsSync(primaryPath)) {
+				this.followImportsRecursively(primaryPath, visited)
+			}
+			return
 		}
-		if (filePath.endsWith(".lll.ts") && !filePath.endsWith(".test.lll.ts")) {
-			return filePath.replace(/\.lll\.ts$/, ".test.lll.ts")
+
+		for (const companionPath of FileVariantSupport.getTestFilePaths(filePath)) {
+			if (!fs.existsSync(companionPath)) {
+				continue
+			}
+			this.followImportsRecursively(companionPath, visited)
 		}
-		return null
 	}
 
 	@Spec("Resolves a relative import to an absolute file path, handling .ts/.lll.ts extensions.")

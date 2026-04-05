@@ -1,6 +1,7 @@
 
 import { SyntaxKind } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
+import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 
@@ -65,7 +66,7 @@ export class OneClassPerFileRule {
 
 				// Check if the exported class or type name matches the filename
 				const fileName = sourceFile.getBaseName().replace('.lll.ts', '').replace('.ts', '')
-				const isTestFile = sourceFile.getBaseName().endsWith(".test.lll.ts")
+				const isTestFile = FileVariantSupport.isTestFilePath(sourceFile.getFilePath())
 				const exportedName = exportedClasses.length === 1
 					? exportedClasses[0].getName()
 					: exportedTypes[0].getName()

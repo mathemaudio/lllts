@@ -49,4 +49,40 @@ export class ProjectInitiatorTest {
 			fs.rmSync(tempRoot, { recursive: true, force: true })
 		}
 	}
+
+	@Scenario("Load both companion variants for a primary class in from_imports mode")
+	static async loadBothCompanionVariants(input = {}, assert: AssertFn) {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-dual-companion-"))
+
+		try {
+			const srcDir = path.join(tempRoot, "src")
+			fs.mkdirSync(srcDir, { recursive: true })
+
+			fs.writeFileSync(
+				path.join(tempRoot, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: {
+						target: "ES2022",
+						module: "CommonJS",
+						moduleResolution: "Node",
+						experimentalDecorators: true
+					},
+					include: ["src/**/*"]
+				})
+			)
+
+			fs.writeFileSync(path.join(srcDir, "Main.lll.ts"), "export class Main {}\n")
+			fs.writeFileSync(path.join(srcDir, "Main.test.lll.ts"), "export class MainTest {}\n")
+			fs.writeFileSync(path.join(srcDir, "Main.test2.lll.ts"), "export class MainTest2 {}\n")
+
+			const loader = new ProjectInitiator(path.join(tempRoot, "tsconfig.json"), "from_imports", "src/Main.lll.ts")
+			const loadedFiles = loader.getFiles().map(file => path.basename(file.getFilePath()))
+
+			assert(loadedFiles.includes("Main.lll.ts"), "Expected primary file to be loaded")
+			assert(loadedFiles.includes("Main.test.lll.ts"), "Expected first companion to be loaded")
+			assert(loadedFiles.includes("Main.test2.lll.ts"), "Expected second companion to be loaded")
+		} finally {
+			fs.rmSync(tempRoot, { recursive: true, force: true })
+		}
+	}
 }

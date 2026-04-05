@@ -6,6 +6,7 @@ import * as util from "util"
 import { Spec } from "../../public/lll.lll"
 import { BaseRule } from "../BaseRule.lll"
 import { DiagnosticObject } from "../DiagnosticObject"
+import { FileVariantSupport } from "../FileVariantSupport.lll"
 import type { Phase } from "../Phase"
 import { ProjectInitiator } from "../ProjectInitiator.lll"
 import { RuleCode } from "../rulesEngine/RuleCode"
@@ -20,7 +21,7 @@ import type { TestRunnerResult } from "./TestRunnerResult"
 import type { TestType } from "./TestType"
 import type { TsConfig } from "../TsConfig"
 //
-@Spec("Executes unit scenarios inside '.test.lll.ts' classes and summarizes behavioral test inventory.")
+@Spec("Executes unit scenarios inside supported companion test classes and summarizes behavioral test inventory.")
 export class TestRunner {
 	private readonly projectRoot: string
 	private readonly rootDir: string
@@ -250,13 +251,14 @@ export class TestRunner {
 		return (match?.[1] as TestType) ?? null
 	}
 
-	@Spec("Collects executable test classes from discovered '.test.lll.ts' files in deterministic order.")
+	@Spec("Collects executable test classes from discovered companion test files in deterministic order.")
 	private listTestClasses(): TestClassRecord[] {
 		const records: TestClassRecord[] = []
 		const files = this.loader.getFiles()
 
 		for (const file of files) {
-			if (!file.getFilePath().endsWith(".test.lll.ts")) {
+			const variant = FileVariantSupport.getVariantForFile(file.getFilePath())
+			if (!variant || !variant.isTest) {
 				continue
 			}
 
@@ -266,7 +268,7 @@ export class TestRunner {
 			}
 
 			const className = exportedClass.getName()
-			if (!className || !className.endsWith("Test")) {
+			if (!className || !className.endsWith(variant.variant.testClassSuffix)) {
 				continue
 			}
 
