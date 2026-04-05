@@ -151,11 +151,41 @@ export class ClientTunnelRunner {
 		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
 	): boolean {
 		return (
+			this.isViteLocalhostWebsocketConsoleError(text, location)
+			|| this.isViteLocalhostBadGatewayConsoleError(text, location)
+		)
+	}
+
+	@Spec("Recognizes Vite dev-client websocket reconnect noise on localhost.")
+	private isViteLocalhostWebsocketConsoleError(
+		text: string,
+		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
+	): boolean {
+		return (
 			text.startsWith("WebSocket connection to 'ws://localhost:")
 			&& text.includes("' failed:")
-			&& typeof location?.url === "string"
-			&& location.url.includes("@vite")
+			&& this.isViteLocation(location)
 		)
+	}
+
+	@Spec("Recognizes transient Vite dev-client asset fetch 502 noise on localhost.")
+	private isViteLocalhostBadGatewayConsoleError(
+		text: string,
+		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
+	): boolean {
+		return (
+			text.startsWith("Failed to load resource: the server responded with a status of 502")
+			&& typeof location?.url === "string"
+			&& location.url.startsWith("http://localhost:")
+			&& this.isViteLocation(location)
+		)
+	}
+
+	@Spec("Limits dev-server noise suppression to errors emitted from Vite-owned browser assets.")
+	private isViteLocation(
+		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
+	): boolean {
+		return typeof location?.url === "string" && location.url.includes("@vite")
 	}
 
 	@Spec("Applies a short delay so browser-side runtime errors can arrive before inspection.")

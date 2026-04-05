@@ -334,6 +334,35 @@ export class ClientTunnelRunnerTest {
 		assert(result.status === "console_error", "Non-Vite websocket failures should still fail the tunnel")
 	}
 
+	@Scenario("Ignores Vite localhost bad gateway console errors")
+	static async ignoresViteLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+		const fixture = this.createRunner({
+			preflightConsoleErrors: [{
+				phase: "preflight",
+				source: "console.error",
+				text: "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+				location: { url: "http://localhost:45273/@vite/client", lineNumber: 0, columnNumber: 0 }
+			}]
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
+		assert(result.status === "passed", "Known Vite 502 asset noise should not fail the tunnel")
+		assert((result.consoleErrors ?? []).length === 0, "Ignored Vite 502 noise should not be returned as a browser runtime error")
+	}
+
+	@Scenario("Does not ignore localhost bad gateway console errors outside Vite assets")
+	static async doesNotIgnoreNonViteBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+		const fixture = this.createRunner({
+			preflightConsoleErrors: [{
+				phase: "preflight",
+				source: "console.error",
+				text: "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+				location: { url: "http://localhost:3000/src/App.ts", lineNumber: 7, columnNumber: 1 }
+			}]
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
+		assert(result.status === "console_error", "Non-Vite 502 failures should still fail the tunnel")
+	}
+
 	@Scenario("Truncates pageerror stacks to three lines with a total count footer")
 	static async truncatesPageErrorStack(input: object = {}, assert: AssertFn): Promise<void> {
 		const fixture = this.createRunner({
