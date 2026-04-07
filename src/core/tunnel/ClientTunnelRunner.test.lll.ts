@@ -349,6 +349,21 @@ export class ClientTunnelRunnerTest {
 		assert((result.consoleErrors ?? []).length === 0, "Ignored Vite 502 noise should not be returned as a browser runtime error")
 	}
 
+	@Scenario("Ignores automatic tunnel localhost bad gateway console errors")
+	static async ignoresAutomaticTunnelLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+		const fixture = this.createRunner({
+			preflightConsoleErrors: [{
+				phase: "preflight",
+				source: "console.error",
+				text: "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+				location: { url: "http://localhost:25723/?automatic=true", lineNumber: 0, columnNumber: 0 }
+			}]
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 60000 })
+		assert(result.status === "passed", "Known automatic tunnel 502 noise should not fail the tunnel")
+		assert((result.consoleErrors ?? []).length === 0, "Ignored automatic tunnel 502 noise should not be returned as a browser runtime error")
+	}
+
 	@Scenario("Does not ignore localhost bad gateway console errors outside Vite assets")
 	static async doesNotIgnoreNonViteBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
 		const fixture = this.createRunner({

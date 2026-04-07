@@ -177,7 +177,7 @@ export class ClientTunnelRunner {
 			text.startsWith("Failed to load resource: the server responded with a status of 502")
 			&& typeof location?.url === "string"
 			&& location.url.startsWith("http://localhost:")
-			&& this.isViteLocation(location)
+			&& this.isViteOwnedLocalhostLocation(location)
 		)
 	}
 
@@ -186,6 +186,27 @@ export class ClientTunnelRunner {
 		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
 	): boolean {
 		return typeof location?.url === "string" && location.url.includes("@vite")
+	}
+
+	@Spec("Treats Vite assets and the automatic overlay page as the same localhost dev-server surface.")
+	private isViteOwnedLocalhostLocation(
+		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
+	): boolean {
+		return this.isViteLocation(location) || this.isAutomaticTunnelLocation(location)
+	}
+
+	@Spec("Recognizes the automatic tunnel page URL used by the overlay runner.")
+	private isAutomaticTunnelLocation(
+		location?: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["location"]
+	): boolean {
+		if (typeof location?.url !== "string" || !location.url.startsWith("http://localhost:")) {
+			return false
+		}
+		try {
+			return new URL(location.url).searchParams.get("automatic") === "true"
+		} catch {
+			return location.url.includes("automatic=true")
+		}
 	}
 
 	@Spec("Applies a short delay so browser-side runtime errors can arrive before inspection.")
