@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./MaxFolderBreadthRule.lll"
 import { MaxFolderBreadthRule } from "./MaxFolderBreadthRule.lll"
 
@@ -8,19 +8,19 @@ export class MaxFolderBreadthRuleTest {
 	testType = "unit"
 
 	@Scenario("Verify rule is registered with correct id")
-	static async verifyRuleId(input: object = {}, assert: AssertFn) {
+	static async verifyRuleId(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = MaxFolderBreadthRule.getRule()
 		assert(rule.id === "R9", "Rule id should be R9")
 	}
 
 	@Scenario("Verify rule title is correct")
-	static async verifyRuleTitle(input: object = {}, assert: AssertFn) {
+	static async verifyRuleTitle(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = MaxFolderBreadthRule.getRule()
 		assert(rule.title === "Max folder breadth", "Rule title should be 'Max folder breadth'")
 	}
 
 	@Scenario("Verify folder breadth diagnostics are emitted once per project")
-	static async verifyProjectDiagnosticsAreNotDuplicated(input: object = {}, assert: AssertFn) {
+	static async verifyProjectDiagnosticsAreNotDuplicated(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const project = new Project({ useInMemoryFileSystem: true })
 		for (let i = 1; i <= 13; i++) {
 			const name = `Rule${String(i).padStart(2, "0")}`
@@ -43,7 +43,7 @@ export class MaxFolderBreadthRuleTest {
 	}
 
 	@Scenario("Verify plain TypeScript files count toward the folder file limit while tests stay excluded")
-	static async verifyPlainTypeScriptFilesAreCounted(input: object = {}, assert: AssertFn) {
+	static async verifyPlainTypeScriptFilesAreCounted(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const project = new Project({ useInMemoryFileSystem: true })
 		project.createSourceFile("/repo/src/core/Anchor.lll.ts", "export class Anchor {}")
 

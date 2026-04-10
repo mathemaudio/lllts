@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoNonNullAssertionRule.lll"
 import { NoNonNullAssertionRule } from "./NoNonNullAssertionRule.lll"
 
@@ -20,14 +20,14 @@ export class NoNonNullAssertionRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoNonNullAssertionRule.getRule()
 		assert(rule.id === "R15", "Rule id should be R15")
 		assert(rule.title === "No non-null assertion", "Rule title should be 'No non-null assertion'")
 	}
 
 	@Scenario("Rejects postfix non-null assertions")
-	static async rejectsPostfixNonNullAssertions(input: object = {}, assert: AssertFn) {
+	static async rejectsPostfixNonNullAssertions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class User {
@@ -46,7 +46,7 @@ export class MathObject {
 	}
 
 	@Scenario("Rejects nested and repeated non-null assertions")
-	static async rejectsNestedAndRepeatedNonNullAssertions(input: object = {}, assert: AssertFn) {
+	static async rejectsNestedAndRepeatedNonNullAssertions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class Box {
@@ -64,7 +64,7 @@ export class MathObject {
 	}
 
 	@Scenario("Allows explicit narrowing and definite assignment fields")
-	static async allowsExplicitNarrowingAndDefiniteAssignmentFields(input: object = {}, assert: AssertFn) {
+	static async allowsExplicitNarrowingAndDefiniteAssignmentFields(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class Worker {

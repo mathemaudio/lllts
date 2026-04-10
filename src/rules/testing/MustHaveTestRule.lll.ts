@@ -146,9 +146,52 @@ export class MustHaveTestRule {
 					)
 				)
 			}
+			MustHaveTestRule.validateScenarioSignature(method.method, diagnostics, file, className)
 		}
 
 		return diagnostics
+	}
+
+	@Spec("Requires scenario methods to use the standard input/assert/waitFor contract.")
+	private static validateScenarioSignature(
+		method: MethodDeclaration,
+		diagnostics: DiagnosticObject[],
+		file: string,
+		className: string
+	) {
+		const parameters = method.getParameters()
+		if (parameters.length !== 3) {
+			diagnostics.push(
+				BaseRule.createError(
+					file,
+					`Scenario method '${className}.${method.getName()}' must declare exactly three parameters: (input, assert: AssertFn, waitFor: WaitForFn).`,
+					"missing-test",
+					method.getStartLineNumber()
+				)
+			)
+			return
+		}
+
+		const [inputParam, assertParam, waitForParam] = parameters
+		const assertType = assertParam.getTypeNode()?.getText().trim() ?? ""
+		const waitForType = waitForParam.getTypeNode()?.getText().trim() ?? ""
+		const hasValidContract =
+			inputParam.getName() === "input"
+			&& assertParam.getName() === "assert"
+			&& assertType === "AssertFn"
+			&& waitForParam.getName() === "waitFor"
+			&& waitForType === "WaitForFn"
+
+		if (!hasValidContract) {
+			diagnostics.push(
+				BaseRule.createError(
+					file,
+					`Scenario method '${className}.${method.getName()}' must declare parameters exactly as (input, assert: AssertFn, waitFor: WaitForFn).`,
+					"missing-test",
+					method.getStartLineNumber()
+				)
+			)
+		}
 	}
 
 	@Spec("Rejects test companion files that fail to export a class at all.")

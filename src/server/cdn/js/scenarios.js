@@ -137,6 +137,23 @@
 		};
 	}
 
+	function createScenarioWaitFor() {
+		return async function (predicate, message, timeoutMs, intervalMs) {
+			var effectiveTimeoutMs = typeof timeoutMs === "number" ? timeoutMs : 1200;
+			var effectiveIntervalMs = typeof intervalMs === "number" ? intervalMs : 20;
+			var startTime = Date.now();
+			while (Date.now() - startTime < effectiveTimeoutMs) {
+				if (await predicate()) {
+					return;
+				}
+				await new Promise(function (resolve) {
+					setTimeout(resolve, effectiveIntervalMs);
+				});
+			}
+			throw new Error("Condition was not met within " + String(effectiveTimeoutMs) + "ms: " + String(message));
+		};
+	}
+
 	async function runScenarioMethod(TestClass, methodName, input) {
 		var scenarioMethodName = String(methodName || "").trim();
 		if (scenarioMethodName.length === 0) {
@@ -147,7 +164,7 @@
 			throw new Error("Scenario method '" + scenarioMethodName + "' is not available on this test class.");
 		}
 		var scenarioInput = input && typeof input === "object" ? input : {};
-		await scenarioFn.call(TestClass, scenarioInput, createScenarioAssert());
+		await scenarioFn.call(TestClass, scenarioInput, createScenarioAssert(), createScenarioWaitFor());
 	}
 
 	globalScope.llltsOverlayScenarios = {

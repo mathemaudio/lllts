@@ -1,5 +1,5 @@
 import type { BrowserType, Page } from "playwright"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import type { FakeRunnerOptions } from "../FakeRunnerOptions"
 import type { FakeRunnerState } from "../FakeRunnerState"
 import type { ClientTunnelRunResult } from "./ClientTunnelRunResult"
@@ -144,7 +144,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Passes when final report line does not contain failed")
-	static async passesWhenLastLineIsClientBehavioralPassed(input: object = {}, assert: AssertFn) {
+	static async passesWhenLastLineIsClientBehavioralPassed(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const fixture = this.createRunner({
 			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll client behavioral tests passed"
 		})
@@ -156,7 +156,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Fails when final report line contains failed case-insensitively")
-	static async failsWhenLastLineContainsFailed(input: object = {}, assert: AssertFn) {
+	static async failsWhenLastLineContainsFailed(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const fixture = this.createRunner({
 			reportText: "## src/App.test.lll.ts\n⛔️ scenario one: failed: nope\n\nSome Failed"
 		})
@@ -166,7 +166,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns timeout when waitForFunction times out")
-	static async returnsTimeoutStatus(input: object = {}, assert: AssertFn) {
+	static async returnsTimeoutStatus(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const timeoutError = new Error("wait timed out")
 		timeoutError.name = "TimeoutError"
 		const fixture = this.createRunner({ waitError: timeoutError })
@@ -177,7 +177,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns runtime_error when browser navigation throws")
-	static async returnsRuntimeError(input: object = {}, assert: AssertFn) {
+	static async returnsRuntimeError(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const fixture = this.createRunner({ gotoError: new Error("navigation failed") })
 		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: true, timeoutMs: 60000 })
 		assert(result.status === "runtime_error", "Non-timeout runtime exceptions should map to runtime_error")
@@ -185,7 +185,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Repairs a missing Chromium executable by installing once and retrying the launch")
-	static async repairsMissingChromiumInstall(input: object = {}, assert: AssertFn) {
+	static async repairsMissingChromiumInstall(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const launchError = new Error(
 			"browserType.launch: Executable doesn't exist at /tmp/chromium\nLooks like Playwright was just installed or updated."
 		)
@@ -200,7 +200,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns runtime_error with remediation when Chromium auto-install fails")
-	static async returnsRemediationWhenChromiumAutoInstallFails(input: object = {}, assert: AssertFn) {
+	static async returnsRemediationWhenChromiumAutoInstallFails(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const launchError = new Error(
 			"browserType.launch: Executable doesn't exist at /tmp/chromium\nLooks like Playwright was just installed or updated."
 		)
@@ -219,7 +219,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Includes JSON mirror payload when report JSON exists")
-	static async includesJsonMirror(input: object = {}, assert: AssertFn) {
+	static async includesJsonMirror(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const reportJson = {
 			status: "passed",
 			summary: { totalTests: 1, passedScenarios: 2, failedScenarios: 0 }
@@ -236,7 +236,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Appends automatic=true to tunnel URL before browser navigation")
-	static async appendsAutomaticQueryParam(input: object = {}, assert: AssertFn) {
+	static async appendsAutomaticQueryParam(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const fixture = this.createRunner()
 		await fixture.runner.run({ url: "http://localhost:3000/tunnel", headed: false, timeoutMs: 60000 })
 		assert(
@@ -246,7 +246,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Preserves existing tunnel query parameters when adding automatic=true")
-	static async preservesExistingQueryParams(input: object = {}, assert: AssertFn) {
+	static async preservesExistingQueryParams(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const fixture = this.createRunner()
 		await fixture.runner.run({ url: "http://localhost:3000/tunnel?foo=bar", headed: false, timeoutMs: 60000 })
 		assert(
@@ -256,7 +256,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns console_error when pageerror fires before behavioral scenarios start")
-	static async returnsConsoleErrorForPreflightPageError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async returnsConsoleErrorForPreflightPageError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{ phase: "preflight", source: "pageerror", text: "component exploded" }]
 		})
@@ -267,7 +267,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns console_error when console.error fires before behavioral scenarios start")
-	static async returnsConsoleErrorForPreflightConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async returnsConsoleErrorForPreflightConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -285,7 +285,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Returns console_error when scenario execution emits browser runtime errors after report starts")
-	static async returnsConsoleErrorForScenarioRuntimeError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async returnsConsoleErrorForScenarioRuntimeError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			reportText: "## src/App.test.lll.ts\n- scenario one: passed\n\nAll client behavioral tests passed",
 			scenarioConsoleErrors: [{ phase: "scenario", source: "console.error", text: "interaction broke" }]
@@ -297,7 +297,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Ignores warnings when browser runtime errors are absent")
-	static async ignoresWarningsWithoutErrors(input: object = {}, assert: AssertFn): Promise<void> {
+	static async ignoresWarningsWithoutErrors(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			consoleWarnings: ["vite fallback warning", "lit dev mode warning"]
 		})
@@ -306,7 +306,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Ignores Vite localhost websocket console errors")
-	static async ignoresViteLocalhostWebsocketConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async ignoresViteLocalhostWebsocketConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -321,7 +321,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Does not ignore localhost websocket console errors outside Vite assets")
-	static async doesNotIgnoreNonViteWebsocketConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async doesNotIgnoreNonViteWebsocketConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -335,7 +335,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Ignores Vite localhost bad gateway console errors")
-	static async ignoresViteLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async ignoresViteLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -350,7 +350,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Ignores automatic tunnel localhost bad gateway console errors")
-	static async ignoresAutomaticTunnelLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async ignoresAutomaticTunnelLocalhostBadGatewayConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -365,7 +365,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Does not ignore localhost bad gateway console errors outside Vite assets")
-	static async doesNotIgnoreNonViteBadGatewayConsoleError(input: object = {}, assert: AssertFn): Promise<void> {
+	static async doesNotIgnoreNonViteBadGatewayConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",
@@ -379,7 +379,7 @@ export class ClientTunnelRunnerTest {
 	}
 
 	@Scenario("Truncates pageerror stacks to three lines with a total count footer")
-	static async truncatesPageErrorStack(input: object = {}, assert: AssertFn): Promise<void> {
+	static async truncatesPageErrorStack(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
 		const fixture = this.createRunner({
 			preflightConsoleErrors: [{
 				phase: "preflight",

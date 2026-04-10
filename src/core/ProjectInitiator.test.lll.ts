@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll.js"
 import "./ProjectInitiator.lll"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 
@@ -10,14 +10,14 @@ export class ProjectInitiatorTest {
 	testType = "unit"
 
 	@Scenario("Load project files")
-	static async loadFiles(input = {}, assert: AssertFn) {
+	static async loadFiles(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const loader = new ProjectInitiator("./tsconfig.json", "from_imports", "src/examples/MathObject.lll.ts")
 		const files = loader.getFiles()
 		assert(files.length > 0, "Should load at least lll file")
 	}
 
 	@Scenario("Follow re-export declarations in from_imports mode")
-	static async followReExportDeclarations(input = {}, assert: AssertFn) {
+	static async followReExportDeclarations(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-reexport-"))
 
 		try {
@@ -51,7 +51,7 @@ export class ProjectInitiatorTest {
 	}
 
 	@Scenario("Load both companion variants for a primary class in from_imports mode")
-	static async loadBothCompanionVariants(input = {}, assert: AssertFn) {
+	static async loadBothCompanionVariants(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-dual-companion-"))
 
 		try {

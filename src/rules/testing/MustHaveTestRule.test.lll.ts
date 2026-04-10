@@ -1,5 +1,5 @@
 import { Project, SourceFile } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./MustHaveTestRule.lll"
 import { MustHaveTestRule } from "./MustHaveTestRule.lll"
 
@@ -23,7 +23,7 @@ export class MustHaveTestRuleTest {
 	}
 
 	@Scenario("Accept valid companion with host side-effect import and optional named import")
-	static async acceptsValidTestNaming(input: object = {}, assert: AssertFn) {
+	static async acceptsValidTestNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
@@ -32,7 +32,7 @@ import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "unit"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!MathObject, "host class should be available")
 	}
 }
@@ -45,7 +45,7 @@ export class MathObjectTest {
 	}
 
 	@Scenario("Reject invalid test class naming")
-	static async rejectsInvalidTestClassNaming(input: object = {}, assert: AssertFn) {
+	static async rejectsInvalidTestClassNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
@@ -54,7 +54,7 @@ import { MathObject } from "./MathObject.lll"
 export class WrongName {
 	testType = "unit"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!MathObject, "host class should be available")
 	}
 }
@@ -67,7 +67,7 @@ export class WrongName {
 	}
 
 	@Scenario("Accept valid second companion naming")
-	static async acceptsValidSecondCompanionNaming(input: object = {}, assert: AssertFn) {
+	static async acceptsValidSecondCompanionNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test2.lll.ts",
 			`
@@ -76,7 +76,7 @@ import { MathObject } from "./MathObject.lll"
 export class MathObjectTest2 {
 	testType = "unit"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!MathObject, "host class should be available")
 	}
 }
@@ -89,7 +89,7 @@ export class MathObjectTest2 {
 	}
 
 	@Scenario("Reject second companion without exported class")
-	static async rejectsSecondCompanionWithoutExportedClass(input: object = {}, assert: AssertFn) {
+	static async rejectsSecondCompanionWithoutExportedClass(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test2.lll.ts",
 			`
@@ -109,7 +109,7 @@ class MathObjectTest2 {
 	}
 
 	@Scenario("Reject production import from test module")
-	static async rejectsProductionImportFromTest(input: object = {}, assert: AssertFn) {
+	static async rejectsProductionImportFromTest(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`
@@ -128,7 +128,7 @@ export class MathObject {
 	}
 
 	@Scenario("Reject production import from second companion module")
-	static async rejectsProductionImportFromSecondCompanion(input: object = {}, assert: AssertFn) {
+	static async rejectsProductionImportFromSecondCompanion(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`
@@ -147,7 +147,7 @@ export class MathObject {
 	}
 
 	@Scenario("Reject invalid testType values")
-	static async rejectsInvalidTestType(input: object = {}, assert: AssertFn) {
+	static async rejectsInvalidTestType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
@@ -156,7 +156,7 @@ import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "api"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!MathObject, "host class should be available")
 	}
 }
@@ -169,7 +169,7 @@ export class MathObjectTest {
 	}
 
 	@Scenario("Accept behavioral tests with CSSResult styles and TemplateResult render")
-	static async acceptsBehavioralLitTypes(input: object = {}, assert: AssertFn) {
+	static async acceptsBehavioralLitTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/App.test.lll.ts",
 			`
@@ -182,7 +182,7 @@ export class AppTest extends LitElement {
 		return {} as TemplateResult<{ label: string }>
 	}
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!App, "host class should be available")
 	}
 }
@@ -198,7 +198,7 @@ export class AppTest extends LitElement {
 	}
 
 	@Scenario("Reject behavioral render return type outside string or TemplateResult")
-	static async rejectsUnsupportedBehavioralRenderType(input: object = {}, assert: AssertFn) {
+	static async rejectsUnsupportedBehavioralRenderType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/App.test.lll.ts",
 			`
@@ -211,7 +211,7 @@ export class AppTest extends LitElement {
 		return 1
 	}
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!App, "host class should be available")
 	}
 }
@@ -227,7 +227,7 @@ export class AppTest extends LitElement {
 	}
 
 	@Scenario("Reject named host import when side-effect import is missing")
-	static async rejectsNamedImportWithoutSideEffectImport(input: object = {}, assert: AssertFn) {
+	static async rejectsNamedImportWithoutSideEffectImport(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
@@ -235,7 +235,7 @@ import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "unit"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(!!MathObject, "host class should be available")
 	}
 }
@@ -251,7 +251,7 @@ export class MathObjectTest {
 	}
 
 	@Scenario("Accept side-effect host import without named host usage")
-	static async acceptsSideEffectImportWithoutNamedHostImport(input: object = {}, assert: AssertFn) {
+	static async acceptsSideEffectImportWithoutNamedHostImport(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = MustHaveTestRuleTest.runRuleOn(
 			"/src/MathObject.test.lll.ts",
 			`
@@ -259,7 +259,7 @@ import "./MathObject.lll"
 export class MathObjectTest {
 	testType = "unit"
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
 		assert(true, "side-effect import is enough to load host module")
 	}
 }
@@ -269,5 +269,29 @@ export class MathObjectTest {
 			}
 		)
 		assert(diagnostics.length === 0, "Expected side-effect host import alone to satisfy the companion import rule")
+	}
+
+	@Scenario("Reject scenario methods that omit waitFor")
+	static async rejectsScenarioWithoutWaitFor(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+		const diagnostics = MustHaveTestRuleTest.runRuleOn(
+			"/src/MathObject.test.lll.ts",
+			`
+import "./MathObject.lll"
+export class MathObjectTest {
+	testType = "unit"
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn) {
+		assert(true, "missing waitFor should fail")
+	}
+}
+`,
+			{
+				"/src/MathObject.lll.ts": `export class MathObject {}`
+			}
+		)
+		assert(
+			diagnostics.some(d => d.message.includes("waitFor: WaitForFn")),
+			"Expected scenario contract diagnostic when waitFor is omitted"
+		)
 	}
 }

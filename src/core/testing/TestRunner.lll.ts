@@ -323,6 +323,7 @@ export class TestRunner {
 		const capturedLogs: string[] = []
 		const restoreConsole = this.hookConsole(capturedLogs)
 		const assert = this.createAssert()
+		const waitFor = this.createWaitFor()
 
 		try {
 			const scenarioFn = runtimeClass[context.scenarioMethodName]
@@ -332,9 +333,9 @@ export class TestRunner {
 
 			try {
 				await Reflect.apply(
-					scenarioFn as (input: undefined, assert: unknown) => Promise<unknown> | unknown,
+					scenarioFn as (input: object, assert: unknown, waitFor: unknown) => Promise<unknown> | unknown,
 					runtimeClass,
-					[undefined, assert]
+					[{}, assert, waitFor]
 				)
 			} catch (error) {
 				return this.buildDiagnostic(context, "scenario", error, capturedLogs, "")
@@ -482,6 +483,36 @@ export class TestRunner {
 				throw new Error(message)
 			}
 		}
+	}
+
+	@Spec("Creates a polling helper for asynchronous scenario conditions.")
+	private createWaitFor(): (
+		predicate: () => boolean | Promise<boolean>,
+		message: string,
+		timeoutMs?: number,
+		intervalMs?: number
+	) => Promise<void> {
+		return async (
+			predicate: () => boolean | Promise<boolean>,
+			message: string,
+			timeoutMs = 1200,
+			intervalMs = 20
+		): Promise<void> => {
+			const startTime = Date.now()
+			while (Date.now() - startTime < timeoutMs) {
+				if (await predicate()) {
+					return
+				}
+				await this.sleep(intervalMs)
+			}
+
+			throw new Error(`Condition was not met within ${timeoutMs}ms: ${message}`)
+		}
+	}
+
+	@Spec("Sleeps between waitFor polling attempts.")
+	private async sleep(durationMs: number): Promise<void> {
+		await new Promise<void>((resolve) => setTimeout(resolve, durationMs))
 	}
 
 	@Spec("Captures console output during scenario execution.")

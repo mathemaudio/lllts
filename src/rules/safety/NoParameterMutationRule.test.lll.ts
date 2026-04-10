@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoParameterMutationRule.lll"
 import { NoParameterMutationRule } from "./NoParameterMutationRule.lll"
 
@@ -15,14 +15,14 @@ export class NoParameterMutationRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoParameterMutationRule.getRule()
 		assert(rule.id === "R19", "Rule id should be R19")
 		assert(rule.title === "No parameter mutation", "Rule title should be 'No parameter mutation'")
 	}
 
 	@Scenario("Rejects direct reassignment and update of parameters")
-	static async rejectsDirectParameterMutation(input: object = {}, assert: AssertFn) {
+	static async rejectsDirectParameterMutation(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {
@@ -41,7 +41,7 @@ export class NoParameterMutationRuleTest {
 	}
 
 	@Scenario("Allows local rewrites and property updates")
-	static async allowsLocalRewritePatterns(input: object = {}, assert: AssertFn) {
+	static async allowsLocalRewritePatterns(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`type User = {
@@ -61,7 +61,7 @@ export class Normalizer {
 	}
 
 	@Scenario("Ignores shadowed parameter names in nested functions")
-	static async ignoresShadowedNestedParameters(input: object = {}, assert: AssertFn) {
+	static async ignoresShadowedNestedParameters(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {
@@ -79,7 +79,7 @@ export class Normalizer {
 	}
 
 	@Scenario("Rejects destructured parameter rebinding")
-	static async rejectsDestructuredParameterMutation(input: object = {}, assert: AssertFn) {
+	static async rejectsDestructuredParameterMutation(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {

@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll.js"
 import { ProjectInitiator } from "../ProjectInitiator.lll.js"
 import "./RulesEngine.lll"
 import { RulesEngine } from "./RulesEngine.lll.js"
@@ -11,7 +11,7 @@ export class RulesEngineTest {
 	testType = "unit"
 
 	@Scenario("Run rules on project")
-	static async runRules(input: object = {}, assert: AssertFn) {
+	static async runRules(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const loader = new ProjectInitiator("./tsconfig.json", "from_imports", "src/LLLTS.lll.ts")
 		const engine = new RulesEngine(loader)
 		const results = engine.runAll()
@@ -20,7 +20,7 @@ export class RulesEngineTest {
 	}
 
 	@Scenario("Fail-safe mode requires second companions and suppresses coverage debt")
-	static async failSafeModeRequiresSecondCompanion(input: object = {}, assert: AssertFn) {
+	static async failSafeModeRequiresSecondCompanion(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-fail-safe-rules-"))
 
 		try {

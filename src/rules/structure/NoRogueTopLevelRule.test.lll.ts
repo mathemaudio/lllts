@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoRogueTopLevelRule.lll"
 import { NoRogueTopLevelRule } from "./NoRogueTopLevelRule.lll"
 
@@ -15,7 +15,7 @@ export class NoRogueTopLevelRuleTest {
 	}
 
 	@Scenario("Passes class-only file")
-	static async passesClassOnlyFile(input: object = {}, assert: AssertFn) {
+	static async passesClassOnlyFile(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {}`
@@ -24,7 +24,7 @@ export class NoRogueTopLevelRuleTest {
 	}
 
 	@Scenario("Rejects top-level function")
-	static async rejectsTopLevelFunction(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelFunction(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`function helper() { return 1 }
@@ -34,7 +34,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Rejects top-level variables")
-	static async rejectsTopLevelVariables(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelVariables(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`const X = 1
@@ -46,7 +46,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Rejects top-level enum")
-	static async rejectsTopLevelEnum(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelEnum(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`enum Greeting { Hi = "hi" }
@@ -56,7 +56,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Rejects top-level namespace")
-	static async rejectsTopLevelNamespace(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelNamespace(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`namespace Internal { export const value = 1 }
@@ -66,7 +66,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Rejects top-level declare in ts")
-	static async rejectsTopLevelDeclareInTs(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelDeclareInTs(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`declare class AmbientThing {}
@@ -76,7 +76,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Allows declaration files")
-	static async allowsDeclarationFiles(input: object = {}, assert: AssertFn) {
+	static async allowsDeclarationFiles(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/globals.d.ts",
 			`declare const ambientValue: string`
@@ -85,7 +85,7 @@ export class MathObject {}`
 	}
 
 	@Scenario("Allows pure re-export barrels")
-	static async allowsPureReExportBarrels(input: object = {}, assert: AssertFn) {
+	static async allowsPureReExportBarrels(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/public/index.ts",
 			`export * from "./api"
@@ -95,7 +95,7 @@ export { A } from "./A"`
 	}
 
 	@Scenario("Allows one final top-level if")
-	static async allowsOneFinalTopLevelIf(input: object = {}, assert: AssertFn) {
+	static async allowsOneFinalTopLevelIf(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/LLLTS.lll.ts",
 			`export class LLLTS {}
@@ -105,7 +105,7 @@ if (true) { console.log("x") }`
 	}
 
 	@Scenario("Allows one final top-level new of exported class in production file")
-	static async allowsFinalTopLevelNewOfExportedClass(input: object = {}, assert: AssertFn) {
+	static async allowsFinalTopLevelNewOfExportedClass(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/Start.lll.ts",
 			`export class Start {}
@@ -115,7 +115,7 @@ new Start()`
 	}
 
 	@Scenario("Rejects top-level new in test files")
-	static async rejectsTopLevelNewInTestFile(input: object = {}, assert: AssertFn) {
+	static async rejectsTopLevelNewInTestFile(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/Start.test.lll.ts",
 			`export class StartTest {}
@@ -125,7 +125,7 @@ new StartTest()`
 	}
 
 	@Scenario("Rejects multiple top-level if statements")
-	static async rejectsMultipleTopLevelIf(input: object = {}, assert: AssertFn) {
+	static async rejectsMultipleTopLevelIf(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/LLLTS.lll.ts",
 			`export class LLLTS {}
@@ -136,7 +136,7 @@ if (false) {}`
 	}
 
 	@Scenario("Rejects non-final top-level if")
-	static async rejectsNonFinalTopLevelIf(input: object = {}, assert: AssertFn) {
+	static async rejectsNonFinalTopLevelIf(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/LLLTS.lll.ts",
 			`if (true) {}
@@ -146,7 +146,7 @@ export class LLLTS {}`
 	}
 
 	@Scenario("Allows explicit public decorators file exception")
-	static async allowsPublicDecoratorsException(input: object = {}, assert: AssertFn) {
+	static async allowsPublicDecoratorsException(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/public/lll.lll.ts",
 			`export function Spec() {}
@@ -156,7 +156,7 @@ export function Scenario() {}`
 	}
 
 	@Scenario("Allows top-level Spec call immediately before exported type")
-	static async allowsTopLevelSpecBeforeExportedType(input: object = {}, assert: AssertFn) {
+	static async allowsTopLevelSpecBeforeExportedType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoRogueTopLevelRuleTest.runRuleOn(
 			"/src/ProjectReport.ts",
 			`Spec("project report")

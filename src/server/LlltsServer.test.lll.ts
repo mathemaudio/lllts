@@ -2,7 +2,7 @@ import * as fs from "fs"
 import * as http from "http"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Scenario, Spec } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll.js"
 import "./LlltsServer.lll"
 import { LlltsServer } from "./LlltsServer.lll.js"
 import type { ServerConfig } from "./ServerConfig"
@@ -82,7 +82,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Missing project path on filesystem returns 404 with diagnostics")
-	static async missingProjectPathResponse(input: object = {}, assert: AssertFn) {
+	static async missingProjectPathResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const server = new LlltsServer()
 		const uniquePath = path.join(os.tmpdir(), `lllts-missing-${Date.now()}-${Math.random().toString(16).slice(2)}`)
 		const config: ServerConfig = {
@@ -98,7 +98,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Project path that exists as file returns 400 with diagnostics")
-	static async nonDirectoryProjectPathResponse(input: object = {}, assert: AssertFn) {
+	static async nonDirectoryProjectPathResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-file-"))
 		const filePath = path.join(tempRoot, "not-a-dir.txt")
 		fs.writeFileSync(filePath, "x\n")
@@ -120,7 +120,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Unreachable project client link returns 502 with diagnostics")
-	static async unreachableProjectClientLinkResponse(input: object = {}, assert: AssertFn) {
+	static async unreachableProjectClientLinkResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-upstream-"))
 		const testFile = path.join(tempRoot, "src", "Alpha.test.lll.ts")
 		fs.mkdirSync(path.dirname(testFile), { recursive: true })
@@ -143,7 +143,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Reachable upstream HTML is proxied and injected with overlay test UI")
-	static async proxiedHtmlIncludesOverlay(input: object = {}, assert: AssertFn) {
+	static async proxiedHtmlIncludesOverlay(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-html-"))
 		const testFileA = path.join(tempRoot, "tests", "Alpha.test.lll.ts")
 		const testFileB = path.join(tempRoot, "tests", "nested", "Beta.test.lll.ts")
@@ -200,7 +200,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Overlay CDN assets are served by local server routes")
-	static async overlayAssetsAreServed(input: object = {}, assert: AssertFn) {
+	static async overlayAssetsAreServed(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-overlay-assets-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 200
@@ -250,7 +250,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Reachable upstream non-HTML content is forwarded without overlay injection")
-	static async proxiedNonHtmlPassThrough(input: object = {}, assert: AssertFn) {
+	static async proxiedNonHtmlPassThrough(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-asset-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 200
@@ -277,7 +277,7 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Upstream non-200 status code is passed through by proxy")
-	static async upstreamNon200StatusPassThrough(input: object = {}, assert: AssertFn) {
+	static async upstreamNon200StatusPassThrough(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-status-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 418

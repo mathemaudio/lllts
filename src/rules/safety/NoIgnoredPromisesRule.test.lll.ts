@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoIgnoredPromisesRule.lll"
 import { NoIgnoredPromisesRule } from "./NoIgnoredPromisesRule.lll"
 
@@ -21,14 +21,14 @@ export class NoIgnoredPromisesRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoIgnoredPromisesRule.getRule()
 		assert(rule.id === "R17", "Rule id should be R17")
 		assert(rule.title === "No ignored promises", "Rule title should be 'No ignored promises'")
 	}
 
 	@Scenario("Rejects a bare promise-returning call")
-	static async rejectsBarePromiseCalls(input: object = {}, assert: AssertFn) {
+	static async rejectsBarePromiseCalls(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoIgnoredPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -56,7 +56,7 @@ export class Worker {
 	}
 
 	@Scenario("Allows awaited promises")
-	static async allowsAwaitedPromises(input: object = {}, assert: AssertFn) {
+	static async allowsAwaitedPromises(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoIgnoredPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -82,7 +82,7 @@ export class Worker {
 	}
 
 	@Scenario("Allows promises that are assigned returned or explicitly voided")
-	static async allowsExplicitPromiseHandlingPatterns(input: object = {}, assert: AssertFn) {
+	static async allowsExplicitPromiseHandlingPatterns(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoIgnoredPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -117,7 +117,7 @@ export class Worker {
 	}
 
 	@Scenario("Rejects ignored PromiseLike values")
-	static async rejectsIgnoredPromiseLikeValues(input: object = {}, assert: AssertFn) {
+	static async rejectsIgnoredPromiseLikeValues(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoIgnoredPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {

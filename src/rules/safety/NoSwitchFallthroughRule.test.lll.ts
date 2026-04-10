@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoSwitchFallthroughRule.lll"
 import { NoSwitchFallthroughRule } from "./NoSwitchFallthroughRule.lll"
 
@@ -15,14 +15,14 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoSwitchFallthroughRule.getRule()
 		assert(rule.id === "R16", "Rule id should be R16")
 		assert(rule.title === "No switch fallthrough", "Rule title should be 'No switch fallthrough'")
 	}
 
 	@Scenario("Allows terminated switch clauses")
-	static async allowsTerminatedSwitchClauses(input: object = {}, assert: AssertFn) {
+	static async allowsTerminatedSwitchClauses(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -43,7 +43,7 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Rejects implicit fallthrough between non-final clauses")
-	static async rejectsImplicitFallthrough(input: object = {}, assert: AssertFn) {
+	static async rejectsImplicitFallthrough(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -65,7 +65,7 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Rejects fallthrough even when marked by comment")
-	static async rejectsFallthroughMarkers(input: object = {}, assert: AssertFn) {
+	static async rejectsFallthroughMarkers(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -87,7 +87,7 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Allows grouped empty clauses without markers")
-	static async allowsGroupedEmptyClausesWithoutMarkers(input: object = {}, assert: AssertFn) {
+	static async allowsGroupedEmptyClausesWithoutMarkers(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -106,7 +106,7 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Allows grouped empty clauses even with marker comments")
-	static async allowsGroupedEmptyClausesWithMarkerComments(input: object = {}, assert: AssertFn) {
+	static async allowsGroupedEmptyClausesWithMarkerComments(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -126,7 +126,7 @@ export class NoSwitchFallthroughRuleTest {
 	}
 
 	@Scenario("Allows clauses whose terminal if statement closes both branches")
-	static async allowsIfBranchesThatBothTerminate(input: object = {}, assert: AssertFn) {
+	static async allowsIfBranchesThatBothTerminate(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoSwitchFallthroughRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {

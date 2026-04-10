@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
 import "./NoAnyRule.lll"
 import { NoAnyRule } from "./NoAnyRule.lll"
 
@@ -20,14 +20,14 @@ export class NoAnyRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoAnyRule.getRule()
 		assert(rule.id === "R14", "Rule id should be R14")
 		assert(rule.title === "No any", "Rule title should be 'No any'")
 	}
 
 	@Scenario("Rejects explicit any annotations and casts")
-	static async rejectsExplicitAnyAnnotationsAndCasts(input: object = {}, assert: AssertFn) {
+	static async rejectsExplicitAnyAnnotationsAndCasts(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoAnyRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -44,7 +44,7 @@ export class NoAnyRuleTest {
 	}
 
 	@Scenario("Allows unknown and concrete types")
-	static async allowsUnknownAndConcreteTypes(input: object = {}, assert: AssertFn) {
+	static async allowsUnknownAndConcreteTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoAnyRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -58,7 +58,7 @@ export class NoAnyRuleTest {
 	}
 
 	@Scenario("Ignores the word any outside type syntax")
-	static async ignoresAnyOutsideTypeSyntax(input: object = {}, assert: AssertFn) {
+	static async ignoresAnyOutsideTypeSyntax(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoAnyRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {

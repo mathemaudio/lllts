@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec } from "../../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn } from "../../../public/lll.lll"
 import "./NoImplicitPrimitiveCoercionRule.lll"
 import { NoImplicitPrimitiveCoercionRule } from "./NoImplicitPrimitiveCoercionRule.lll"
 
@@ -20,14 +20,14 @@ export class NoImplicitPrimitiveCoercionRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn) {
+	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const rule = NoImplicitPrimitiveCoercionRule.getRule()
 		assert(rule.id === "R13", "Rule id should be R13")
 		assert(rule.title === "No implicit primitive coercion", "Rule title should be 'No implicit primitive coercion'")
 	}
 
 	@Scenario("Allows arithmetic on statically numeric operands")
-	static async allowsNumericArithmetic(input: object = {}, assert: AssertFn) {
+	static async allowsNumericArithmetic(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoImplicitPrimitiveCoercionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -51,7 +51,7 @@ export class NoImplicitPrimitiveCoercionRuleTest {
 	}
 
 	@Scenario("Rejects binary arithmetic that would rely on coercion")
-	static async rejectsBinaryArithmeticCoercion(input: object = {}, assert: AssertFn) {
+	static async rejectsBinaryArithmeticCoercion(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoImplicitPrimitiveCoercionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -71,7 +71,7 @@ export class NoImplicitPrimitiveCoercionRuleTest {
 	}
 
 	@Scenario("Rejects unary arithmetic on non-numeric operands")
-	static async rejectsUnaryArithmeticCoercion(input: object = {}, assert: AssertFn) {
+	static async rejectsUnaryArithmeticCoercion(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoImplicitPrimitiveCoercionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -89,7 +89,7 @@ export class NoImplicitPrimitiveCoercionRuleTest {
 	}
 
 	@Scenario("Rejects ambiguous unions and any-like arithmetic inputs")
-	static async rejectsAmbiguousArithmeticInputs(input: object = {}, assert: AssertFn) {
+	static async rejectsAmbiguousArithmeticInputs(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const diagnostics = NoImplicitPrimitiveCoercionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
