@@ -70,7 +70,7 @@
 	}
 
 	function ensureOverlayMarkup(templateHtml) {
-		if (document.getElementById("lllts-test-toggle")) {
+		if (document.getElementById("lllts-test-panel")) {
 			return;
 		}
 		var container = document.createElement("div");
@@ -217,7 +217,6 @@
 		var scenarioApi = getScenarioApi();
 		var loadTokenCounter = 0;
 		var backdrop = document.getElementById("lllts-overlay-backdrop");
-		var toggleButton = document.getElementById("lllts-test-toggle");
 		var panel = document.getElementById("lllts-test-panel");
 		var list = document.getElementById("lllts-test-list");
 		var emptyState = document.getElementById("lllts-test-empty");
@@ -237,7 +236,6 @@
 		var terminalPopupClose = document.getElementById("lllts-terminal-popup-close");
 
 		if (
-			!toggleButton ||
 			!backdrop ||
 			!panel ||
 			!list ||
@@ -259,10 +257,10 @@
 		) {
 			return;
 		}
-		if (toggleButton.getAttribute("data-lllts-wired") === "true") {
+		if (panel.getAttribute("data-lllts-wired") === "true") {
 			return;
 		}
-		toggleButton.setAttribute("data-lllts-wired", "true");
+		panel.setAttribute("data-lllts-wired", "true");
 		var isRunningAllTests = false;
 
 		function clearFixedLastRunReport() {
@@ -299,11 +297,7 @@
 		}
 
 		function syncBackdropState() {
-			var shouldShowBackdrop =
-				panel.classList.contains("lllts-open") ||
-				popup.classList.contains("lllts-open") ||
-				terminalPopup.classList.contains("lllts-open");
-			backdrop.classList.toggle("lllts-open", shouldShowBackdrop);
+			backdrop.classList.add("lllts-open");
 		}
 
 		function setPanelResult(state, message) {
@@ -647,10 +641,6 @@
 		if (openByDefault) {
 			panel.classList.add("lllts-open");
 		}
-		toggleButton.addEventListener("click", function () {
-			panel.classList.toggle("lllts-open");
-			syncBackdropState();
-		});
 		popupClose.addEventListener("click", closePopup);
 		terminalPopupClose.addEventListener("click", closeTerminalPopup);
 		setPanelResult("", "");

@@ -219,7 +219,8 @@ export class LlltsServerTest {
 			const templateResponse = await this.request(app, "/__lllts-overlay/index.html")
 			assert(templateResponse.status === 200, "Overlay template route should return HTTP 200")
 			assert(templateResponse.contentType.includes("text/html"), "Overlay template route should return text/html")
-			assert(templateResponse.body.includes("LLLTS Tests"), "Overlay template should include toggle markup")
+			assert(templateResponse.body.includes("Project Tests"), "Overlay template should include test panel markup")
+			assert(!templateResponse.body.includes("lllts-test-toggle"), "Overlay template should not include toggle markup")
 
 			const scriptResponse = await this.request(app, "/__lllts-overlay/js/script.js")
 			assert(scriptResponse.status === 200, "Overlay script route should return HTTP 200")
@@ -242,7 +243,8 @@ export class LlltsServerTest {
 			const styleResponse = await this.request(app, "/__lllts-overlay/css/style.css")
 			assert(styleResponse.status === 200, "Overlay style route should return HTTP 200")
 			assert(styleResponse.contentType.includes("text/css"), "Overlay style route should return text/css")
-			assert(styleResponse.body.includes("#lllts-test-toggle"), "Overlay stylesheet should include toggle styles")
+			assert(styleResponse.body.includes("#lllts-test-panel"), "Overlay stylesheet should include panel styles")
+			assert(!styleResponse.body.includes("#lllts-test-toggle"), "Overlay stylesheet should not include toggle styles")
 		} finally {
 			await upstream.close()
 			fs.rmSync(tempRoot, { recursive: true, force: true })
