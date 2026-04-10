@@ -3,6 +3,7 @@ import type { ClientTunnelConfig } from "./ClientTunnelConfig"
 import { LoadStrategy } from "./LoadStrategy"
 import type { MainResult } from "./MainResult"
 import type { ServerModeConfig } from "./ServerModeConfig"
+import packageJson from "../package.json"
 import { BaseRule } from "./core/BaseRule.lll"
 import { ProjectInitiator } from "./core/ProjectInitiator.lll"
 import { ResultReporter } from "./core/ResultReporter.lll"
@@ -38,9 +39,7 @@ export class LLLTS {
 		}
 		const clientTunnelConfig = clientTunnelConfigResult.config
 
-
-
-		console.log(`LLLTS Compiler v0.1.4`)
+		console.log(`LLLTS Compiler v${packageJson.version}`)
 		// console.log(`Project: ${projectPath}`)
 		console.log(`Entry: ${entryFile}`)
 
