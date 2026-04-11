@@ -5,7 +5,7 @@ import { RulesEngine } from "./core/rulesEngine/RulesEngine.lll.js";
 import { TestRunner } from "./core/testing/TestRunner.lll.js";
 import { ClientTunnelRunner } from "./core/tunnel/ClientTunnelRunner.lll.js";
 import type { ClientTunnelRunResult } from "./core/tunnel/ClientTunnelRunResult.js";
-import { AssertFn, Scenario, Spec, WaitForFn } from "./public/lll.lll.js";
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "./public/lll.lll.js";
 import { LlltsServer } from "./server/LlltsServer.lll.js";
 
 @Spec("End-to-end scenarios for the LLLTS CLI.")
@@ -65,7 +65,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Compile MathObject example using the playground inputs")
-	static async compileMathObjectExample(input: { project?: string; entry?: string; verbose?: boolean } = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async compileMathObjectExample(scenario: ScenarioParameter) {
+		const input = scenario.input as { project?: string, entry?: string, verbose?: boolean }
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = (input.project || "./tsconfig.json").trim()
 		const entry = (input.entry || "src/examples/MathObject.lll.ts").trim()
 		const verbose = input.verbose ?? false
@@ -82,7 +85,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral inventory without --clientTunnel returns compile failure")
-	static async behavioralTestsRequireClientTunnel(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTestsRequireClientTunnel(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		let tunnelInvoked = false
 		await this.withCompileStubs(
 			{
@@ -102,14 +108,20 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Invalid --clientTunnelTimeoutMs returns compile failure")
-	static async invalidClientTunnelTimeout(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async invalidClientTunnelTimeout(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnelTimeoutMs", "0"])
 		assert(result.mode === "compile", "Invalid timeout should still return compile result mode")
 		assert(result.exitCode === 1, "Invalid timeout should return non-zero compile exit code")
 	}
 
 	@Scenario("Coverage debt warning keeps compile successful and prints success footer")
-	static async coverageDebtWarningKeepsSuccess(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async coverageDebtWarningKeepsSuccess(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -148,7 +160,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Coverage debt error fails compile and suppresses success footer")
-	static async coverageDebtErrorFailsCompile(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async coverageDebtErrorFailsCompile(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -187,7 +202,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("--noTests skips test execution/reporting and ignores test-only failures")
-	static async noTestsSkipsTestExecutionAndCoverageDebtErrors(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async noTestsSkipsTestExecutionAndCoverageDebtErrors(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalRulesRunAll = RulesEngine.prototype.runAll
 		const originalInventory = TestRunner.prototype.summarizeInventory
 		const originalRunAll = TestRunner.prototype.runAll
@@ -269,7 +287,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("--fail-safe forwards fail-safe mode into the rules engine")
-	static async failSafeFlagForwardsToRulesEngine(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async failSafeFlagForwardsToRulesEngine(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalRulesRunAll = RulesEngine.prototype.runAll
 		const originalInventory = TestRunner.prototype.summarizeInventory
 		const originalRunAll = TestRunner.prototype.runAll
@@ -305,7 +326,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel pass returns compile success without full report by default")
-	static async behavioralTunnelPass(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async behavioralTunnelPass(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -342,7 +366,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Client tunnel skips Node-side test runner even when no behavioral tests exist")
-	static async clientTunnelSkipsNodeTests(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async clientTunnelSkipsNodeTests(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalRulesRunAll = RulesEngine.prototype.runAll
 		const originalInventory = TestRunner.prototype.summarizeInventory
 		const originalRunAll = TestRunner.prototype.runAll
@@ -393,7 +420,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel is skipped when local diagnostics already fail compile")
-	static async behavioralTunnelSkippedOnLocalErrors(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTunnelSkippedOnLocalErrors(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		let tunnelInvoked = false
 		await this.withCompileStubs(
 			{
@@ -414,7 +444,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel failure prints full report and fails compile")
-	static async behavioralTunnelFailure(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async behavioralTunnelFailure(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -447,7 +480,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel failure output can omit passing files and passing scenarios")
-	static async behavioralTunnelFailureOnlyPrintsFailedSections(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTunnelFailureOnlyPrintsFailedSections(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -499,7 +535,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Behavioral tunnel failure does not print duplicate test-failure diagnostic block")
-	static async behavioralTunnelFailureHasNoDuplicateDiagnostic(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async behavioralTunnelFailureHasNoDuplicateDiagnostic(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const originalError = console.error
 		const logLines: string[] = []
@@ -546,7 +585,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Preflight browser runtime errors become compile diagnostics and stop test execution")
-	static async behavioralTunnelPreflightConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTunnelPreflightConsoleError(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -592,7 +634,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Scenario browser runtime errors print diagnostics and preserve tunnel report text")
-	static async behavioralTunnelScenarioConsoleError(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTunnelScenarioConsoleError(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -636,7 +681,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Tunnel timeout output distinguishes navigation from scenario execution")
-	static async behavioralTunnelTimeoutMessages(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async behavioralTunnelTimeoutMessages(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalError = console.error
 		const logLines: string[] = []
 		console.error = (...args: unknown[]) => {
@@ -696,7 +744,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Verbose tunnel-only run does not print no-tests-executed placeholder")
-	static async verboseBehavioralOnlyRunSkipsNoTestsPlaceholder(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verboseBehavioralOnlyRunSkipsNoTestsPlaceholder(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {
@@ -733,7 +784,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("--clientTunnelHeaded and --clientTunnelTimeoutMs are forwarded to tunnel runner")
-	static async tunnelFlagsAreForwarded(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async tunnelFlagsAreForwarded(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const calls: Array<{ url: string; headed: boolean; timeoutMs: number }> = []
 		await this.withCompileStubs(
 			{
@@ -762,7 +816,10 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Server start with explicit valid port returns server mode")
-	static async serverStartMode(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+	static async serverStartMode(scenario: ScenarioParameter): Promise<void> {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const port = 54397
 		const projectPath = "."
 		const projectClientLink = "http://localhost:3000"
@@ -788,28 +845,40 @@ export class LLLTSTest {
 	}
 
 	@Scenario("Missing --projectPath returns compile failure result")
-	static async missingServerProjectPath(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async missingServerProjectPath(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const result = await LLLTS.main(["--server", "start", "--port", "54300", "--projectClientLink", "http://localhost:3000"])
 		assert(result.mode === "compile", "Missing --projectPath should return compile failure result")
 		assert(result.exitCode === 1, "Missing --projectPath should return non-zero exit code")
 	}
 
 	@Scenario("Missing --projectClientLink returns compile failure result")
-	static async missingServerProjectClientLink(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async missingServerProjectClientLink(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const result = await LLLTS.main(["--server", "start", "--port", "54300", "--projectPath", "."])
 		assert(result.mode === "compile", "Missing --projectClientLink should return compile failure result")
 		assert(result.exitCode === 1, "Missing --projectClientLink should return non-zero exit code")
 	}
 
 	@Scenario("Invalid server port returns compile failure result")
-	static async invalidServerPort(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async invalidServerPort(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const result = await LLLTS.main(["--server", "start", "--port", "abc", "--projectPath", ".", "--projectClientLink", "http://localhost:3000"])
 		assert(result.mode === "compile", "Invalid server args should return compile failure result")
 		assert(result.exitCode === 1, "Invalid server args should return non-zero exit code")
 	}
 
 	@Scenario("Unsupported server action returns compile failure result")
-	static async unsupportedServerAction(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async unsupportedServerAction(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const result = await LLLTS.main(["--server", "stop"])
 		assert(result.mode === "compile", "Unsupported server action should return compile failure result")
 		assert(result.exitCode === 1, "Unsupported server action should return non-zero exit code")

@@ -1,4 +1,4 @@
-import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../public/lll.lll.js"
 import "./BaseRule.lll"
 import { BaseRule } from "./BaseRule.lll"
 
@@ -7,7 +7,10 @@ export class BaseRuleTest {
 	testType = "unit"
 
 	@Scenario("Create and filter diagnostics")
-	static async createAndFilter(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async createAndFilter(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diag = BaseRule.createDiagnostic("test.ts", "Test error", "error", "missing-spec-class", 10)
 		assert(diag.file === "test.ts", "File should match")
 		assert(diag.severity === "error", "Severity should match")

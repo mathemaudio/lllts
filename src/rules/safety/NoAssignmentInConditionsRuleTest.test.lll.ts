@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter, SubjectFactory } from "../../public/lll.lll"
 import { NoAssignmentInConditionsRule } from "./NoAssignmentInConditionsRule.lll"
 
 @Spec("Validates the ban on assignment expressions inside if conditions.")
@@ -14,7 +14,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Allows pure boolean checks inside if")
-	static async allowsPureBooleanChecks(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsPureBooleanChecks(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -30,7 +33,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects direct assignment inside if condition")
-	static async rejectsDirectAssignmentInsideIfCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsDirectAssignmentInsideIfCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -46,7 +52,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects compound assignment nested inside if condition")
-	static async rejectsCompoundAssignmentNestedInsideIfCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsCompoundAssignmentNestedInsideIfCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -62,7 +71,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects logical assignment inside nested if expression")
-	static async rejectsLogicalAssignmentInsideNestedIfExpression(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsLogicalAssignmentInsideNestedIfExpression(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -79,7 +91,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects assignment inside while condition")
-	static async rejectsAssignmentInsideWhileCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsAssignmentInsideWhileCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -95,7 +110,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects assignment inside do while condition")
-	static async rejectsAssignmentInsideDoWhileCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsAssignmentInsideDoWhileCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -111,7 +129,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects assignment inside for condition")
-	static async rejectsAssignmentInsideForCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsAssignmentInsideForCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -125,7 +146,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects assignment inside ternary condition")
-	static async rejectsAssignmentInsideTernaryCondition(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsAssignmentInsideTernaryCondition(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -140,7 +164,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Rejects assignments across all supported condition positions")
-	static async rejectsAssignmentsAcrossAllSupportedConditionPositions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsAssignmentsAcrossAllSupportedConditionPositions(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -166,7 +193,10 @@ export class NoAssignmentInConditionsRuleTest {
 	}
 
 	@Scenario("Allows assignments outside the ternary condition slot")
-	static async allowsAssignmentsOutsideTernaryConditionSlot(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsAssignmentsOutsideTernaryConditionSlot(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoAssignmentInConditionsRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {

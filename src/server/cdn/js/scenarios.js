@@ -154,7 +154,7 @@
 		};
 	}
 
-	async function runScenarioMethod(TestClass, methodName, input) {
+	async function runScenarioMethod(TestClass, methodName, options) {
 		var scenarioMethodName = String(methodName || "").trim();
 		if (scenarioMethodName.length === 0) {
 			throw new Error("Scenario method name is required.");
@@ -163,8 +163,17 @@
 		if (typeof scenarioFn !== "function") {
 			throw new Error("Scenario method '" + scenarioMethodName + "' is not available on this test class.");
 		}
-		var scenarioInput = input && typeof input === "object" ? input : {};
-		await scenarioFn.call(TestClass, scenarioInput, createScenarioAssert(), createScenarioWaitFor());
+		var normalizedOptions = options && typeof options === "object" ? options : {};
+		var scenarioParameter = {
+			input: normalizedOptions.input && typeof normalizedOptions.input === "object" ? normalizedOptions.input : {},
+			assert: createScenarioAssert(),
+			waitFor: createScenarioWaitFor()
+		};
+		if (typeof normalizedOptions.subjectFactory === "function" && scenarioFn.length >= 2) {
+			await scenarioFn.call(TestClass, normalizedOptions.subjectFactory, scenarioParameter);
+			return;
+		}
+		await scenarioFn.call(TestClass, scenarioParameter);
 	}
 
 	globalScope.llltsOverlayScenarios = {

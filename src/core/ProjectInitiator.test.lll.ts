@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter, SubjectFactory } from "../public/lll.lll.js"
 import "./ProjectInitiator.lll"
 import { ProjectInitiator } from "./ProjectInitiator.lll"
 
@@ -10,14 +10,20 @@ export class ProjectInitiatorTest {
 	testType = "unit"
 
 	@Scenario("Load project files")
-	static async loadFiles(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async loadFiles(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const loader = new ProjectInitiator("./tsconfig.json", "from_imports", "src/examples/MathObject.lll.ts")
 		const files = loader.getFiles()
 		assert(files.length > 0, "Should load at least lll file")
 	}
 
 	@Scenario("Follow re-export declarations in from_imports mode")
-	static async followReExportDeclarations(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async followReExportDeclarations(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-reexport-"))
 
 		try {
@@ -51,7 +57,10 @@ export class ProjectInitiatorTest {
 	}
 
 	@Scenario("Load both companion variants for a primary class in from_imports mode")
-	static async loadBothCompanionVariants(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async loadBothCompanionVariants(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-dual-companion-"))
 
 		try {

@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./NoFloatingPromisesRule.lll"
 import { NoFloatingPromisesRule } from "./NoFloatingPromisesRule.lll"
 
@@ -21,14 +21,20 @@ export class NoFloatingPromisesRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = NoFloatingPromisesRule.getRule()
 		assert(rule.id === "R18", "Rule id should be R18")
 		assert(rule.title === "No floating promises in async code", "Rule title should be 'No floating promises in async code'")
 	}
 
 	@Scenario("Rejects promise values that are declared but never awaited or returned")
-	static async rejectsFloatingPromiseVariables(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsFloatingPromiseVariables(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -56,7 +62,10 @@ export class Worker {
 	}
 
 	@Scenario("Allows promise values that are awaited later")
-	static async allowsAwaitedPromiseVariables(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsAwaitedPromiseVariables(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -83,7 +92,10 @@ export class Worker {
 	}
 
 	@Scenario("Allows promise values that are returned from async code")
-	static async allowsReturnedPromiseVariables(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsReturnedPromiseVariables(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -109,7 +121,10 @@ export class Worker {
 	}
 
 	@Scenario("Rejects promise collections that are created but never combined")
-	static async rejectsFloatingPromiseCollections(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsFloatingPromiseCollections(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -136,7 +151,10 @@ export class Worker {
 	}
 
 	@Scenario("Allows promise collections passed to Promise.all")
-	static async allowsPromiseCollectionsHandledByCombinators(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsPromiseCollectionsHandledByCombinators(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {
@@ -167,7 +185,10 @@ export class Worker {
 	}
 
 	@Scenario("Ignores non-async code because the rule is scoped to async functions")
-	static async ignoresNonAsyncCode(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async ignoresNonAsyncCode(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoFloatingPromisesRuleTest.runRuleOn(
 			"/src/Worker.lll.ts",
 			`type promise_like<T> = {

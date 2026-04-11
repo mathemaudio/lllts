@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./MustHaveExplicitReturnTypeRule.lll"
 import { MustHaveExplicitReturnTypeRule } from "./MustHaveExplicitReturnTypeRule.lll"
 
@@ -20,14 +20,20 @@ export class MustHaveExplicitReturnTypeRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = MustHaveExplicitReturnTypeRule.getRule()
 		assert(rule.id === "R6", "Rule id should remain R6")
 		assert(rule.title.includes("explicit return types"), "Rule title should mention explicit return types")
 	}
 
 	@Scenario("Rejects methods that return values without explicit return types")
-	static async rejectsImplicitMethodReturnTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsImplicitMethodReturnTypes(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = MustHaveExplicitReturnTypeRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -42,7 +48,10 @@ export class MustHaveExplicitReturnTypeRuleTest {
 	}
 
 	@Scenario("Rejects named functions that return values without explicit return types")
-	static async rejectsImplicitFunctionReturnTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsImplicitFunctionReturnTypes(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = MustHaveExplicitReturnTypeRuleTest.runRuleOn(
 			"/src/legacy.ts",
 			`export function sum(left: number, right: number) {
@@ -55,7 +64,10 @@ export class MustHaveExplicitReturnTypeRuleTest {
 	}
 
 	@Scenario("Allows value-returning declarations with explicit return types")
-	static async allowsExplicitReturnTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsExplicitReturnTypes(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = MustHaveExplicitReturnTypeRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -68,7 +80,10 @@ export class MustHaveExplicitReturnTypeRuleTest {
 	}
 
 	@Scenario("Allows declarations that do not return values")
-	static async allowsVoidDeclarationsWithoutAnnotation(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsVoidDeclarationsWithoutAnnotation(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = MustHaveExplicitReturnTypeRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -81,7 +96,10 @@ export class MustHaveExplicitReturnTypeRuleTest {
 	}
 
 	@Scenario("Ignores returns that belong to nested callbacks instead of the outer declaration")
-	static async ignoresNestedCallbackReturns(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async ignoresNestedCallbackReturns(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = MustHaveExplicitReturnTypeRuleTest.runRuleOn(
 			"/src/Bridge.lll.ts",
 			`export class Bridge {

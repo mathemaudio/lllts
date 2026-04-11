@@ -135,6 +135,15 @@
 		return basePath + separator + "t=" + encodeURIComponent(tParam);
 	}
 
+	function buildPairedHostImportUrl(testModuleUrl, testPath) {
+		var hostClassName = resolveHostClassNameFromTestPath(testPath);
+		var absoluteTestModuleUrl = new URL(String(testModuleUrl || ""), document.baseURI).toString();
+		if (!hostClassName) {
+			return new URL(buildImportUrl(resolveHostPathFromTestPath(testPath), ""), document.baseURI).toString();
+		}
+		return new URL("./" + hostClassName + ".lll.ts", absoluteTestModuleUrl).toString();
+	}
+
 	function isFunction(value) {
 		return typeof value === "function";
 	}
@@ -161,53 +170,53 @@
 		return null;
 	}
 
-	function hashPath(value) {
-		var hash = 2166136261 >>> 0;
-		for (var i = 0; i < value.length; i++) {
-			hash ^= value.charCodeAt(i);
-			hash = Math.imul(hash, 16777619);
-		}
-		return (hash >>> 0).toString(16);
+	function resolveHostPathFromTestPath(testPath) {
+		return String(testPath || "").replace(/\.test2?\.lll\.ts$/, ".lll.ts");
 	}
 
-	function buildPreviewTagName(testPath) {
+	function resolveHostClassNameFromTestPath(testPath) {
 		var rawPath = String(testPath || "");
-		var slug = rawPath.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
-		if (!slug) {
-			slug = "test";
+		var fileName = rawPath.split("/").pop() || rawPath;
+		var match = /^(.*)\.test2?\.lll\.ts$/.exec(fileName);
+		return match ? match[1] : "";
+	}
+
+	function resolveHostClass(moduleObject, testPath) {
+		if (!moduleObject || typeof moduleObject !== "object") {
+			return null;
 		}
-		return "lllts-preview-" + slug + "-" + hashPath(rawPath);
+		var expectedName = resolveHostClassNameFromTestPath(testPath);
+		if (expectedName && isFunction(moduleObject[expectedName])) {
+			return moduleObject[expectedName];
+		}
+		var defaultExport = moduleObject.default;
+		if (isFunction(defaultExport)) {
+			return defaultExport;
+		}
+		return null;
 	}
 
 	function isHTMLElementSubclass(TestClass) {
 		return typeof HTMLElement !== "undefined" && !!TestClass && !!TestClass.prototype && TestClass.prototype instanceof HTMLElement;
 	}
 
-	function createPreviewElementClass(TestClass) {
-		return class extends TestClass { };
-	}
-
-	function ensurePreviewTagDefined(tagName, TestClass) {
-		var existingDefinition = customElements.get(tagName);
-		if (existingDefinition) {
-			return tagName;
+	async function settleRenderedSubject(subject) {
+		if (subject && typeof subject.updateComplete === "object" && typeof subject.updateComplete.then === "function") {
+			await subject.updateComplete;
 		}
-		var PreviewElementClass = createPreviewElementClass(TestClass);
-		customElements.define(tagName, PreviewElementClass);
-		return tagName;
 	}
 
-	function resolveUsableTagName(TestClass, testPath) {
-		var preferredTag = buildPreviewTagName(testPath);
-		return ensurePreviewTagDefined(preferredTag, TestClass);
-	}
-
-	function mountBehavioralPreview(popupRenderHost, TestClass, testPath) {
-		var tagName = resolveUsableTagName(TestClass, testPath);
-		var element = document.createElement(tagName);
-		popupRenderHost.appendChild(element);
+	async function mountBehavioralSubject(popupRenderHost, HostClass) {
+		clearRenderHost(popupRenderHost);
+		var subject = new HostClass();
+		var element = null;
+		if (isHTMLElementSubclass(HostClass) && subject instanceof HTMLElement) {
+			element = subject;
+			popupRenderHost.appendChild(element);
+		}
+		await settleRenderedSubject(subject);
 		return {
-			tagName: tagName,
+			subject: subject,
 			element: element
 		};
 	}
@@ -446,6 +455,35 @@
 			};
 		}
 
+		function clearActiveBehavioralPreview(runContext) {
+			if (!runContext) {
+				return;
+			}
+			if (runContext.activePreviewElement && runContext.activePreviewElement.parentNode) {
+				runContext.activePreviewElement.parentNode.removeChild(runContext.activePreviewElement);
+			}
+			runContext.activePreviewElement = null;
+			runContext.activePreviewSubject = null;
+			clearRenderHost(popupRenderHost);
+		}
+
+		function createBehavioralSubjectFactory(runContext) {
+			var cachedSubject = null;
+			return async function () {
+				if (cachedSubject !== null) {
+					return cachedSubject;
+				}
+				if (!runContext.activeHostClass) {
+					throw new Error("Paired host class is still loading.");
+				}
+				var mounted = await mountBehavioralSubject(popupRenderHost, runContext.activeHostClass);
+				runContext.activePreviewElement = mounted.element;
+				runContext.activePreviewSubject = mounted.subject;
+				cachedSubject = mounted.subject;
+				return cachedSubject;
+			};
+		}
+
 		async function executeScenario(runContext, scenario) {
 			if (runContext.loadToken !== loadTokenCounter) {
 				return "stale";
@@ -464,12 +502,20 @@
 			scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
 			setStatus(popupStatus, "Running scenario: " + scenario.title, false);
 			try {
+				var scenarioOptions = {
+					input: {
+						testPath: runContext.selectedPath,
+						document: document,
+						window: window
+					}
+				};
+				if (runContext.activeTestType === "behavioral") {
+					clearActiveBehavioralPreview(runContext);
+					scenarioOptions.subjectFactory = createBehavioralSubjectFactory(runContext);
+				}
 				await scenarioApi.runScenarioMethod(runContext.activeTestClass, scenario.methodName, {
-					testPath: runContext.selectedPath,
-					previewElement: runContext.activePreviewElement,
-					renderHost: popupRenderHost,
-					document: document,
-					window: window
+					input: scenarioOptions.input,
+					subjectFactory: scenarioOptions.subjectFactory
 				});
 				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
 				storeScenarioResult(runContext, scenario, "passed", "");
@@ -556,7 +602,10 @@
 				selectedScenarios: scenarioApi.getScenariosForTest(config, selectedPath),
 				loadToken: 0,
 				activeTestClass: null,
+				activeHostClass: null,
+				activeTestType: null,
 				activePreviewElement: null,
+				activePreviewSubject: null,
 				scenarioResultByMethod: {}
 			};
 			setFixedRunProgress({
@@ -582,13 +631,15 @@
 			popupBody.textContent = "Loading test preview...";
 			popupLink.textContent = selectedPath;
 			setStatus(popupStatus, "", false);
-			clearRenderHost(popupRenderHost);
+			clearActiveBehavioralPreview(runContext);
 
 			try {
 				var detectedT = detectPageModuleTParam();
-				var moduleUrl = buildImportUrl(selectedPath, detectedT);
-				setStatus(popupStatus, "Importing " + moduleUrl, false);
-				var moduleObject = await import(moduleUrl);
+				var testModuleUrl = buildImportUrl(selectedPath, detectedT);
+				var hostModuleUrl = buildPairedHostImportUrl(testModuleUrl, selectedPath);
+				setStatus(popupStatus, "Importing " + testModuleUrl, false);
+				var moduleObject = await import(testModuleUrl);
+				var hostModuleObject = await import(hostModuleUrl);
 				if (runContext.loadToken !== loadTokenCounter) {
 					return {
 						status: "stale",
@@ -600,17 +651,11 @@
 					throw new Error("No exported '*Test' class (or default class/function) was found.");
 				}
 				runContext.activeTestClass = TestClass;
-				var testInstance;
-				try {
-					testInstance = new TestClass();
-				} catch (instantiateError) {
-					if (!isHTMLElementSubclass(TestClass)) {
-						throw instantiateError;
-					}
-					var fallbackTagName = resolveUsableTagName(TestClass, selectedPath);
-					testInstance = document.createElement(fallbackTagName);
-				}
+				var HostClass = resolveHostClass(hostModuleObject, selectedPath);
+				runContext.activeHostClass = HostClass;
+				var testInstance = new TestClass();
 				var testType = testInstance ? testInstance.testType : undefined;
+				runContext.activeTestType = testType;
 				if (testType === "unit") {
 					popupBody.textContent = "Please choose a scenario to run this unit test.";
 					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
@@ -620,9 +665,13 @@
 						setStatus(popupStatus, "No scenarios were discovered for this unit test.", false);
 					}
 				} else if (testType === "behavioral") {
-					popupBody.textContent = "Please choose a scenario or play with this behavioral test component yourself.";
-					var preview = mountBehavioralPreview(popupRenderHost, TestClass, selectedPath);
+					if (!HostClass) {
+						throw new Error("No paired production class was found for this behavioral companion.");
+					}
+					popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself.";
+					var preview = await mountBehavioralSubject(popupRenderHost, HostClass);
 					runContext.activePreviewElement = preview.element;
+					runContext.activePreviewSubject = preview.subject;
 					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
 					if (runContext.selectedScenarios.length > 0) {
 						setStatus(popupStatus, "Choose a scenario from the left panel.", false);

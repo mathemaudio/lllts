@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./NoNonNullAssertionRule.lll"
 import { NoNonNullAssertionRule } from "./NoNonNullAssertionRule.lll"
 
@@ -20,14 +20,20 @@ export class NoNonNullAssertionRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = NoNonNullAssertionRule.getRule()
 		assert(rule.id === "R15", "Rule id should be R15")
 		assert(rule.title === "No non-null assertion", "Rule title should be 'No non-null assertion'")
 	}
 
 	@Scenario("Rejects postfix non-null assertions")
-	static async rejectsPostfixNonNullAssertions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsPostfixNonNullAssertions(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class User {
@@ -46,7 +52,10 @@ export class MathObject {
 	}
 
 	@Scenario("Rejects nested and repeated non-null assertions")
-	static async rejectsNestedAndRepeatedNonNullAssertions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsNestedAndRepeatedNonNullAssertions(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class Box {
@@ -64,7 +73,10 @@ export class MathObject {
 	}
 
 	@Scenario("Allows explicit narrowing and definite assignment fields")
-	static async allowsExplicitNarrowingAndDefiniteAssignmentFields(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsExplicitNarrowingAndDefiniteAssignmentFields(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoNonNullAssertionRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class Worker {

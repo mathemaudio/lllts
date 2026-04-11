@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./NoParameterMutationRule.lll"
 import { NoParameterMutationRule } from "./NoParameterMutationRule.lll"
 
@@ -15,14 +15,20 @@ export class NoParameterMutationRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = NoParameterMutationRule.getRule()
 		assert(rule.id === "R19", "Rule id should be R19")
 		assert(rule.title === "No parameter mutation", "Rule title should be 'No parameter mutation'")
 	}
 
 	@Scenario("Rejects direct reassignment and update of parameters")
-	static async rejectsDirectParameterMutation(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsDirectParameterMutation(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {
@@ -41,7 +47,10 @@ export class NoParameterMutationRuleTest {
 	}
 
 	@Scenario("Allows local rewrites and property updates")
-	static async allowsLocalRewritePatterns(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsLocalRewritePatterns(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`type User = {
@@ -61,7 +70,10 @@ export class Normalizer {
 	}
 
 	@Scenario("Ignores shadowed parameter names in nested functions")
-	static async ignoresShadowedNestedParameters(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async ignoresShadowedNestedParameters(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {
@@ -79,7 +91,10 @@ export class Normalizer {
 	}
 
 	@Scenario("Rejects destructured parameter rebinding")
-	static async rejectsDestructuredParameterMutation(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsDestructuredParameterMutation(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoParameterMutationRuleTest.runRuleOn(
 			"/src/Normalizer.lll.ts",
 			`export class Normalizer {

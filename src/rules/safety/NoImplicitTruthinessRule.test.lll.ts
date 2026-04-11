@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./NoImplicitTruthinessRule.lll"
 import { NoImplicitTruthinessRule } from "./NoImplicitTruthinessRule.lll"
 
@@ -20,14 +20,20 @@ export class NoImplicitTruthinessRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = NoImplicitTruthinessRule.getRule()
 		assert(rule.id === "R12", "Rule id should be R12")
 		assert(rule.title === "No implicit truthiness", "Rule title should be 'No implicit truthiness'")
 	}
 
 	@Scenario("Allows direct boolean conditions and explicit boolean expressions")
-	static async allowsBooleanConditions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsBooleanConditions(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoImplicitTruthinessRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -49,7 +55,10 @@ export class NoImplicitTruthinessRuleTest {
 	}
 
 	@Scenario("Rejects direct string truthiness in if")
-	static async rejectsDirectStringTruthinessInIf(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsDirectStringTruthinessInIf(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoImplicitTruthinessRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -68,7 +77,10 @@ export class NoImplicitTruthinessRuleTest {
 	}
 
 	@Scenario("Rejects numeric truthiness in loops")
-	static async rejectsNumericTruthinessInLoops(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsNumericTruthinessInLoops(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoImplicitTruthinessRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -90,7 +102,10 @@ export class NoImplicitTruthinessRuleTest {
 	}
 
 	@Scenario("Rejects nullable references and ambiguous unions")
-	static async rejectsNullableReferencesAndAmbiguousUnions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsNullableReferencesAndAmbiguousUnions(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoImplicitTruthinessRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class Box {}
@@ -113,7 +128,10 @@ export class MathObject {
 	}
 
 	@Scenario("Rejects truthiness across all supported condition positions")
-	static async rejectsTruthinessAcrossAllSupportedConditionPositions(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsTruthinessAcrossAllSupportedConditionPositions(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoImplicitTruthinessRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {

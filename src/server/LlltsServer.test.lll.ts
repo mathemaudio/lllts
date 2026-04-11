@@ -2,7 +2,7 @@ import * as fs from "fs"
 import * as http from "http"
 import * as os from "os"
 import * as path from "path"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll.js"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter, SubjectFactory } from "../public/lll.lll.js"
 import "./LlltsServer.lll"
 import { LlltsServer } from "./LlltsServer.lll.js"
 import type { ServerConfig } from "./ServerConfig"
@@ -82,7 +82,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Missing project path on filesystem returns 404 with diagnostics")
-	static async missingProjectPathResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async missingProjectPathResponse(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const server = new LlltsServer()
 		const uniquePath = path.join(os.tmpdir(), `lllts-missing-${Date.now()}-${Math.random().toString(16).slice(2)}`)
 		const config: ServerConfig = {
@@ -98,7 +101,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Project path that exists as file returns 400 with diagnostics")
-	static async nonDirectoryProjectPathResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async nonDirectoryProjectPathResponse(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-file-"))
 		const filePath = path.join(tempRoot, "not-a-dir.txt")
 		fs.writeFileSync(filePath, "x\n")
@@ -120,7 +126,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Unreachable project client link returns 502 with diagnostics")
-	static async unreachableProjectClientLinkResponse(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async unreachableProjectClientLinkResponse(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-upstream-"))
 		const testFile = path.join(tempRoot, "src", "Alpha.test.lll.ts")
 		fs.mkdirSync(path.dirname(testFile), { recursive: true })
@@ -143,7 +152,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Reachable upstream HTML is proxied and injected with overlay test UI")
-	static async proxiedHtmlIncludesOverlay(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async proxiedHtmlIncludesOverlay(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-html-"))
 		const testFileA = path.join(tempRoot, "tests", "Alpha.test.lll.ts")
 		const testFileB = path.join(tempRoot, "tests", "nested", "Beta.test.lll.ts")
@@ -200,7 +212,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Overlay CDN assets are served by local server routes")
-	static async overlayAssetsAreServed(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async overlayAssetsAreServed(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-overlay-assets-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 200
@@ -227,7 +242,8 @@ export class LlltsServerTest {
 			assert(scriptResponse.contentType.includes("application/javascript"), "Overlay script route should return javascript content-type")
 			assert(scriptResponse.body.includes("await import(moduleUrl)"), "Overlay script should include dynamic module import logic")
 			assert(scriptResponse.body.includes("testType === \"behavioral\""), "Overlay script should include behavioral branching logic")
-			assert(scriptResponse.body.includes("customElements.define(tagName, PreviewElementClass)"), "Overlay script should define preview custom elements")
+			assert(scriptResponse.body.includes("resolveHostPathFromTestPath"), "Overlay script should derive paired host paths from companion naming")
+			assert(scriptResponse.body.includes("mountBehavioralSubject"), "Overlay script should mount paired host subjects for behavioral preview")
 			assert(scriptResponse.body.includes("scenarioApi.runScenarioMethod"), "Overlay script should execute scenario methods via helper API")
 			assert(scriptResponse.body.includes("FIXED_llltsLastRunReport"), "Overlay script should expose fixed string report variable")
 			assert(scriptResponse.body.includes("FIXED_llltsLastRunReportJson"), "Overlay script should expose fixed JSON report variable")
@@ -239,6 +255,7 @@ export class LlltsServerTest {
 			assert(scenariosScriptResponse.contentType.includes("application/javascript"), "Overlay scenarios helper route should return javascript content-type")
 			assert(scenariosScriptResponse.body.includes("globalScope.llltsOverlayScenarios"), "Scenarios helper should expose global scenario API")
 			assert(scenariosScriptResponse.body.includes("function runScenarioMethod"), "Scenarios helper should include runtime scenario invocation function")
+			assert(scenariosScriptResponse.body.includes("scenarioParameter"), "Scenarios helper should construct ScenarioParameter objects")
 
 			const styleResponse = await this.request(app, "/__lllts-overlay/css/style.css")
 			assert(styleResponse.status === 200, "Overlay style route should return HTTP 200")
@@ -252,7 +269,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Reachable upstream non-HTML content is forwarded without overlay injection")
-	static async proxiedNonHtmlPassThrough(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async proxiedNonHtmlPassThrough(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-asset-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 200
@@ -279,7 +299,10 @@ export class LlltsServerTest {
 	}
 
 	@Scenario("Upstream non-200 status code is passed through by proxy")
-	static async upstreamNon200StatusPassThrough(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async upstreamNon200StatusPassThrough(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lllts-server-status-"))
 		const upstream = await this.startUpstreamServer((_req, res) => {
 			res.statusCode = 418

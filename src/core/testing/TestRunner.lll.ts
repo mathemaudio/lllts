@@ -13,6 +13,8 @@ import { RuleCode } from "../rulesEngine/RuleCode"
 import type { ScenarioContext } from "../scenario/ScenarioContext"
 import type { ScenarioEntry } from "../scenario/ScenarioEntry"
 import type { ScenarioMetadata } from "../scenario/ScenarioMetadata"
+import { PairedHostSupport } from "./PairedHostSupport.lll"
+import type { PairedHostKind } from "./PairedHostSupport.lll"
 import type { BehavioralTestReference } from "./BehavioralTestReference"
 import type { TestClassRecord } from "./TestClassRecord"
 import type { TestInventorySummary } from "./TestInventorySummary"
@@ -20,6 +22,7 @@ import type { TestReport } from "./TestReport"
 import type { TestRunnerResult } from "./TestRunnerResult"
 import type { TestType } from "./TestType"
 import type { TsConfig } from "../TsConfig"
+import type { AssertFn, ScenarioParameter, SubjectFactory, WaitForFn } from "../../public/lll.lll"
 //
 @Spec("Executes unit scenarios inside supported companion test classes and summarizes behavioral test inventory.")
 export class TestRunner {
@@ -99,24 +102,25 @@ export class TestRunner {
 				continue
 			}
 
-			const runtimeClass = this.loadRuntimeClass(file, className)
+			const runtimeClass = this.loadRuntimeExport(file, className)
 			if (!runtimeClass) {
 				diagnostics.push(this.createModuleDiagnostic(file.getFilePath(), className))
 				continue
 			}
-
-			const renderMethod = this.getRenderMethod(exportedClass)
-			const staticRenderMethod = exportedClass.getStaticMethod("render")
-			const forbiddenRender = renderMethod ?? staticRenderMethod
-			if (testType === "unit" && forbiddenRender !== undefined) {
-				diagnostics.push(this.createRenderForbiddenDiag(relativeFile, className, forbiddenRender.getStartLineNumber()))
+			const hostKind = PairedHostSupport.getHostKind(file)
+			const hostClassName = PairedHostSupport.getHostClassName(file.getFilePath()) ?? className.replace(/Test2?$/, "")
+			const runtimeHostClass = hostKind === "instantiable"
+				? this.loadRuntimeExportByPath(file.getFilePath(), hostClassName, PairedHostSupport.getHostFilePath(file.getFilePath()))
+				: null
+			if (hostKind === "instantiable" && runtimeHostClass === null) {
+				diagnostics.push(this.createModuleDiagnostic(file.getFilePath(), hostClassName))
 				continue
 			}
 
 			const report: TestReport = {
 				className,
 				filePath: relativeFile,
-				line: (renderMethod ?? exportedClass).getStartLineNumber(),
+				line: exportedClass.getStartLineNumber(),
 				scenarios: []
 			}
 
@@ -134,7 +138,7 @@ export class TestRunner {
 					line: entry.method.getStartLineNumber()
 				}
 
-				const failure = await this.runScenarioUnit(context, runtimeClass)
+				const failure = await this.runScenarioUnit(context, runtimeClass, hostKind, runtimeHostClass)
 				report.scenarios.push({
 					id: entry.metadata.id,
 					title: entry.metadata.title,
@@ -237,11 +241,6 @@ export class TestRunner {
 			}))
 	}
 
-	@Spec("Returns the instance render() method if it exists.")
-	private getRenderMethod(classDecl: ClassDeclaration): MethodDeclaration | undefined {
-		return classDecl.getInstanceMethod("render")
-	}
-
 	@Spec("Reads testType literal from the source class.")
 	private getTestTypeLiteral(classDecl: ClassDeclaration): TestType | null {
 		const testTypeProp = classDecl.getProperties().find(prop => !prop.isStatic() && prop.getName() === "testType")
@@ -293,15 +292,20 @@ export class TestRunner {
 		})
 	}
 
-	@Spec("Requires the compiled JS module and returns the exported class reference.")
-	private loadRuntimeClass(sourceFile: SourceFile, className: string): Record<string, unknown> | null {
-		const compiledPath = this.getCompiledPath(sourceFile.getFilePath())
+	@Spec("Requires the compiled JS module and returns the requested exported binding.")
+	private loadRuntimeExport(sourceFile: SourceFile, exportName: string): Record<string, unknown> | null {
+		return this.loadRuntimeExportByPath(sourceFile.getFilePath(), exportName)
+	}
+
+	@Spec("Requires the compiled JS module for a given path and returns the requested exported binding.")
+	private loadRuntimeExportByPath(sourcePath: string, exportName: string, overridePath?: string | null): Record<string, unknown> | null {
+		const compiledPath = this.getCompiledPath(overridePath ?? sourcePath)
 		if (!compiledPath || !fs.existsSync(compiledPath)) {
 			return null
 		}
 
 		const exports = require(compiledPath) as Record<string, unknown>
-		const classRef = exports[className]
+		const classRef = exports[exportName]
 		return typeof classRef === "object" || typeof classRef === "function"
 			? (classRef as Record<string, unknown>)
 			: null
@@ -319,11 +323,15 @@ export class TestRunner {
 	}
 
 	@Spec("Executes a scenario method in unit mode, returning diagnostic on failure.")
-	private async runScenarioUnit(context: ScenarioContext, runtimeClass: Record<string, unknown>): Promise<DiagnosticObject | null> {
+	private async runScenarioUnit(
+		context: ScenarioContext,
+		runtimeClass: Record<string, unknown>,
+		hostKind: PairedHostKind,
+		runtimeHostClass: Record<string, unknown> | null
+	): Promise<DiagnosticObject | null> {
 		const capturedLogs: string[] = []
 		const restoreConsole = this.hookConsole(capturedLogs)
-		const assert = this.createAssert()
-		const waitFor = this.createWaitFor()
+		const scenario = this.createScenarioParameter()
 
 		try {
 			const scenarioFn = runtimeClass[context.scenarioMethodName]
@@ -332,11 +340,20 @@ export class TestRunner {
 			}
 
 			try {
-				await Reflect.apply(
-					scenarioFn as (input: object, assert: unknown, waitFor: unknown) => Promise<unknown> | unknown,
-					runtimeClass,
-					[{}, assert, waitFor]
-				)
+				if (hostKind === "static-only") {
+					await Reflect.apply(
+						scenarioFn as (scenario: ScenarioParameter) => Promise<unknown> | unknown,
+						runtimeClass,
+						[scenario]
+					)
+				} else {
+					const subjectFactory = this.createSubjectFactory(runtimeHostClass, context)
+					await Reflect.apply(
+						scenarioFn as (subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) => Promise<unknown> | unknown,
+						runtimeClass,
+						[subjectFactory, scenario]
+					)
+				}
 			} catch (error) {
 				return this.buildDiagnostic(context, "scenario", error, capturedLogs, "")
 			}
@@ -344,6 +361,32 @@ export class TestRunner {
 			return null
 		} finally {
 			restoreConsole()
+		}
+	}
+
+	@Spec("Builds the shared scenario helper object passed into scenario methods.")
+	private createScenarioParameter(): ScenarioParameter {
+		return {
+			input: {},
+			assert: this.createAssert(),
+			waitFor: this.createWaitFor()
+		}
+	}
+
+	@Spec("Builds an async-capable subject factory that creates a fresh host instance per scenario run.")
+	private createSubjectFactory(runtimeHostClass: Record<string, unknown> | null, context: ScenarioContext): SubjectFactory<unknown> {
+		let cachedSubject: unknown | undefined
+		let hasCachedSubject = false
+		return async () => {
+			if (hasCachedSubject) {
+				return cachedSubject
+			}
+			if (typeof runtimeHostClass !== "function") {
+				throw new Error(`Paired host class for '${context.className}' is unavailable at runtime.`)
+			}
+			cachedSubject = Reflect.construct(runtimeHostClass as new () => unknown, [])
+			hasCachedSubject = true
+			return cachedSubject
 		}
 	}
 
@@ -409,16 +452,6 @@ export class TestRunner {
 		return BaseRule.createError(
 			file,
 			`Test class '${className}' must declare testType = 'unit' | 'behavioral'.`,
-			this.getRuleCode(),
-			line
-		)
-	}
-
-	@Spec("Reports render forbidden in unit mode.")
-	private createRenderForbiddenDiag(file: string, className: string, line: number): DiagnosticObject {
-		return BaseRule.createError(
-			file,
-			`Test class '${className}' must not declare render() when testType is 'unit'.`,
 			this.getRuleCode(),
 			line
 		)

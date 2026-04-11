@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./MustHaveSpecHeaderRule.lll"
 import { MustHaveSpecHeaderRule } from "./MustHaveSpecHeaderRule.lll"
 
@@ -8,14 +8,20 @@ export class MustHaveSpecHeaderRuleTest {
 	testType = "unit"
 
 	@Scenario("Check for spec header")
-	static async checkSpecHeader(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async checkSpecHeader(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = MustHaveSpecHeaderRule.getRule()
 		console.log(`Rule ${rule.id}: ${rule.title}`)
 		assert(rule.title.includes("spec"), "Rule title should mention spec")
 	}
 
 	@Scenario("Allow constructor with first Spec call")
-	static async allowConstructorWithLeadingSpecCall(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowConstructorWithLeadingSpecCall(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/GoodCtor.lll.ts",
@@ -36,7 +42,10 @@ export class GoodCtor {
 	}
 
 	@Scenario("Require constructor to begin with Spec call")
-	static async requireConstructorLeadingSpecCall(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async requireConstructorLeadingSpecCall(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/BadCtor.lll.ts",
@@ -57,7 +66,10 @@ export class BadCtor {
 	}
 
 	@Scenario("Allow empty constructor with no params and no Spec call")
-	static async allowEmptyConstructorWithoutSpec(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowEmptyConstructorWithoutSpec(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/EmptyCtor.lll.ts",
@@ -75,7 +87,10 @@ export class EmptyCtor {
 	}
 
 	@Scenario("Allow short exported type without leading Spec call")
-	static async allowShortExportedTypeWithoutLeadingSpec(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowShortExportedTypeWithoutLeadingSpec(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/GoodType.ts",
@@ -90,7 +105,10 @@ export class EmptyCtor {
 	}
 
 	@Scenario("Require leading Spec for exported type with more than 10 lines")
-	static async requireLeadingSpecForLongExportedType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async requireLeadingSpecForLongExportedType(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/BadLongType.ts",
@@ -115,7 +133,10 @@ export class EmptyCtor {
 	}
 
 	@Scenario("Require leading Spec for exported type with more than 10 members")
-	static async requireLeadingSpecForManyMembersExportedType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async requireLeadingSpecForManyMembersExportedType(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/BadManyMembersType.ts",
@@ -140,7 +161,10 @@ export class EmptyCtor {
 	}
 
 	@Scenario("Allow complex exported type with immediate leading Spec call")
-	static async allowComplexExportedTypeWithImmediateLeadingSpec(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowComplexExportedTypeWithImmediateLeadingSpec(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
 		const sourceFile = project.createSourceFile(
 			"/tmp/GoodComplexType.ts",

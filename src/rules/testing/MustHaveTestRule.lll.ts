@@ -4,6 +4,7 @@ import { BaseRule } from "../../core/BaseRule.lll"
 import { DiagnosticObject } from "../../core/DiagnosticObject"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
+import { PairedHostSupport } from "../../core/testing/PairedHostSupport.lll"
 import type { TestType } from "../../core/testing/TestType"
 import { Spec } from "../../public/lll.lll"
 
@@ -81,12 +82,12 @@ export class MustHaveTestRule {
 		return diagnostics
 	}
 
-	@Spec("Verifies test files use '<Base>Test' naming, valid testType, host side-effect import, and scenario contract.")
+	@Spec("Verifies test files use '<Base>Test' naming, valid testType, plain companion rules, host side-effect import, and scenario contract.")
 	private static validateTestClass(sourceFile: SourceFile, exportedClass: ClassDeclaration): DiagnosticObject[] {
 		const diagnostics: DiagnosticObject[] = []
 		const file = sourceFile.getFilePath()
 		const className = exportedClass.getName() ?? "(anonymous)"
-		const expectedHostName = MustHaveTestRule.getExpectedHostClassName(file)
+		const expectedHostName = PairedHostSupport.getHostClassName(file) ?? MustHaveTestRule.getExpectedHostClassName(file)
 		const expectedTestClassName = FileVariantSupport.getExpectedTestClassName(file) ?? `${expectedHostName}Test`
 
 		if (className !== expectedTestClassName) {
@@ -100,25 +101,8 @@ export class MustHaveTestRule {
 			)
 		}
 
-		const testType = MustHaveTestRule.validateTestType(exportedClass, diagnostics, file, className)
-
-		if (testType === "behavioral") {
-			MustHaveTestRule.validateBehavioralRenderContract(exportedClass, diagnostics, file, className)
-		} else if (testType === "unit") {
-			const renderMethod = exportedClass.getInstanceMethod("render")
-			const staticRenderMethod = exportedClass.getStaticMethod("render")
-			const forbiddenMethod = renderMethod ?? staticRenderMethod
-			if (forbiddenMethod !== undefined) {
-				diagnostics.push(
-					BaseRule.createError(
-						file,
-						`Test class '${className}' must not declare render() when testType is 'unit'.`,
-						"bad-test-type",
-						forbiddenMethod.getStartLineNumber()
-					)
-				)
-			}
-		}
+		MustHaveTestRule.validateTestType(exportedClass, diagnostics, file, className)
+		MustHaveTestRule.validatePlainCompanionRestrictions(exportedClass, diagnostics, file, className)
 
 		MustHaveTestRule.validateHostSideEffectImport(sourceFile, diagnostics, expectedHostName)
 
@@ -146,25 +130,55 @@ export class MustHaveTestRule {
 					)
 				)
 			}
-			MustHaveTestRule.validateScenarioSignature(method.method, diagnostics, file, className)
+			MustHaveTestRule.validateScenarioSignature(sourceFile, method.method, diagnostics, file, className)
 		}
 
 		return diagnostics
 	}
 
-	@Spec("Requires scenario methods to use the standard input/assert/waitFor contract.")
+	@Spec("Requires scenario methods to use the paired-host scenario contract.")
 	private static validateScenarioSignature(
+		sourceFile: SourceFile,
 		method: MethodDeclaration,
 		diagnostics: DiagnosticObject[],
 		file: string,
 		className: string
 	) {
+		const hostKind = PairedHostSupport.getHostKind(sourceFile)
 		const parameters = method.getParameters()
-		if (parameters.length !== 3) {
+		if (hostKind === "static-only") {
+			if (parameters.length !== 1) {
+				diagnostics.push(
+					BaseRule.createError(
+						file,
+						`Scenario method '${className}.${method.getName()}' must declare exactly one parameter for static-only host '${PairedHostSupport.getHostClassName(file) ?? "Host"}': (scenario: ScenarioParameter).`,
+						"missing-test",
+						method.getStartLineNumber()
+					)
+				)
+				return
+			}
+
+			const [scenarioParam] = parameters
+			const scenarioType = scenarioParam.getTypeNode()?.getText().trim() ?? ""
+			if (scenarioParam.getName() !== "scenario" || scenarioType !== "ScenarioParameter") {
+				diagnostics.push(
+					BaseRule.createError(
+						file,
+						`Scenario method '${className}.${method.getName()}' must declare parameters exactly as (scenario: ScenarioParameter) for static-only host '${PairedHostSupport.getHostClassName(file) ?? "Host"}'.`,
+						"missing-test",
+						method.getStartLineNumber()
+					)
+				)
+			}
+			return
+		}
+
+		if (parameters.length !== 2) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Scenario method '${className}.${method.getName()}' must declare exactly three parameters: (input, assert: AssertFn, waitFor: WaitForFn).`,
+					`Scenario method '${className}.${method.getName()}' must declare exactly two parameters for instantiable host '${PairedHostSupport.getHostClassName(file) ?? "Host"}': (subjectFactory: SubjectFactory<Subject>, scenario: ScenarioParameter).`,
 					"missing-test",
 					method.getStartLineNumber()
 				)
@@ -172,21 +186,20 @@ export class MustHaveTestRule {
 			return
 		}
 
-		const [inputParam, assertParam, waitForParam] = parameters
-		const assertType = assertParam.getTypeNode()?.getText().trim() ?? ""
-		const waitForType = waitForParam.getTypeNode()?.getText().trim() ?? ""
+		const [subjectFactoryParam, scenarioParam] = parameters
+		const subjectFactoryType = subjectFactoryParam.getTypeNode()?.getText().trim() ?? ""
+		const scenarioType = scenarioParam.getTypeNode()?.getText().trim() ?? ""
 		const hasValidContract =
-			inputParam.getName() === "input"
-			&& assertParam.getName() === "assert"
-			&& assertType === "AssertFn"
-			&& waitForParam.getName() === "waitFor"
-			&& waitForType === "WaitForFn"
+			subjectFactoryParam.getName() === "subjectFactory"
+			&& MustHaveTestRule.isValidSubjectFactoryType(subjectFactoryType)
+			&& scenarioParam.getName() === "scenario"
+			&& scenarioType === "ScenarioParameter"
 
 		if (!hasValidContract) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Scenario method '${className}.${method.getName()}' must declare parameters exactly as (input, assert: AssertFn, waitFor: WaitForFn).`,
+					`Scenario method '${className}.${method.getName()}' must declare parameters exactly as (subjectFactory: SubjectFactory<Subject>, scenario: ScenarioParameter) for instantiable host '${PairedHostSupport.getHostClassName(file) ?? "Host"}'.`,
 					"missing-test",
 					method.getStartLineNumber()
 				)
@@ -208,126 +221,86 @@ export class MustHaveTestRule {
 		]
 	}
 
-	@Spec("Enforces behavioral test render() requirements.")
-	private static validateBehavioralRenderContract(
+	@Spec("Rejects component-style companion behaviors so companions remain plain orchestration classes.")
+	private static validatePlainCompanionRestrictions(
 		exportedClass: ClassDeclaration,
 		diagnostics: DiagnosticObject[],
 		file: string,
 		className: string
 	) {
 		const extendsClause = exportedClass.getExtends()
-		const extendsName = extendsClause?.getExpression().getText().trim()
-		if (extendsName !== "LitElement") {
+		if (extendsClause !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Behavioral test class '${className}' must extend LitElement.`,
+					`Test companion class '${className}' must not extend any base class.`,
 					"missing-test",
-					exportedClass.getStartLineNumber()
+					extendsClause.getStartLineNumber()
 				)
 			)
 		}
 
 		const stylesProp = exportedClass.getStaticProperty("styles")
-		if (!stylesProp) {
+		if (stylesProp !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Behavioral test class '${className}' must declare static styles with string or CSSResult type.`,
+					`Test companion class '${className}' must not declare static styles.`,
 					"missing-test",
-					exportedClass.getStartLineNumber()
+					stylesProp.getStartLineNumber()
 				)
 			)
-		} else {
-			const declaredTypeText =
-				"getTypeNode" in stylesProp ? (stylesProp.getTypeNode()?.getText() ?? "") : ""
-			const resolvedTypeText = stylesProp.getType().getText(stylesProp)
-			const hasAllowedType =
-				MustHaveTestRule.isAllowedStylesType(declaredTypeText) ||
-				MustHaveTestRule.isAllowedStylesType(resolvedTypeText)
-			if (!hasAllowedType) {
-				diagnostics.push(
-					BaseRule.createError(
-						file,
-						`Property '${className}.styles' must be typed as string or CSSResult.`,
-						"missing-test",
-						stylesProp.getStartLineNumber()
-					)
-				)
-			}
 		}
 
 		const renderMethod = exportedClass.getInstanceMethod("render")
 		const staticRenderMethod = exportedClass.getStaticMethod("render")
-		if (staticRenderMethod !== undefined) {
+		const forbiddenRenderMethod = renderMethod ?? staticRenderMethod
+		if (forbiddenRenderMethod !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Method '${className}.render' must be an instance method, not static.`,
+					`Test companion class '${className}' must not declare render().`,
 					"missing-test",
-					staticRenderMethod.getStartLineNumber()
-				)
-			)
-		}
-		if (!renderMethod) {
-			diagnostics.push(
-				BaseRule.createError(
-					file,
-					`Behavioral test class '${className}' must declare render(): string or TemplateResult.`,
-					"missing-test",
-					exportedClass.getStartLineNumber()
-				)
-			)
-			return
-		}
-
-		if (renderMethod.isAsync()) {
-			diagnostics.push(
-				BaseRule.createError(
-					file,
-					`Method '${className}.render' must not be async.`,
-					"missing-test",
-					renderMethod.getStartLineNumber()
+					forbiddenRenderMethod.getStartLineNumber()
 				)
 			)
 		}
 
-		if (renderMethod.getParameters().length !== 0) {
+		const connectedCallback = exportedClass.getInstanceMethod("connectedCallback") ?? exportedClass.getStaticMethod("connectedCallback")
+		if (connectedCallback !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Method '${className}.render' must not accept parameters.`,
+					`Test companion class '${className}' must not declare connectedCallback().`,
 					"missing-test",
-					renderMethod.getStartLineNumber()
+					connectedCallback.getStartLineNumber()
 				)
 			)
 		}
 
-		const declaredReturnTypeText = renderMethod.getReturnTypeNode()?.getText() ?? ""
-		const resolvedReturnTypeText = renderMethod.getReturnType().getText(renderMethod)
-		const hasAllowedReturnType =
-			MustHaveTestRule.isAllowedRenderType(declaredReturnTypeText) ||
-			MustHaveTestRule.isAllowedRenderType(resolvedReturnTypeText)
-		if (!hasAllowedReturnType) {
+		const disconnectedCallback = exportedClass.getInstanceMethod("disconnectedCallback") ?? exportedClass.getStaticMethod("disconnectedCallback")
+		if (disconnectedCallback !== undefined) {
 			diagnostics.push(
 				BaseRule.createError(
 					file,
-					`Method '${className}.render' must return string or TemplateResult.`,
+					`Test companion class '${className}' must not declare disconnectedCallback().`,
 					"missing-test",
-					renderMethod.getStartLineNumber()
+					disconnectedCallback.getStartLineNumber()
 				)
 			)
 		}
-	}
 
-	@Spec("Returns true when a styles type matches the supported behavioral contract.")
-	private static isAllowedStylesType(typeText: string): boolean {
-		return /\bstring\b/.test(typeText) || /\bCSSResult\b/.test(typeText)
-	}
-
-	@Spec("Returns true when a render return type matches the supported behavioral contract.")
-	private static isAllowedRenderType(typeText: string): boolean {
-		return /\bstring\b/.test(typeText) || /\bTemplateResult\b/.test(typeText)
+		const customElementDecorator = BaseRule.findDecorator(exportedClass, "customElement")
+		if (customElementDecorator !== undefined) {
+			diagnostics.push(
+				BaseRule.createError(
+					file,
+					`Test companion class '${className}' must not use @customElement(...).`,
+					"missing-test",
+					customElementDecorator.getStartLineNumber()
+				)
+			)
+		}
 	}
 
 	@Spec("Ensures testType literal is present on test classes.")
@@ -416,6 +389,18 @@ export class MustHaveTestRule {
 	@Spec("Extracts expected host class name from a supported companion test file path.")
 	private static getExpectedHostClassName(filePath: string): string {
 		return FileVariantSupport.getHostClassNameFromTestPath(filePath) ?? path.parse(filePath).name
+	}
+
+	@Spec("Returns true when a subjectFactory type node matches the supported async-capable factory contract.")
+	private static isValidSubjectFactoryType(typeText: string): boolean {
+		const trimmed = typeText.trim()
+		if (trimmed.length === 0) {
+			return false
+		}
+		if (/^SubjectFactory<.+>$/.test(trimmed)) {
+			return true
+		}
+		return /^\(\s*\)\s*=>\s*.+$/.test(trimmed)
 	}
 
 	@Spec("Determines if a file is a supported primary or test variant.")

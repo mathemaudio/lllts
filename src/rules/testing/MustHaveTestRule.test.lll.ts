@@ -1,297 +1,238 @@
-import { Project, SourceFile } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
-import "./MustHaveTestRule.lll"
-import { MustHaveTestRule } from "./MustHaveTestRule.lll"
+import { Project, SourceFile } from 'ts-morph'
+import { AssertFn, Scenario, ScenarioParameter, Spec } from '../../public/lll.lll'
+import './MustHaveTestRule.lll'
+import { MustHaveTestRule } from './MustHaveTestRule.lll'
 
-@Spec("Ensures the rule validates companion classes and schema.")
+@Spec('Ensures the rule validates plain companion classes and scenario signatures.')
 export class MustHaveTestRuleTest {
-	testType = "unit"
+	testType = 'unit'
 
-	@Spec("Builds an in-memory source file for rule testing.")
+	@Spec('Builds an in-memory source file for rule testing.')
 	private static buildSource(project: Project, filePath: string, body: string): SourceFile {
 		return project.createSourceFile(filePath, body)
 	}
 
-	@Spec("Runs the rule against one in-memory source file.")
+	@Spec('Runs the rule against one in-memory source file.')
 	private static runRuleOn(filePath: string, source: string, supportFiles: Record<string, string> = {}): import('../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { experimentalDecorators: true } })
 		for (const [supportPath, supportBody] of Object.entries(supportFiles)) {
-			MustHaveTestRuleTest.buildSource(project, supportPath, supportBody)
+			this.buildSource(project, supportPath, supportBody)
 		}
-		const sourceFile = MustHaveTestRuleTest.buildSource(project, filePath, source)
+		const sourceFile = this.buildSource(project, filePath, source)
 		return MustHaveTestRule.getRule().run(sourceFile)
 	}
 
-	@Scenario("Accept valid companion with host side-effect import and optional named import")
-	static async acceptsValidTestNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
+	@Scenario('accepts static-only host scenarios with ScenarioParameter only')
+	static async acceptsStaticOnlyScenarioContract(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/MathObject.test.lll.ts',
 			`
 import "./MathObject.lll"
-import { MathObject } from "./MathObject.lll"
+import { Scenario, ScenarioParameter, Spec } from "../public/lll.lll"
+
 export class MathObjectTest {
 	testType = "unit"
+
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!MathObject, "host class should be available")
+	static async s(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		assert(true, "static-only host should accept ScenarioParameter only")
 	}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject { static add(a: number, b: number) { return a + b } }`
+				'/src/MathObject.lll.ts': `export class MathObject { static add(a: number, b: number) { return a + b } }`
 			}
 		)
-		assert(diagnostics.length === 0, "Expected valid test naming to pass MustHaveTestRule")
+		assert(diagnostics.length === 0, 'Expected static-only host scenario contract to pass')
 	}
 
-	@Scenario("Reject invalid test class naming")
-	static async rejectsInvalidTestClassNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
+	@Scenario('accepts instantiable host scenarios with subjectFactory and ScenarioParameter')
+	static async acceptsInstantiableScenarioContract(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/App.test.lll.ts',
 			`
-import "./MathObject.lll"
-import { MathObject } from "./MathObject.lll"
-export class WrongName {
-	testType = "unit"
+import "./App.lll"
+import { Scenario, ScenarioParameter, Spec, SubjectFactory } from "../public/lll.lll"
+import { App } from "./App.lll"
+
+export class AppTest {
+	testType = "behavioral"
+
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!MathObject, "host class should be available")
+	static async s(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		assert(typeof subjectFactory === "function", "instantiable host should accept subjectFactory")
 	}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`
+				'/src/App.lll.ts': `export class App { value = 1 }`
 			}
 		)
-		assert(diagnostics.some(d => d.ruleCode === "missing-test"), "Expected missing-test for invalid class naming")
+		assert(diagnostics.length === 0, 'Expected instantiable host scenario contract to pass')
 	}
 
-	@Scenario("Accept valid second companion naming")
-	static async acceptsValidSecondCompanionNaming(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test2.lll.ts",
+	@Scenario('rejects extends clauses on companions')
+	static async rejectsCompanionExtends(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/App.test.lll.ts',
 			`
-import "./MathObject.lll"
-import { MathObject } from "./MathObject.lll"
-export class MathObjectTest2 {
-	testType = "unit"
+import "./App.lll"
+export class AppTest extends LitElement {
+	testType = "behavioral"
+
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!MathObject, "host class should be available")
-	}
+	static async s(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter) {}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`,
+				'/src/App.lll.ts': `export class App { value = 1 }`
 			}
 		)
-		assert(diagnostics.length === 0, "Expected valid second companion naming to pass MustHaveTestRule")
+		assert(diagnostics.some(d => d.message.includes('must not extend any base class')), 'Expected extends clause to be rejected')
 	}
 
-	@Scenario("Reject second companion without exported class")
-	static async rejectsSecondCompanionWithoutExportedClass(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test2.lll.ts",
+	@Scenario('rejects render styles lifecycle and customElement on companions')
+	static async rejectsComponentStyleCompanionMembers(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/App.test.lll.ts',
+			`
+import "./App.lll"
+@customElement("app-test")
+export class AppTest {
+	testType = "behavioral"
+	static styles = ""
+	connectedCallback() {}
+	disconnectedCallback() {}
+	render() {
+		return ""
+	}
+
+	@Scenario("s")
+	static async s(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter) {}
+}
+`,
+			{
+				'/src/App.lll.ts': `export class App { value = 1 }`
+			}
+		)
+		assert(diagnostics.some(d => d.message.includes('must not declare static styles')), 'Expected static styles to be rejected')
+		assert(diagnostics.some(d => d.message.includes('must not declare connectedCallback()')), 'Expected connectedCallback to be rejected')
+		assert(diagnostics.some(d => d.message.includes('must not declare disconnectedCallback()')), 'Expected disconnectedCallback to be rejected')
+		assert(diagnostics.some(d => d.message.includes('must not declare render()')), 'Expected render() to be rejected')
+		assert(diagnostics.some(d => d.message.includes('must not use @customElement')), 'Expected @customElement to be rejected')
+	}
+
+	@Scenario('rejects old three-argument scenario signature')
+	static async rejectsLegacyThreeArgumentScenarioSignature(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/App.test.lll.ts',
+			`
+import "./App.lll"
+export class AppTest {
+	testType = "behavioral"
+
+	@Scenario("s")
+	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {}
+}
+`,
+			{
+				'/src/App.lll.ts': `export class App { value = 1 }`
+			}
+		)
+		assert(diagnostics.some(d => d.message.includes('exactly two parameters')), 'Expected old three-argument signature to be rejected')
+	}
+
+	@Scenario('rejects wrong parameter order or names')
+	static async rejectsWrongScenarioParameterOrder(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/App.test.lll.ts',
+			`
+import "./App.lll"
+export class AppTest {
+	testType = "behavioral"
+
+	@Scenario("s")
+	static async s(scenario: ScenarioParameter, subjectFactory: SubjectFactory<App>) {}
+}
+`,
+			{
+				'/src/App.lll.ts': `export class App { value = 1 }`
+			}
+		)
+		assert(diagnostics.some(d => d.message.includes('subjectFactory: SubjectFactory<Subject>, scenario: ScenarioParameter')), 'Expected wrong parameter order to be rejected')
+	}
+
+	@Scenario('rejects static-only hosts that still declare subjectFactory')
+	static async rejectsSubjectFactoryForStaticOnlyHosts(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/MathObject.test.lll.ts',
 			`
 import "./MathObject.lll"
-class MathObjectTest2 {
+export class MathObjectTest {
 	testType = "unit"
+
+	@Scenario("s")
+	static async s(subjectFactory: SubjectFactory<MathObject>, scenario: ScenarioParameter) {}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`,
+				'/src/MathObject.lll.ts': `export class MathObject { static add(a: number, b: number) { return a + b } }`
 			}
 		)
-		assert(
-			diagnostics.some(d => d.message.includes("MathObjectTest2")),
-			"Expected second companion without exported class to mention the expected test class name"
-		)
+		assert(diagnostics.some(d => d.message.includes('exactly one parameter')), 'Expected static-only host to reject subjectFactory')
 	}
 
-	@Scenario("Reject production import from test module")
-	static async rejectsProductionImportFromTest(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.lll.ts",
-			`
-import { MathObjectTest } from "./MathObject.test.lll"
-export class MathObject {
-	static touch() {
-		return MathObjectTest
-	}
-}
-`,
-			{
-				"/src/MathObject.test.lll.ts": `export class MathObjectTest {}`
-			}
-		)
-		assert(diagnostics.some(d => d.ruleCode === "test-import-boundary"), "Expected test-import-boundary diagnostic")
-	}
-
-	@Scenario("Reject production import from second companion module")
-	static async rejectsProductionImportFromSecondCompanion(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.lll.ts",
-			`
-import { MathObjectTest2 } from "./MathObject.test2.lll"
-export class MathObject {
-	static touch() {
-		return MathObjectTest2
-	}
-}
-`,
-			{
-				"/src/MathObject.test2.lll.ts": `export class MathObjectTest2 {}`
-			}
-		)
-		assert(diagnostics.some(d => d.ruleCode === "test-import-boundary"), "Expected test-import-boundary diagnostic")
-	}
-
-	@Scenario("Reject invalid testType values")
-	static async rejectsInvalidTestType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
+	@Scenario('keeps testType validation')
+	static async rejectsInvalidTestType(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/MathObject.test.lll.ts',
 			`
 import "./MathObject.lll"
-import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "api"
+
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!MathObject, "host class should be available")
-	}
+	static async s(scenario: ScenarioParameter) {}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`
+				'/src/MathObject.lll.ts': `export class MathObject { static add(a: number, b: number) { return a + b } }`
 			}
 		)
-		assert(diagnostics.some(d => d.ruleCode === "bad-test-type"), "Expected bad-test-type diagnostic")
+		assert(diagnostics.some(d => d.ruleCode === 'bad-test-type'), 'Expected invalid testType to remain rejected')
 	}
 
-	@Scenario("Accept behavioral tests with CSSResult styles and TemplateResult render")
-	static async acceptsBehavioralLitTypes(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/App.test.lll.ts",
-			`
-import "./App.lll"
-import { App } from "./App.lll"
-export class AppTest extends LitElement {
-	testType = "behavioral"
-	static styles: CSSResult = {} as CSSResult
-	render(): TemplateResult<{ label: string }> {
-		return {} as TemplateResult<{ label: string }>
-	}
-	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!App, "host class should be available")
-	}
-}
-`,
-			{
-				"/src/App.lll.ts": `export class App {}`
-			}
-		)
-		assert(
-			diagnostics.length === 0,
-			"Expected behavioral companion to accept CSSResult styles and TemplateResult render type"
-		)
-	}
-
-	@Scenario("Reject behavioral render return type outside string or TemplateResult")
-	static async rejectsUnsupportedBehavioralRenderType(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/App.test.lll.ts",
-			`
-import "./App.lll"
-import { App } from "./App.lll"
-export class AppTest extends LitElement {
-	testType = "behavioral"
-	static styles: CSSResult = {} as CSSResult
-	render(): number {
-		return 1
-	}
-	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(!!App, "host class should be available")
-	}
-}
-`,
-			{
-				"/src/App.lll.ts": `export class App {}`
-			}
-		)
-		assert(
-			diagnostics.some(d => d.message.includes("must return string or TemplateResult")),
-			"Expected unsupported render return type to be rejected"
-		)
-	}
-
-	@Scenario("Reject named host import when side-effect import is missing")
-	static async rejectsNamedImportWithoutSideEffectImport(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
+	@Scenario('keeps host side-effect import validation')
+	static async rejectsNamedImportWithoutSideEffectImport(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const diagnostics = this.runRuleOn(
+			'/src/MathObject.test.lll.ts',
 			`
 import { MathObject } from "./MathObject.lll"
 export class MathObjectTest {
 	testType = "unit"
+
 	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async s(scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
 		assert(!!MathObject, "host class should be available")
 	}
 }
 `,
 			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`
+				'/src/MathObject.lll.ts': `export class MathObject { static add(a: number, b: number) { return a + b } }`
 			}
 		)
-		assert(
-			diagnostics.some(d => d.message.includes("must side-effect import host module")),
-			"Expected symbol-only host import to be rejected"
-		)
-	}
-
-	@Scenario("Accept side-effect host import without named host usage")
-	static async acceptsSideEffectImportWithoutNamedHostImport(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
-			`
-import "./MathObject.lll"
-export class MathObjectTest {
-	testType = "unit"
-	@Scenario("s")
-	static async s(input = {}, assert: AssertFn, waitFor: WaitForFn) {
-		assert(true, "side-effect import is enough to load host module")
-	}
-}
-`,
-			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`
-			}
-		)
-		assert(diagnostics.length === 0, "Expected side-effect host import alone to satisfy the companion import rule")
-	}
-
-	@Scenario("Reject scenario methods that omit waitFor")
-	static async rejectsScenarioWithoutWaitFor(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
-		const diagnostics = MustHaveTestRuleTest.runRuleOn(
-			"/src/MathObject.test.lll.ts",
-			`
-import "./MathObject.lll"
-export class MathObjectTest {
-	testType = "unit"
-	@Scenario("s")
-	static async s(input = {}, assert: AssertFn) {
-		assert(true, "missing waitFor should fail")
-	}
-}
-`,
-			{
-				"/src/MathObject.lll.ts": `export class MathObject {}`
-			}
-		)
-		assert(
-			diagnostics.some(d => d.message.includes("waitFor: WaitForFn")),
-			"Expected scenario contract diagnostic when waitFor is omitted"
-		)
+		assert(diagnostics.some(d => d.message.includes('must side-effect import host module')), 'Expected missing host side-effect import to remain rejected')
 	}
 }

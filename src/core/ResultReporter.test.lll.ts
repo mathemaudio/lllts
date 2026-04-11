@@ -1,4 +1,4 @@
-import { AssertFn, Scenario, Spec, WaitForFn } from "../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter, SubjectFactory } from "../public/lll.lll"
 import { DiagnosticObject } from "./DiagnosticObject"
 import "./ResultReporter.lll"
 import { ResultReporter } from "./ResultReporter.lll"
@@ -8,7 +8,10 @@ export class ResultReporterTest {
 	testType = "unit"
 
 	@Scenario("Print errors")
-	static async printErrors(input = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async printErrors(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const originalLog = console.log
 		const logLines: string[] = []
 		console.log = (...args: unknown[]) => {

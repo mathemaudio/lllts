@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
 import "./NoLooseEqualityRule.lll"
 import { NoLooseEqualityRule } from "./NoLooseEqualityRule.lll"
 
@@ -15,14 +15,20 @@ export class NoLooseEqualityRuleTest {
 	}
 
 	@Scenario("Verifies rule registration basics")
-	static async verifyRuleRegistration(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async verifyRuleRegistration(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const rule = NoLooseEqualityRule.getRule()
 		assert(rule.id === "R11", "Rule id should be R11")
 		assert(rule.title === "No loose equality", "Rule title should be 'No loose equality'")
 	}
 
 	@Scenario("Allows strict equality operators")
-	static async allowsStrictEqualityOperators(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async allowsStrictEqualityOperators(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoLooseEqualityRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -40,7 +46,10 @@ export class NoLooseEqualityRuleTest {
 	}
 
 	@Scenario("Rejects double equals")
-	static async rejectsDoubleEquals(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsDoubleEquals(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoLooseEqualityRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -59,7 +68,10 @@ export class NoLooseEqualityRuleTest {
 	}
 
 	@Scenario("Rejects not equals including null checks")
-	static async rejectsNotEqualsIncludingNullChecks(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsNotEqualsIncludingNullChecks(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoLooseEqualityRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
@@ -77,7 +89,10 @@ export class NoLooseEqualityRuleTest {
 	}
 
 	@Scenario("Rejects loose equality everywhere")
-	static async rejectsLooseEqualityEverywhere(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+	static async rejectsLooseEqualityEverywhere(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
 		const diagnostics = NoLooseEqualityRuleTest.runRuleOn(
 			"/src/MathObject.lll.ts",
 			`export class MathObject {
