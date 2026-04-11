@@ -16,7 +16,7 @@ export class LlltsServerTest {
 		app: ReturnType<LlltsServer["createApp"]>,
 		requestPath: string,
 		options: { method?: string; headers?: Record<string, string>; body?: string | Uint8Array } = {}
-	): Promise<{ status: number; contentType: string; body: string }> {
+	): Promise<{ status: number; contentType: string; body: string; headers: Record<string, string> }> {
 		const listener = http.createServer(app)
 		await new Promise<void>((resolve, reject) => {
 			listener.listen(0, "127.0.0.1", () => resolve())
@@ -36,10 +36,15 @@ export class LlltsServerTest {
 				requestInit.body = options.body as unknown as never
 			}
 			const response = await fetch(`http://127.0.0.1:${address.port}${requestPath}`, requestInit)
+			const headers: Record<string, string> = {}
+			for (const [name, value] of response.headers.entries()) {
+				headers[name.toLowerCase()] = value
+			}
 			return {
 				status: response.status,
 				contentType: response.headers.get("content-type") ?? "",
-				body: await response.text()
+				body: await response.text(),
+				headers
 			}
 		} finally {
 			await new Promise<void>((resolve, reject) => {
@@ -234,6 +239,9 @@ export class LlltsServerTest {
 			const templateResponse = await this.request(app, "/__lllts-overlay/index.html")
 			assert(templateResponse.status === 200, "Overlay template route should return HTTP 200")
 			assert(templateResponse.contentType.includes("text/html"), "Overlay template route should return text/html")
+			assert(templateResponse.headers["cache-control"] === "no-store, no-cache, must-revalidate, proxy-revalidate", "Overlay template route should disable caching")
+			assert(templateResponse.headers["pragma"] === "no-cache", "Overlay template route should send pragma no-cache")
+			assert(templateResponse.headers["expires"] === "0", "Overlay template route should expire immediately")
 			assert(templateResponse.body.includes("Project Tests"), "Overlay template should include test panel markup")
 			assert(!templateResponse.body.includes("lllts-test-toggle"), "Overlay template should not include toggle markup")
 
@@ -290,6 +298,7 @@ export class LlltsServerTest {
 			const response = await this.request(app, "/assets/file.txt")
 			assert(response.status === 200, "Non-HTML upstream should keep status")
 			assert(response.contentType.includes("text/plain"), "Non-HTML upstream content-type should be preserved")
+			assert(response.headers["cache-control"] === "no-store, no-cache, must-revalidate, proxy-revalidate", "Tunnel asset proxy should disable caching")
 			assert(response.body === "plain-asset-body", "Non-HTML upstream body should be preserved without modification")
 			assert(!response.body.includes("LLLTS_TEST_OVERLAY"), "Overlay should not be injected into non-HTML responses")
 		} finally {

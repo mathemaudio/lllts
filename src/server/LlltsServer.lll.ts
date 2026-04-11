@@ -18,6 +18,7 @@ export class LlltsServer {
 	private static readonly overlayScenarioScriptAssetPath = "js/scenarios.js"
 	private static readonly overlayScriptAssetPath = "js/script.js"
 	private static readonly overlayStyleAssetPath = "css/style.css"
+	private static readonly noStoreCacheControlValue = "no-store, no-cache, must-revalidate, proxy-revalidate"
 
 	@Spec("Starts an express server that proxies a configured client and overlays discovered project tests.")
 	public async start(port: number, config: ServerConfig): Promise<number> {
@@ -59,14 +60,17 @@ export class LlltsServer {
 	private serveOverlayAsset(res: Response, relativeAssetPath: string, contentType: string): void {
 		const overlayRoot = this.resolveOverlayAssetsRootPath()
 		if (!overlayRoot) {
+			this.applyNoStoreResponseHeaders(res)
 			res.status(500).type("text/plain").send("Overlay assets directory is unavailable.")
 			return
 		}
 		const absoluteAssetPath = path.join(overlayRoot, relativeAssetPath)
 		try {
 			const body = fs.readFileSync(absoluteAssetPath)
+			this.applyNoStoreResponseHeaders(res)
 			res.status(200).type(contentType).send(body)
 		} catch {
+			this.applyNoStoreResponseHeaders(res)
 			res.status(404).type("text/plain").send("Overlay asset not found.")
 		}
 	}
@@ -93,16 +97,19 @@ export class LlltsServer {
 	private async handleProxyRequest(req: Request, res: Response, config: ServerConfig): Promise<void> {
 		const report = this.inspectProjectPath(config.projectPath)
 		if (!report.exists) {
+			this.applyNoStoreResponseHeaders(res)
 			res.status(404).type("text/plain").send(this.buildProjectPathStateResponse(report, config.projectClientLink, "Project path does not exist."))
 			return
 		}
 		if (!report.isDirectory) {
+			this.applyNoStoreResponseHeaders(res)
 			res.status(400).type("text/plain").send(this.buildProjectPathStateResponse(report, config.projectClientLink, "Project path exists but is not a directory."))
 			return
 		}
 
 		const upstreamBaseUrl = this.resolveProjectClientLink(config.projectClientLink)
 		if (!upstreamBaseUrl) {
+			this.applyNoStoreResponseHeaders(res)
 			res.status(502).type("text/plain").send(this.buildProjectClientLinkUnavailableResponse(report, config.projectClientLink, "Invalid projectClientLink format."))
 			return
 		}
@@ -122,6 +129,7 @@ export class LlltsServer {
 			})
 		} catch (error) {
 			const reason = error instanceof Error ? error.message : String(error)
+			this.applyNoStoreResponseHeaders(res)
 			res.status(502).type("text/plain").send(this.buildProjectClientLinkUnavailableResponse(report, config.projectClientLink, `Upstream request failed: ${reason}`))
 			return
 		}
@@ -256,14 +264,24 @@ export class LlltsServer {
 			const upstreamHtml = bodyBuffer.toString("utf8")
 			const htmlWithOverlay = this.injectOverlayIntoHtml(upstreamHtml, report)
 			this.copyUpstreamResponseHeaders(res, upstreamResponse, true)
+			this.applyNoStoreResponseHeaders(res)
 			res.status(upstreamResponse.status)
 			res.send(htmlWithOverlay)
 			return
 		}
 
 		this.copyUpstreamResponseHeaders(res, upstreamResponse, false)
+		this.applyNoStoreResponseHeaders(res)
 		res.status(upstreamResponse.status)
 		res.send(bodyBuffer)
+	}
+
+	@Spec("Forces the browser to revalidate every tunnel response during local development.")
+	private applyNoStoreResponseHeaders(res: Response): void {
+		res.setHeader("cache-control", LlltsServer.noStoreCacheControlValue)
+		res.setHeader("pragma", "no-cache")
+		res.setHeader("expires", "0")
+		res.setHeader("surrogate-control", "no-store")
 	}
 
 	@Spec("Copies response headers from upstream to express response, handling content-length/set-cookie correctly.")
