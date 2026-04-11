@@ -125,6 +125,30 @@
 		return "";
 	}
 
+	function installIdempotentCustomElementDefineGuard() {
+		if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
+			return;
+		}
+		var registry = window.customElements;
+		if (registry.__llltsDuplicateDefineGuardInstalled === true) {
+			return;
+		}
+		var originalDefine = registry.define.bind(registry);
+		registry.define = function (name, constructor, options) {
+			var normalizedName = String(name || "");
+			var existingConstructor = typeof registry.get === "function" ? registry.get(normalizedName) : undefined;
+			if (existingConstructor) {
+				var existingName = String(existingConstructor.name || "");
+				var incomingName = constructor && typeof constructor === "function" ? String(constructor.name || "") : "";
+				if (existingConstructor === constructor || (existingName.length > 0 && existingName === incomingName)) {
+					return existingConstructor;
+				}
+			}
+			return originalDefine(name, constructor, options);
+		};
+		registry.__llltsDuplicateDefineGuardInstalled = true;
+	}
+
 	function buildImportUrl(testPath, tParam) {
 		var normalizedPath = String(testPath || "").replace(/^\/+/, "");
 		var basePath = "/" + normalizedPath;
@@ -222,6 +246,7 @@
 	}
 
 	function wireOverlay(config) {
+		installIdempotentCustomElementDefineGuard();
 		var tests = Array.isArray(config.tests) ? config.tests : [];
 		var openByDefault = !!config.openByDefault;
 		var scenarioApi = getScenarioApi();

@@ -252,6 +252,7 @@ export class LlltsServerTest {
 			assert(scriptResponse.body.includes("testType === \"behavioral\""), "Overlay script should include behavioral branching logic")
 			assert(scriptResponse.body.includes("resolveHostPathFromTestPath"), "Overlay script should derive paired host paths from companion naming")
 			assert(scriptResponse.body.includes("mountBehavioralSubject"), "Overlay script should mount paired host subjects for behavioral preview")
+			assert(scriptResponse.body.includes("installIdempotentCustomElementDefineGuard"), "Overlay script should guard duplicate custom element registrations during behavioral preview")
 			assert(scriptResponse.body.includes("scenarioApi.runScenarioMethod"), "Overlay script should execute scenario methods via helper API")
 			assert(scriptResponse.body.includes("FIXED_llltsLastRunReport"), "Overlay script should expose fixed string report variable")
 			assert(scriptResponse.body.includes("FIXED_llltsLastRunReportJson"), "Overlay script should expose fixed JSON report variable")
