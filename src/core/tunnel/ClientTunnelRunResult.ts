@@ -7,6 +7,12 @@ export type ClientTunnelRunResult = {
 	reportText?: string
 	reportJson?: unknown
 	message?: string
+	timeoutContext?: {
+		phase: "navigation" | "scenario"
+		testPath?: string
+		scenarioName?: string
+		scenarioMethodName?: string
+	}
 	consoleErrors?: Array<{
 		phase: "preflight" | "scenario"
 		source: "pageerror" | "console.error"

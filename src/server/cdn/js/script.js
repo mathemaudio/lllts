@@ -5,6 +5,7 @@
 	var TEST_STATUS_EMOJI_FAILED = "⛔️";
 	var FIXED_LAST_RUN_REPORT_KEY = "FIXED_llltsLastRunReport";
 	var FIXED_LAST_RUN_REPORT_JSON_KEY = "FIXED_llltsLastRunReportJson";
+	var FIXED_RUN_PROGRESS_JSON_KEY = "FIXED_llltsRunProgressJson";
 
 	function parseConfig() {
 		var configElement = document.getElementById(CONFIG_ELEMENT_ID);
@@ -273,6 +274,14 @@
 			window[FIXED_LAST_RUN_REPORT_JSON_KEY] = reportJson === undefined ? undefined : reportJson;
 		}
 
+		function clearFixedRunProgress() {
+			window[FIXED_RUN_PROGRESS_JSON_KEY] = undefined;
+		}
+
+		function setFixedRunProgress(progress) {
+			window[FIXED_RUN_PROGRESS_JSON_KEY] = progress && typeof progress === "object" ? progress : undefined;
+		}
+
 		function openPopup() {
 			closeTerminalPopup();
 			popup.classList.add("lllts-open");
@@ -445,6 +454,12 @@
 				setStatus(popupStatus, "Test is still loading. Please wait.", false);
 				return "failed";
 			}
+			setFixedRunProgress({
+				phase: "scenario",
+				testPath: String((runContext && runContext.selectedPath) || ""),
+				scenarioName: String((scenario && scenario.title) || ""),
+				scenarioMethodName: String((scenario && scenario.methodName) || "")
+			});
 			scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
 			scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
 			setStatus(popupStatus, "Running scenario: " + scenario.title, false);
@@ -544,6 +559,10 @@
 				activePreviewElement: null,
 				scenarioResultByMethod: {}
 			};
+			setFixedRunProgress({
+				phase: "test",
+				testPath: selectedPath
+			});
 			loadTokenCounter++;
 			runContext.loadToken = loadTokenCounter;
 
@@ -646,6 +665,7 @@
 		setPanelResult("", "");
 		syncBackdropState();
 		clearFixedLastRunReport();
+		clearFixedRunProgress();
 
 		if (tests.length === 0) {
 			emptyState.hidden = false;
@@ -679,6 +699,7 @@
 				return;
 			}
 			clearFixedLastRunReport();
+			clearFixedRunProgress();
 			isRunningAllTests = true;
 			setPanelPlayAllEnabled(false);
 			setListButtonsEnabled(false);
@@ -689,6 +710,10 @@
 				for (var i = 0; i < tests.length; i++) {
 					setPanelResult("running", String(i + 1) + "/" + String(tests.length));
 					var testPath = String(tests[i] || "");
+					setFixedRunProgress({
+						phase: "test",
+						testPath: testPath
+					});
 					var testResult = await loadTestPreview(testPath, true);
 					var status = testResult && testResult.status ? String(testResult.status) : "failed";
 					var scenarioResults = testResult && Array.isArray(testResult.scenarioResults) ? testResult.scenarioResults : [];
@@ -724,6 +749,7 @@
 			var reportJson = buildTerminalReportJson(testReports, !hasFailures);
 			openTerminalPopup(reportText);
 			setFixedLastRunReport(reportText, reportJson);
+			clearFixedRunProgress();
 
 			if (hasFailures) {
 				setPanelResult("error", "Failed");

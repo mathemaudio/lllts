@@ -635,6 +635,66 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("Tunnel timeout output distinguishes navigation from scenario execution")
+	static async behavioralTunnelTimeoutMessages(input: object = {}, assert: AssertFn, waitFor: WaitForFn): Promise<void> {
+		const originalError = console.error
+		const logLines: string[] = []
+		console.error = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "timeout",
+						message: "page.goto: Timeout 30000ms exceeded.",
+						timeoutContext: {
+							phase: "navigation"
+						}
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Tunnel timeout should fail compile mode")
+				}
+			)
+
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "timeout",
+						message: "Condition was not met within 1200ms.",
+						timeoutContext: {
+							phase: "scenario",
+							testPath: "src/App.test.lll.ts",
+							scenarioName: "opens settings"
+						}
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Scenario timeout should fail compile mode")
+				}
+			)
+		} finally {
+			console.error = originalError
+		}
+
+		assert(
+			logLines.some(line => line.includes("before any scenario started")),
+			"Navigation timeout should explain that no scenario had started yet"
+		)
+		assert(
+			logLines.some(line => line.includes("while running test src/App.test.lll.ts, scenario \"opens settings\"")),
+			"Scenario timeout should include the active test and scenario"
+		)
+	}
+
 	@Scenario("Verbose tunnel-only run does not print no-tests-executed placeholder")
 	static async verboseBehavioralOnlyRunSkipsNoTestsPlaceholder(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
 		const originalLog = console.log

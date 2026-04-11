@@ -313,7 +313,7 @@ export class LLLTS {
 			return [
 				BaseRule.createError(
 					file,
-					`Client tunnel timed out while waiting for FIXED_llltsLastRunReport. ${result.message ?? ""}`.trim(),
+					this.formatClientTunnelTimeoutMessage(result),
 					"test-failure",
 					line
 				)
@@ -358,6 +358,34 @@ export class LLLTS {
 			segments.push(`(${suffix})`)
 		}
 		return segments.join(" ")
+	}
+
+	@Spec("Formats timeout diagnostics with explicit execution phase and active target when known.")
+	private static formatClientTunnelTimeoutMessage(result: ClientTunnelRunResult): string {
+		const details: string[] = ["Client tunnel timed out while waiting for FIXED_llltsLastRunReport."]
+		const timeoutContext = result.timeoutContext
+		if (timeoutContext?.phase === "navigation") {
+			details.push("Timeout happened before any scenario started, while navigating to the automatic tunnel page.")
+		} else if (timeoutContext?.phase === "scenario") {
+			const targetParts: string[] = []
+			if (typeof timeoutContext.testPath === "string" && timeoutContext.testPath.length > 0) {
+				targetParts.push(`test ${timeoutContext.testPath}`)
+			}
+			if (typeof timeoutContext.scenarioName === "string" && timeoutContext.scenarioName.length > 0) {
+				targetParts.push(`scenario ${JSON.stringify(timeoutContext.scenarioName)}`)
+			} else if (typeof timeoutContext.scenarioMethodName === "string" && timeoutContext.scenarioMethodName.length > 0) {
+				targetParts.push(`scenario method ${timeoutContext.scenarioMethodName}`)
+			}
+			if (targetParts.length > 0) {
+				details.push(`Timeout happened while running ${targetParts.join(", ")}.`)
+			} else {
+				details.push("Timeout happened after the tunnel entered scenario execution.")
+			}
+		}
+		if (typeof result.message === "string" && result.message.trim().length > 0) {
+			details.push(result.message.trim())
+		}
+		return details.join(" ")
 	}
 
 	@Spec("Retrieves a required CLI argument by flag or throws error.")
@@ -494,7 +522,7 @@ export class LLLTS {
 		}
 
 		if (result.status === "timeout") {
-			console.error(`\n❌ Client tunnel timed out: ${result.message ?? "No additional details."}`)
+			console.error(`\n❌ ${this.formatClientTunnelTimeoutMessage(result)}`)
 			return
 		}
 

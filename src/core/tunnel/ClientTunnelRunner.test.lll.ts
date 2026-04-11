@@ -93,6 +93,9 @@ export class ClientTunnelRunnerTest {
 			},
 			evaluate: async function evaluate<T>(_fn: Parameters<Page["evaluate"]>[0]): Promise<T> {
 				evaluateCount++
+				if (options.waitError !== undefined && evaluateCount === 1 && options.timeoutProgressJson !== undefined) {
+					return options.timeoutProgressJson as T
+				}
 				if (evaluateCount === 1) {
 					return (options.reportText ?? "All client behavioral tests passed") as T
 				}
@@ -172,8 +175,38 @@ export class ClientTunnelRunnerTest {
 		const fixture = this.createRunner({ waitError: timeoutError })
 		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 500 })
 		assert(result.status === "timeout", "Expected TimeoutError to map to timeout status")
+		assert(result.timeoutContext?.phase === "scenario", "waitForFunction timeout should be labeled as scenario phase")
 		assert(fixture.state.contextClosedCount === 1, "Timeout run should close context")
 		assert(fixture.state.browserClosedCount === 1, "Timeout run should close browser")
+	}
+
+	@Scenario("Includes active test and scenario progress when scenario wait times out")
+	static async returnsScenarioTimeoutProgress(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+		const timeoutError = new Error("wait timed out")
+		timeoutError.name = "TimeoutError"
+		const fixture = this.createRunner({
+			waitError: timeoutError,
+			timeoutProgressJson: {
+				testPath: "src/App.test.lll.ts",
+				scenarioName: "opens settings",
+				scenarioMethodName: "opensSettings"
+			}
+		})
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 500 })
+		assert(result.status === "timeout", "Expected timeout status")
+		assert(result.timeoutContext?.testPath === "src/App.test.lll.ts", "Timeout should retain active test path")
+		assert(result.timeoutContext?.scenarioName === "opens settings", "Timeout should retain active scenario title")
+		assert(result.timeoutContext?.scenarioMethodName === "opensSettings", "Timeout should retain active scenario method")
+	}
+
+	@Scenario("Labels navigation timeout before any scenario starts")
+	static async labelsNavigationTimeout(input: object = {}, assert: AssertFn, waitFor: WaitForFn) {
+		const timeoutError = new Error("page.goto: Timeout 30000ms exceeded.")
+		timeoutError.name = "TimeoutError"
+		const fixture = this.createRunner({ gotoError: timeoutError })
+		const result = await fixture.runner.run({ url: "http://localhost:3000", headed: false, timeoutMs: 500 })
+		assert(result.status === "timeout", "Expected goto timeout to map to timeout status")
+		assert(result.timeoutContext?.phase === "navigation", "Navigation timeout should be labeled before scenario execution")
 	}
 
 	@Scenario("Returns runtime_error when browser navigation throws")

@@ -5,6 +5,7 @@ Spec("Options for mocked tunnel-runner behavior used by unit tests.")
 export type FakeRunnerOptions = {
 	reportText?: string
 	reportJson?: unknown
+	timeoutProgressJson?: unknown
 	gotoError?: Error
 	waitError?: Error
 	launchError?: Error

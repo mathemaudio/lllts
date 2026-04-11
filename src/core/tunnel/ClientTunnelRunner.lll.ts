@@ -22,6 +22,8 @@ export class ClientTunnelRunner {
 		let currentPhase: NonNullable<ClientTunnelRunResult["consoleErrors"]>[number]["phase"] = "preflight"
 		let browser: Browser | null = null
 		let context: BrowserContext | null = null
+		let page: Page | null = null
+		let timeoutPhase: NonNullable<NonNullable<ClientTunnelRunResult["timeoutContext"]>["phase"]> = "navigation"
 		try {
 			const playwright = this.loadPlaywright()
 			if (!playwright.chromium || typeof playwright.chromium.launch !== "function") {
@@ -38,7 +40,7 @@ export class ClientTunnelRunner {
 			browser = browserInstance
 			const contextInstance = await browserInstance.newContext()
 			context = contextInstance
-			const page = await contextInstance.newPage()
+			page = await contextInstance.newPage()
 			const automaticUrl = this.buildAutomaticTunnelUrl(input.url)
 			this.attachConsoleErrorListeners(page, consoleErrors, () => currentPhase)
 
@@ -53,6 +55,7 @@ export class ClientTunnelRunner {
 			}
 
 			currentPhase = "scenario"
+			timeoutPhase = "scenario"
 			await page.waitForFunction(
 				() => typeof (globalThis as typeof globalThis & { FIXED_llltsLastRunReport?: unknown }).FIXED_llltsLastRunReport === "string",
 				{ timeout: input.timeoutMs }
@@ -82,10 +85,41 @@ export class ClientTunnelRunner {
 				reportJson
 			}
 		} catch (error) {
-			return this.mapRuntimeError(error)
+			const timeoutContext = this.isTimeoutError(error)
+				? await this.readTimeoutContext(page, timeoutPhase)
+				: undefined
+			return this.mapRuntimeError(error, timeoutContext)
 		} finally {
 			await this.safeClose(context)
 			await this.safeClose(browser)
+		}
+	}
+
+	@Spec("Reads overlay progress so timeout messages can identify the active test or scenario.")
+	private async readTimeoutContext(
+		page: Page | null,
+		timeoutPhase: NonNullable<NonNullable<ClientTunnelRunResult["timeoutContext"]>["phase"]>
+	): Promise<ClientTunnelRunResult["timeoutContext"]> {
+		const context: NonNullable<ClientTunnelRunResult["timeoutContext"]> = { phase: timeoutPhase }
+		if (page === null || timeoutPhase !== "scenario") {
+			return context
+		}
+		try {
+			const raw = await page.evaluate(
+				() => (globalThis as typeof globalThis & { FIXED_llltsRunProgressJson?: unknown }).FIXED_llltsRunProgressJson
+			)
+			if (!raw || typeof raw !== "object") {
+				return context
+			}
+			const record = raw as Record<string, unknown>
+			return {
+				phase: timeoutPhase,
+				testPath: typeof record.testPath === "string" && record.testPath.length > 0 ? record.testPath : undefined,
+				scenarioName: typeof record.scenarioName === "string" && record.scenarioName.length > 0 ? record.scenarioName : undefined,
+				scenarioMethodName: typeof record.scenarioMethodName === "string" && record.scenarioMethodName.length > 0 ? record.scenarioMethodName : undefined
+			}
+		} catch {
+			return context
 		}
 	}
 
@@ -274,12 +308,16 @@ export class ClientTunnelRunner {
 	}
 
 	@Spec("Maps browser/runtime errors into deterministic tunnel statuses.")
-	private mapRuntimeError(error: unknown): ClientTunnelRunResult {
+	private mapRuntimeError(
+		error: unknown,
+		timeoutContext?: ClientTunnelRunResult["timeoutContext"]
+	): ClientTunnelRunResult {
 		const message = this.formatError(error)
 		if (this.isTimeoutError(error)) {
 			return {
 				status: "timeout",
-				message
+				message,
+				timeoutContext
 			}
 		}
 		return {
