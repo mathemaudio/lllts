@@ -36,6 +36,39 @@
 		}
 	}
 
+	function getAutomaticStepTimeoutMs() {
+		try {
+			var currentUrl = new URL(window.location.href);
+			var rawValue = currentUrl.searchParams.get("stepTimeoutMs");
+			if (!rawValue) {
+				return null;
+			}
+			var parsed = Number(rawValue);
+			if (!Number.isFinite(parsed) || parsed <= 0) {
+				return null;
+			}
+			return parsed;
+		} catch (_error) {
+			return null;
+		}
+	}
+
+	async function runWithTimeout(promiseFactory, timeoutMs, timeoutMessage) {
+		if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+			return await promiseFactory();
+		}
+		return await Promise.race([
+			Promise.resolve().then(function () {
+				return promiseFactory();
+			}),
+			new Promise(function (_resolve, reject) {
+				setTimeout(function () {
+					reject(new Error(timeoutMessage));
+				}, timeoutMs);
+			})
+		]);
+	}
+
 	function getScenarioApi() {
 		if (typeof window !== "undefined" && window.llltsOverlayScenarios) {
 			return window.llltsOverlayScenarios;
@@ -420,6 +453,7 @@
 				var report = reports[i];
 				var testPath = String((report && report.testPath) || "unknown-test");
 				var testStatus = String((report && report.status) || "failed");
+				var testFailureDetails = String((report && report.failureDetails) || "").trim();
 				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
 				var failedScenarioLines = [];
 				for (var j = 0; j < scenarioResults.length; j++) {
@@ -441,7 +475,11 @@
 				}
 				lines.push("## " + testPath);
 				if (failedScenarioLines.length === 0) {
-					lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded");
+					if (testFailureDetails.length > 0) {
+						lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded: " + testFailureDetails);
+					} else {
+						lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded");
+					}
 				} else {
 					for (var k = 0; k < failedScenarioLines.length; k++) {
 						lines.push(failedScenarioLines[k]);
@@ -538,10 +576,12 @@
 					clearActiveBehavioralPreview(runContext);
 					scenarioOptions.subjectFactory = createBehavioralSubjectFactory(runContext);
 				}
-				await scenarioApi.runScenarioMethod(runContext.activeTestClass, scenario.methodName, {
-					input: scenarioOptions.input,
-					subjectFactory: scenarioOptions.subjectFactory
-				});
+				await runWithTimeout(function () {
+					return scenarioApi.runScenarioMethod(runContext.activeTestClass, scenario.methodName, {
+						input: scenarioOptions.input,
+						subjectFactory: scenarioOptions.subjectFactory
+					});
+				}, runContext.stepTimeoutMs, "Scenario \"" + String(scenario.title || scenario.methodName || "scenario") + "\" in test " + String(runContext.selectedPath || "unknown-test") + " timed out after " + String(runContext.stepTimeoutMs) + "ms.")
 				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
 				storeScenarioResult(runContext, scenario, "passed", "");
 				setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
@@ -625,6 +665,7 @@
 			var runContext = {
 				selectedPath: selectedPath,
 				selectedScenarios: scenarioApi.getScenariosForTest(config, selectedPath),
+				stepTimeoutMs: getAutomaticStepTimeoutMs(),
 				loadToken: 0,
 				activeTestClass: null,
 				activeHostClass: null,
@@ -663,8 +704,14 @@
 				var testModuleUrl = buildImportUrl(selectedPath, detectedT);
 				var hostModuleUrl = buildPairedHostImportUrl(testModuleUrl, selectedPath);
 				setStatus(popupStatus, "Importing " + testModuleUrl, false);
-				var moduleObject = await import(testModuleUrl);
-				var hostModuleObject = await import(hostModuleUrl);
+				var loadedModules = await runWithTimeout(function () {
+					return Promise.all([
+						import(testModuleUrl),
+						import(hostModuleUrl)
+					]);
+				}, runContext.stepTimeoutMs, "Test setup for " + selectedPath + " timed out after " + String(runContext.stepTimeoutMs) + "ms while importing modules.");
+				var moduleObject = loadedModules[0];
+				var hostModuleObject = loadedModules[1];
 				if (runContext.loadToken !== loadTokenCounter) {
 					return {
 						status: "stale",
@@ -694,7 +741,9 @@
 						throw new Error("No paired production class was found for this behavioral companion.");
 					}
 					popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself.";
-					var preview = await mountBehavioralSubject(popupRenderHost, HostClass);
+					var preview = await runWithTimeout(function () {
+						return mountBehavioralSubject(popupRenderHost, HostClass);
+					}, runContext.stepTimeoutMs, "Test setup for " + selectedPath + " timed out after " + String(runContext.stepTimeoutMs) + "ms while mounting the behavioral subject.");
 					runContext.activePreviewElement = preview.element;
 					runContext.activePreviewSubject = preview.subject;
 					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
@@ -718,6 +767,7 @@
 				setStatus(popupStatus, errorMessage(error), true);
 				return {
 					status: "failed",
+					failureDetails: errorMessage(error),
 					scenarioResults: []
 				};
 			}
@@ -790,10 +840,12 @@
 					});
 					var testResult = await loadTestPreview(testPath, true);
 					var status = testResult && testResult.status ? String(testResult.status) : "failed";
+					var failureDetails = String((testResult && testResult.failureDetails) || "");
 					var scenarioResults = testResult && Array.isArray(testResult.scenarioResults) ? testResult.scenarioResults : [];
 					testReports.push({
 						testPath: testPath,
 						status: status,
+						failureDetails: failureDetails,
 						scenarioResults: scenarioResults
 					});
 					if (status !== "passed" && status !== "no-scenarios") {

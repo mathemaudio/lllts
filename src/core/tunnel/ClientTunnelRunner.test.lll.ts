@@ -295,7 +295,7 @@ export class ClientTunnelRunnerTest {
 		assert(!!summary && summary.totalTests === 1, "Expected JSON mirror summary to preserve totalTests")
 	}
 
-	@Scenario("Appends automatic=true to tunnel URL before browser navigation")
+	@Scenario("Appends automatic and per-step timeout query params to tunnel URL before browser navigation")
 	static async appendsAutomaticQueryParam(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
 		const input = scenario.input
 		const assert: AssertFn = scenario.assert
@@ -303,12 +303,12 @@ export class ClientTunnelRunnerTest {
 		const fixture = this.createRunner()
 		await fixture.runner.run({ url: "http://localhost:3000/tunnel", headed: false, timeoutMs: 60000 })
 		assert(
-			fixture.state.visitedUrl === "http://localhost:3000/tunnel?automatic=true",
-			"Expected tunnel runner to append automatic=true when query string is absent"
+			fixture.state.visitedUrl === "http://localhost:3000/tunnel?automatic=true&stepTimeoutMs=10000",
+			"Expected tunnel runner to append automatic and capped per-step timeout query params when query string is absent"
 		)
 	}
 
-	@Scenario("Preserves existing tunnel query parameters when adding automatic=true")
+	@Scenario("Preserves existing tunnel query parameters when adding automatic and per-step timeout query params")
 	static async preservesExistingQueryParams(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
 		const input = scenario.input
 		const assert: AssertFn = scenario.assert
@@ -316,8 +316,21 @@ export class ClientTunnelRunnerTest {
 		const fixture = this.createRunner()
 		await fixture.runner.run({ url: "http://localhost:3000/tunnel?foo=bar", headed: false, timeoutMs: 60000 })
 		assert(
-			fixture.state.visitedUrl === "http://localhost:3000/tunnel?foo=bar&automatic=true",
-			"Expected tunnel runner to preserve existing query params when adding automatic=true"
+			fixture.state.visitedUrl === "http://localhost:3000/tunnel?foo=bar&automatic=true&stepTimeoutMs=10000",
+			"Expected tunnel runner to preserve existing query params when adding automatic and per-step timeout query params"
+		)
+	}
+
+	@Scenario("Uses the requested tunnel timeout when it is already below the per-step cap")
+	static async preservesShortPerStepTimeout(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		const fixture = this.createRunner()
+		await fixture.runner.run({ url: "http://localhost:3000/tunnel", headed: false, timeoutMs: 4321 })
+		assert(
+			fixture.state.visitedUrl === "http://localhost:3000/tunnel?automatic=true&stepTimeoutMs=4321",
+			"Expected tunnel runner to preserve shorter explicit timeouts for each automatic test step"
 		)
 	}
 

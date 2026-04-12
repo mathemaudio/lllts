@@ -479,6 +479,43 @@ export class LLLTSTest {
 		)
 	}
 
+	@Scenario("Behavioral tunnel failure prints pre-scenario test construction details")
+	static async behavioralTunnelFailurePrintsPreScenarioDetails(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		try {
+			await this.withCompileStubs(
+				{
+					hasBehavioralTests: true,
+					tunnelRunner: async () => ({
+						status: "failed",
+						reportText: "## src/App.test.lll.ts\n⛔️ Test failed before any scenario results were recorded: Failed to construct 'HTMLElement': Illegal constructor\n\nsome failed"
+					})
+				},
+				async () => {
+					const result = await LLLTS.main([...this.baseCompileArgs(), "--clientTunnel", "http://localhost:3000"])
+					assert(result.mode === "compile", "Compile mode should run for tunnel args")
+					assert(result.exitCode === 1, "Failing tunnel run should fail compile mode")
+				}
+			)
+		} finally {
+			console.log = originalLog
+		}
+
+		const printedReport = logLines.join("\n")
+		assert(
+			printedReport.includes("Failed to construct 'HTMLElement': Illegal constructor"),
+			"Pre-scenario browser construction failure details should appear in compile output"
+		)
+	}
+
 	@Scenario("Behavioral tunnel failure output can omit passing files and passing scenarios")
 	static async behavioralTunnelFailureOnlyPrintsFailedSections(scenario: ScenarioParameter): Promise<void> {
 		const input = scenario.input
