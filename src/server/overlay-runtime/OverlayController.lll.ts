@@ -22,6 +22,7 @@ type OverlayTestResult = {
 }
 
 export class OverlayController {
+	private static readonly defaultInteractiveStepTimeoutMs = 10000
 	private readonly tests: string[]
 	private readonly openByDefault: boolean
 	private readonly scenarioApi = OverlayScenarioRuntime.getGlobalApi()
@@ -204,7 +205,7 @@ export class OverlayController {
 		}
 	}
 
-	private getAutomaticStepTimeoutMs(): number | null {
+	private getConfiguredStepTimeoutMs(): number | null {
 		try {
 			const currentUrl = new URL(window.location.href)
 			const rawValue = currentUrl.searchParams.get("stepTimeoutMs")
@@ -219,6 +220,10 @@ export class OverlayController {
 		} catch {
 			return null
 		}
+	}
+
+	private getEffectiveStepTimeoutMs(): number {
+		return this.getConfiguredStepTimeoutMs() ?? OverlayController.defaultInteractiveStepTimeoutMs
 	}
 
 	private openPopup(): void {
@@ -468,7 +473,7 @@ export class OverlayController {
 		const runContext: OverlayRunContext = {
 			selectedPath,
 			selectedScenarios: this.scenarioApi.getScenariosForTest(this.config, selectedPath),
-			stepTimeoutMs: this.getAutomaticStepTimeoutMs(),
+			stepTimeoutMs: this.getEffectiveStepTimeoutMs(),
 			loadToken: 0,
 			activeTestClass: null,
 			activeHostClass: null,

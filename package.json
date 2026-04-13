@@ -1,6 +1,6 @@
 {
 	"name": "lllts",
-	"version": "0.1.13",
+	"version": "0.1.15",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
 	"main": "dist/LLLTS.lll.js",
 	"bin": {
@@ -10,6 +10,7 @@
 	"type": "commonjs",
 	"scripts": {
 		"watch": "node scripts/watch.mjs",
+		"watch:overlay-runtime": "node scripts/build-overlay-runtime.mjs --watch",
 		"🪽lll-check": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
@@ -20,7 +21,6 @@
 		"build:typescript": "tsc",
 		"typecheck:overlay-runtime": "tsc -p tsconfig.overlay-runtime.json --noEmit",
 		"build:overlay-runtime": "node scripts/build-overlay-runtime.mjs",
-		"watch:overlay-runtime": "node scripts/build-overlay-runtime.mjs --watch",
 		"build": "pnpm run build:typescript && pnpm run build:overlay-runtime",
 		"ts-check": "tsc --noEmit",
 		"playwright-setup": "pnpm exec playwright install chromium",

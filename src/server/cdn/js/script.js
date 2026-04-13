@@ -110,7 +110,12 @@
       return null;
     }
     static isHTMLElementSubclass(TestClass) {
-      return typeof HTMLElement !== "undefined" && !!TestClass && typeof TestClass === "function" && !!TestClass.prototype && TestClass.prototype instanceof HTMLElement;
+      const nativeHTMLElement = this.nativeHTMLElementConstructor;
+      return nativeHTMLElement !== null && !!TestClass && typeof TestClass === "function" && !!TestClass.prototype && TestClass.prototype instanceof nativeHTMLElement;
+    }
+    static isNativeHTMLElementInstance(value) {
+      const nativeHTMLElement = this.nativeHTMLElementConstructor;
+      return nativeHTMLElement !== null && value instanceof nativeHTMLElement;
     }
     static async settleRenderedSubject(subject) {
       const typedSubject = subject;
@@ -127,7 +132,7 @@
       this.clearRenderHost(popupRenderHost);
       const subject = new HostClass();
       let element = null;
-      if (this.isHTMLElementSubclass(HostClass) && subject instanceof HTMLElement) {
+      if (this.isHTMLElementSubclass(HostClass) && this.isNativeHTMLElementInstance(subject)) {
         element = subject;
         popupRenderHost.appendChild(element);
       }
@@ -141,6 +146,7 @@
       return typeof value === "function";
     }
   };
+  __publicField(OverlayModuleRuntime, "nativeHTMLElementConstructor", typeof HTMLElement === "function" ? HTMLElement : null);
 
   // src/server/overlay-runtime/OverlayReportRuntime.lll.ts
   var OverlayReportRuntime = class {
@@ -445,7 +451,7 @@
   var OverlayScenarioRuntime = _OverlayScenarioRuntime;
 
   // src/server/overlay-runtime/OverlayController.lll.ts
-  var OverlayController = class {
+  var _OverlayController = class _OverlayController {
     constructor(config) {
       this.config = config;
       __publicField(this, "tests");
@@ -594,7 +600,7 @@
         return false;
       }
     }
-    getAutomaticStepTimeoutMs() {
+    getConfiguredStepTimeoutMs() {
       try {
         const currentUrl = new URL(window.location.href);
         const rawValue = currentUrl.searchParams.get("stepTimeoutMs");
@@ -609,6 +615,9 @@
       } catch {
         return null;
       }
+    }
+    getEffectiveStepTimeoutMs() {
+      return this.getConfiguredStepTimeoutMs() ?? _OverlayController.defaultInteractiveStepTimeoutMs;
     }
     openPopup() {
       this.closeTerminalPopup();
@@ -839,7 +848,7 @@
       const runContext = {
         selectedPath,
         selectedScenarios: this.scenarioApi.getScenariosForTest(this.config, selectedPath),
-        stepTimeoutMs: this.getAutomaticStepTimeoutMs(),
+        stepTimeoutMs: this.getEffectiveStepTimeoutMs(),
         loadToken: 0,
         activeTestClass: null,
         activeHostClass: null,
@@ -1028,6 +1037,8 @@
       this.setPanelResult("success", "Passed");
     }
   };
+  __publicField(_OverlayController, "defaultInteractiveStepTimeoutMs", 1e4);
+  var OverlayController = _OverlayController;
 
   // src/server/overlay-runtime/OverlayRuntimeBootstrap.lll.ts
   var OverlayRuntimeBootstrap = class {

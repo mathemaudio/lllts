@@ -1,4 +1,6 @@
 export class OverlayModuleRuntime {
+	private static readonly nativeHTMLElementConstructor = typeof HTMLElement === "function" ? HTMLElement : null
+
 	public static detectPageModuleTParam(): string {
 		const moduleScripts = document.querySelectorAll<HTMLScriptElement>('script[type="module"][src]')
 		for (const script of moduleScripts) {
@@ -112,11 +114,17 @@ export class OverlayModuleRuntime {
 	}
 
 	public static isHTMLElementSubclass(TestClass: unknown): boolean {
-		return typeof HTMLElement !== "undefined"
+		const nativeHTMLElement = this.nativeHTMLElementConstructor
+		return nativeHTMLElement !== null
 			&& !!TestClass
 			&& typeof TestClass === "function"
 			&& !!TestClass.prototype
-			&& TestClass.prototype instanceof HTMLElement
+			&& TestClass.prototype instanceof nativeHTMLElement
+	}
+
+	public static isNativeHTMLElementInstance(value: unknown): value is HTMLElement {
+		const nativeHTMLElement = this.nativeHTMLElementConstructor
+		return nativeHTMLElement !== null && value instanceof nativeHTMLElement
 	}
 
 	public static async settleRenderedSubject(subject: unknown): Promise<void> {
@@ -139,7 +147,7 @@ export class OverlayModuleRuntime {
 		this.clearRenderHost(popupRenderHost)
 		const subject = new HostClass()
 		let element: HTMLElement | null = null
-		if (this.isHTMLElementSubclass(HostClass) && subject instanceof HTMLElement) {
+		if (this.isHTMLElementSubclass(HostClass) && this.isNativeHTMLElementInstance(subject)) {
 			element = subject
 			popupRenderHost.appendChild(element)
 		}
