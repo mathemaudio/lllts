@@ -15,7 +15,6 @@ export class LlltsServer {
 	private static readonly testPanelOpenByDefault = !false
 	private static readonly overlayAssetsBasePath = "/__lllts-overlay"
 	private static readonly overlayIndexAssetPath = "index.html"
-	private static readonly overlayScenarioScriptAssetPath = "js/scenarios.js"
 	private static readonly overlayScriptAssetPath = "js/script.js"
 	private static readonly overlayStyleAssetPath = "css/style.css"
 	private static readonly noStoreCacheControlValue = "no-store, no-cache, must-revalidate, proxy-revalidate"
@@ -45,14 +44,15 @@ export class LlltsServer {
 		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayIndexAssetPath}`, (_req: Request, res: Response) => {
 			this.serveOverlayAsset(res, LlltsServer.overlayIndexAssetPath, "text/html; charset=utf-8")
 		})
-		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayScenarioScriptAssetPath}`, (_req: Request, res: Response) => {
-			this.serveOverlayAsset(res, LlltsServer.overlayScenarioScriptAssetPath, "application/javascript; charset=utf-8")
-		})
 		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayScriptAssetPath}`, (_req: Request, res: Response) => {
 			this.serveOverlayAsset(res, LlltsServer.overlayScriptAssetPath, "application/javascript; charset=utf-8")
 		})
 		app.get(`${LlltsServer.overlayAssetsBasePath}/${LlltsServer.overlayStyleAssetPath}`, (_req: Request, res: Response) => {
 			this.serveOverlayAsset(res, LlltsServer.overlayStyleAssetPath, "text/css; charset=utf-8")
+		})
+		app.get(`${LlltsServer.overlayAssetsBasePath}/*`, (_req: Request, res: Response) => {
+			this.applyNoStoreResponseHeaders(res)
+			res.status(404).type("text/plain").send("Overlay asset not found.")
 		})
 	}
 
@@ -344,19 +344,10 @@ export class LlltsServer {
     runtimeScript.async=false;
     document.body.appendChild(runtimeScript);
   }
-  if(document.getElementById("lllts-overlay-scenarios-script")){
-    loadRuntimeScript();
-    return;
-  }
-  var scenariosScript=document.createElement("script");
-  scenariosScript.id="lllts-overlay-scenarios-script";
-  scenariosScript.src=assetsBasePath+"/${LlltsServer.overlayScenarioScriptAssetPath}";
-  scenariosScript.async=false;
-  scenariosScript.onload=loadRuntimeScript;
-  document.body.appendChild(scenariosScript);
+  loadRuntimeScript();
 })();
 </script>`
-		}
+			}
 
 	@Spec("Recursively scans for supported companion test files and extracts static @Scenario metadata.")
 	private findTestsWithScenarios(projectPath: string): TestDescriptor[] {

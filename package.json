@@ -1,6 +1,6 @@
 {
 	"name": "lllts",
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
 	"main": "dist/LLLTS.lll.js",
 	"bin": {
@@ -9,7 +9,7 @@
 	},
 	"type": "commonjs",
 	"scripts": {
-		"watch": "TSC_NONPOLLING_WATCHER=1 tsc --watch",
+		"watch": "node scripts/watch.mjs",
 		"🪽lll-check": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
@@ -17,7 +17,11 @@
 		"lll-example-check-quick": "./bin/lllts --project tsconfig.json --entry src/examples/MathObject.lll.ts",
 		"lll-example-bad-many-functions": "./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
 		"lll-example-bad-rogue-top-level": "./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
-		"build": "tsc",
+		"build:typescript": "tsc",
+		"typecheck:overlay-runtime": "tsc -p tsconfig.overlay-runtime.json --noEmit",
+		"build:overlay-runtime": "node scripts/build-overlay-runtime.mjs",
+		"watch:overlay-runtime": "node scripts/build-overlay-runtime.mjs --watch",
+		"build": "pnpm run build:typescript && pnpm run build:overlay-runtime",
 		"ts-check": "tsc --noEmit",
 		"playwright-setup": "pnpm exec playwright install chromium",
 		"playwright-list": "pnpm exec playwright install --list",
@@ -41,6 +45,7 @@
 	"devDependencies": {
 		"@types/express": "^4.17.25",
 		"@types/node": "^20.10.6",
+		"esbuild": "^0.25.12",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "^5.3.3"

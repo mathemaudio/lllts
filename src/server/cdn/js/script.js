@@ -1,909 +1,1083 @@
-(function () {
-	var CONFIG_ELEMENT_ID = "lllts-overlay-config";
-	var FALLBACK_ASSETS_BASE_PATH = "/__lllts-overlay";
-	var TEST_STATUS_EMOJI_PASSED = "🟢";
-	var TEST_STATUS_EMOJI_FAILED = "⛔️";
-	var FIXED_LAST_RUN_REPORT_KEY = "FIXED_llltsLastRunReport";
-	var FIXED_LAST_RUN_REPORT_JSON_KEY = "FIXED_llltsLastRunReportJson";
-	var FIXED_RUN_PROGRESS_JSON_KEY = "FIXED_llltsRunProgressJson";
-
-	function parseConfig() {
-		var configElement = document.getElementById(CONFIG_ELEMENT_ID);
-		if (!configElement) {
-			return {};
-		}
-		try {
-			return JSON.parse(configElement.textContent || "{}");
-		} catch (_error) {
-			return {};
-		}
-	}
-
-	function getAssetsBasePath(config) {
-		if (!config || typeof config.assetsBasePath !== "string") {
-			return FALLBACK_ASSETS_BASE_PATH;
-		}
-		var trimmed = config.assetsBasePath.trim();
-		return trimmed.length > 0 ? trimmed : FALLBACK_ASSETS_BASE_PATH;
-	}
-
-	function shouldAutoRunFromQuery() {
-		try {
-			var currentUrl = new URL(window.location.href);
-			return currentUrl.searchParams.get("automatic") === "true";
-		} catch (_error) {
-			return false;
-		}
-	}
-
-	function getAutomaticStepTimeoutMs() {
-		try {
-			var currentUrl = new URL(window.location.href);
-			var rawValue = currentUrl.searchParams.get("stepTimeoutMs");
-			if (!rawValue) {
-				return null;
-			}
-			var parsed = Number(rawValue);
-			if (!Number.isFinite(parsed) || parsed <= 0) {
-				return null;
-			}
-			return parsed;
-		} catch (_error) {
-			return null;
-		}
-	}
-
-	async function runWithTimeout(promiseFactory, timeoutMs, timeoutMessage) {
-		if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-			return await promiseFactory();
-		}
-		return await Promise.race([
-			Promise.resolve().then(function () {
-				return promiseFactory();
-			}),
-			new Promise(function (_resolve, reject) {
-				setTimeout(function () {
-					reject(new Error(timeoutMessage));
-				}, timeoutMs);
-			})
-		]);
-	}
-
-	function getScenarioApi() {
-		if (typeof window !== "undefined" && window.llltsOverlayScenarios) {
-			return window.llltsOverlayScenarios;
-		}
-		return {
-			getScenariosForTest: function () {
-				return [];
-			},
-			renderScenarioButtons: function (listElement, emptyElement) {
-				if (!listElement || !emptyElement) {
-					return;
-				}
-				listElement.textContent = "";
-				emptyElement.hidden = false;
-			},
-			markScenarioSelection: function () { },
-			setScenarioState: function () { },
-			setAllScenarioStates: function () { },
-			setPlayAllState: function () { },
-			setPlayAllEnabled: function () { },
-			runScenarioMethod: async function () {
-				throw new Error("Scenario helper script is unavailable.");
-			}
-		};
-	}
-
-	async function loadOverlayTemplate(assetsBasePath) {
-		var templateResponse = await fetch(assetsBasePath + "/index.html", { credentials: "same-origin" });
-		if (!templateResponse.ok) {
-			throw new Error("Overlay template request failed with status " + String(templateResponse.status) + ".");
-		}
-		return await templateResponse.text();
-	}
-
-	function ensureOverlayMarkup(templateHtml) {
-		if (document.getElementById("lllts-test-panel")) {
-			return;
-		}
-		var container = document.createElement("div");
-		container.innerHTML = String(templateHtml || "");
-		while (container.firstChild) {
-			document.body.appendChild(container.firstChild);
-		}
-	}
-
-	function clearRenderHost(popupRenderHost) {
-		while (popupRenderHost.firstChild) {
-			popupRenderHost.removeChild(popupRenderHost.firstChild);
-		}
-	}
-
-	function setStatus(popupStatus, message, isError) {
-		popupStatus.textContent = message || "";
-		if (isError) {
-			popupStatus.setAttribute("data-state", "error");
-			return;
-		}
-		popupStatus.removeAttribute("data-state");
-	}
-
-	function errorMessage(error) {
-		if (error && typeof error === "object" && "message" in error) {
-			var message = String(error.message || "");
-			if (message.length > 0) {
-				return message;
-			}
-		}
-		return String(error || "Unknown error");
-	}
-
-	function detectPageModuleTParam() {
-		var moduleScripts = document.querySelectorAll('script[type="module"][src]');
-		for (var i = 0; i < moduleScripts.length; i++) {
-			var script = moduleScripts[i];
-			var src = script.getAttribute("src");
-			if (!src) {
-				continue;
-			}
-			try {
-				var srcUrl = new URL(src, window.location.href);
-				var tValue = srcUrl.searchParams.get("t");
-				if (tValue) {
-					return tValue;
-				}
-			} catch (_error) { }
-		}
-		return "";
-	}
-
-	function installIdempotentCustomElementDefineGuard() {
-		if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
-			return;
-		}
-		var registry = window.customElements;
-		if (registry.__llltsDuplicateDefineGuardInstalled === true) {
-			return;
-		}
-		var originalDefine = registry.define.bind(registry);
-		registry.define = function (name, constructor, options) {
-			var normalizedName = String(name || "");
-			var existingConstructor = typeof registry.get === "function" ? registry.get(normalizedName) : undefined;
-			if (existingConstructor) {
-				var existingName = String(existingConstructor.name || "");
-				var incomingName = constructor && typeof constructor === "function" ? String(constructor.name || "") : "";
-				if (existingConstructor === constructor || (existingName.length > 0 && existingName === incomingName)) {
-					return existingConstructor;
-				}
-			}
-			return originalDefine(name, constructor, options);
-		};
-		registry.__llltsDuplicateDefineGuardInstalled = true;
-	}
-
-	function buildImportUrl(testPath, tParam) {
-		var normalizedPath = String(testPath || "").replace(/^\/+/, "");
-		var basePath = "/" + normalizedPath;
-		if (!tParam) {
-			return basePath;
-		}
-		var separator = basePath.indexOf("?") === -1 ? "?" : "&";
-		return basePath + separator + "t=" + encodeURIComponent(tParam);
-	}
-
-	function buildPairedHostImportUrl(testModuleUrl, testPath) {
-		var hostClassName = resolveHostClassNameFromTestPath(testPath);
-		var absoluteTestModuleUrl = new URL(String(testModuleUrl || ""), document.baseURI).toString();
-		if (!hostClassName) {
-			return new URL(buildImportUrl(resolveHostPathFromTestPath(testPath), ""), document.baseURI).toString();
-		}
-		return new URL("./" + hostClassName + ".lll.ts", absoluteTestModuleUrl).toString();
-	}
-
-	function isFunction(value) {
-		return typeof value === "function";
-	}
-
-	function resolveTestClass(moduleObject) {
-		if (!moduleObject || typeof moduleObject !== "object") {
-			return null;
-		}
-		var exportKeys = Object.keys(moduleObject);
-		for (var i = 0; i < exportKeys.length; i++) {
-			var candidate = moduleObject[exportKeys[i]];
-			if (!isFunction(candidate)) {
-				continue;
-			}
-			var candidateName = String(candidate.name || "");
-			if (candidateName.endsWith("Test")) {
-				return candidate;
-			}
-		}
-		var defaultExport = moduleObject.default;
-		if (isFunction(defaultExport)) {
-			return defaultExport;
-		}
-		return null;
-	}
-
-	function resolveHostPathFromTestPath(testPath) {
-		return String(testPath || "").replace(/\.test2?\.lll\.ts$/, ".lll.ts");
-	}
-
-	function resolveHostClassNameFromTestPath(testPath) {
-		var rawPath = String(testPath || "");
-		var fileName = rawPath.split("/").pop() || rawPath;
-		var match = /^(.*)\.test2?\.lll\.ts$/.exec(fileName);
-		return match ? match[1] : "";
-	}
-
-	function resolveHostClass(moduleObject, testPath) {
-		if (!moduleObject || typeof moduleObject !== "object") {
-			return null;
-		}
-		var expectedName = resolveHostClassNameFromTestPath(testPath);
-		if (expectedName && isFunction(moduleObject[expectedName])) {
-			return moduleObject[expectedName];
-		}
-		var defaultExport = moduleObject.default;
-		if (isFunction(defaultExport)) {
-			return defaultExport;
-		}
-		return null;
-	}
-
-	function isHTMLElementSubclass(TestClass) {
-		return typeof HTMLElement !== "undefined" && !!TestClass && !!TestClass.prototype && TestClass.prototype instanceof HTMLElement;
-	}
-
-	async function settleRenderedSubject(subject) {
-		if (subject && typeof subject.updateComplete === "object" && typeof subject.updateComplete.then === "function") {
-			await subject.updateComplete;
-		}
-	}
-
-	async function mountBehavioralSubject(popupRenderHost, HostClass) {
-		clearRenderHost(popupRenderHost);
-		var subject = new HostClass();
-		var element = null;
-		if (isHTMLElementSubclass(HostClass) && subject instanceof HTMLElement) {
-			element = subject;
-			popupRenderHost.appendChild(element);
-		}
-		await settleRenderedSubject(subject);
-		return {
-			subject: subject,
-			element: element
-		};
-	}
-
-	function wireOverlay(config) {
-		installIdempotentCustomElementDefineGuard();
-		var tests = Array.isArray(config.tests) ? config.tests : [];
-		var openByDefault = !!config.openByDefault;
-		var scenarioApi = getScenarioApi();
-		var loadTokenCounter = 0;
-		var backdrop = document.getElementById("lllts-overlay-backdrop");
-		var panel = document.getElementById("lllts-test-panel");
-		var list = document.getElementById("lllts-test-list");
-		var emptyState = document.getElementById("lllts-test-empty");
-		var panelPlayAll = document.getElementById("lllts-test-panel-play-all");
-		var panelResult = document.getElementById("lllts-test-panel-result");
-		var popup = document.getElementById("lllts-test-popup");
-		var popupBody = document.getElementById("lllts-test-popup-body");
-		var popupLink = document.getElementById("lllts-test-popup-link");
-		var popupStatus = document.getElementById("lllts-test-popup-status");
-		var popupRenderHost = document.getElementById("lllts-test-popup-render");
-		var popupClose = document.getElementById("lllts-test-popup-close");
-		var popupScenariosList = document.getElementById("lllts-test-popup-scenarios-list");
-		var popupScenariosEmpty = document.getElementById("lllts-test-popup-scenarios-empty");
-		var popupScenariosPlayAll = document.getElementById("lllts-test-popup-scenarios-play-all");
-		var terminalPopup = document.getElementById("lllts-terminal-popup");
-		var terminalPopupBody = document.getElementById("lllts-terminal-popup-body");
-		var terminalPopupClose = document.getElementById("lllts-terminal-popup-close");
-
-		if (
-			!backdrop ||
-			!panel ||
-			!list ||
-			!emptyState ||
-			!panelPlayAll ||
-			!panelResult ||
-			!popup ||
-			!popupBody ||
-			!popupLink ||
-			!popupStatus ||
-			!popupRenderHost ||
-			!popupClose ||
-			!popupScenariosList ||
-			!popupScenariosEmpty ||
-			!popupScenariosPlayAll ||
-			!terminalPopup ||
-			!terminalPopupBody ||
-			!terminalPopupClose
-		) {
-			return;
-		}
-		if (panel.getAttribute("data-lllts-wired") === "true") {
-			return;
-		}
-		panel.setAttribute("data-lllts-wired", "true");
-		var isRunningAllTests = false;
-
-		function clearFixedLastRunReport() {
-			window[FIXED_LAST_RUN_REPORT_KEY] = undefined;
-			window[FIXED_LAST_RUN_REPORT_JSON_KEY] = undefined;
-		}
-
-		function setFixedLastRunReport(reportText, reportJson) {
-			window[FIXED_LAST_RUN_REPORT_KEY] = String(reportText || "");
-			window[FIXED_LAST_RUN_REPORT_JSON_KEY] = reportJson === undefined ? undefined : reportJson;
-		}
-
-		function clearFixedRunProgress() {
-			window[FIXED_RUN_PROGRESS_JSON_KEY] = undefined;
-		}
-
-		function setFixedRunProgress(progress) {
-			window[FIXED_RUN_PROGRESS_JSON_KEY] = progress && typeof progress === "object" ? progress : undefined;
-		}
-
-		function openPopup() {
-			closeTerminalPopup();
-			popup.classList.add("lllts-open");
-			syncBackdropState();
-		}
-
-		function closePopup() {
-			popup.classList.remove("lllts-open");
-			syncBackdropState();
-		}
-
-		function openTerminalPopup(reportText) {
-			closePopup();
-			terminalPopupBody.textContent = String(reportText || "");
-			terminalPopup.classList.add("lllts-open");
-			syncBackdropState();
-		}
-
-		function closeTerminalPopup() {
-			terminalPopup.classList.remove("lllts-open");
-			syncBackdropState();
-		}
-
-		function syncBackdropState() {
-			backdrop.classList.add("lllts-open");
-		}
-
-		function setPanelResult(state, message) {
-			panelResult.textContent = String(message || "");
-			if (!state) {
-				panelResult.removeAttribute("data-state");
-				return;
-			}
-			panelResult.setAttribute("data-state", String(state));
-		}
-
-		function setPanelPlayAllEnabled(isEnabled) {
-			panelPlayAll.disabled = !isEnabled;
-		}
-
-		function setListButtonsEnabled(isEnabled) {
-			var listButtons = list.querySelectorAll("button[data-test-path]");
-			for (var i = 0; i < listButtons.length; i++) {
-				listButtons[i].disabled = !isEnabled;
-			}
-		}
-
-		function setScenarioButtonsEnabled(isEnabled) {
-			var scenarioButtons = popupScenariosList.querySelectorAll("button[data-scenario-method]");
-			for (var i = 0; i < scenarioButtons.length; i++) {
-				scenarioButtons[i].disabled = !isEnabled;
-			}
-		}
-
-		function storeScenarioResult(runContext, scenario, state, details) {
-			if (!runContext || !scenario) {
-				return;
-			}
-			var methodName = String(scenario.methodName || "");
-			if (methodName.length === 0) {
-				return;
-			}
-			if (!runContext.scenarioResultByMethod) {
-				runContext.scenarioResultByMethod = {};
-			}
-			runContext.scenarioResultByMethod[methodName] = {
-				title: String(scenario.title || methodName),
-				state: String(state || "failed"),
-				details: String(details || "")
-			};
-		}
-
-		function collectScenarioResults(runContext) {
-			var results = [];
-			var scenarios = runContext && Array.isArray(runContext.selectedScenarios) ? runContext.selectedScenarios : [];
-			var resultMap = runContext && runContext.scenarioResultByMethod ? runContext.scenarioResultByMethod : {};
-			for (var i = 0; i < scenarios.length; i++) {
-				var scenario = scenarios[i];
-				var methodName = String(scenario.methodName || "");
-				var resolvedResult = resultMap[methodName];
-				if (resolvedResult) {
-					results.push({
-						title: resolvedResult.title,
-						state: resolvedResult.state,
-						details: String(resolvedResult.details || "")
-					});
-					continue;
-				}
-				results.push({
-					title: String(scenario.title || methodName || "scenario"),
-					state: "failed",
-					details: ""
-				});
-			}
-			return results;
-		}
-
-		function buildTerminalReport(testReports, allPassed) {
-			var lines = [];
-			var reports = Array.isArray(testReports) ? testReports : [];
-			for (var i = 0; i < reports.length; i++) {
-				var report = reports[i];
-				var testPath = String((report && report.testPath) || "unknown-test");
-				var testStatus = String((report && report.status) || "failed");
-				var testFailureDetails = String((report && report.failureDetails) || "").trim();
-				var scenarioResults = report && Array.isArray(report.scenarioResults) ? report.scenarioResults : [];
-				var failedScenarioLines = [];
-				for (var j = 0; j < scenarioResults.length; j++) {
-					var scenarioResult = scenarioResults[j];
-					var scenarioTitle = String((scenarioResult && scenarioResult.title) || "scenario");
-					var scenarioState = String((scenarioResult && scenarioResult.state) || "failed");
-					var scenarioDetails = String((scenarioResult && scenarioResult.details) || "").trim();
-					if (scenarioState === "passed") {
-						continue;
-					}
-					if (scenarioState === "failed" && scenarioDetails.length > 0) {
-						failedScenarioLines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": failed: " + scenarioDetails);
-						continue;
-					}
-					failedScenarioLines.push(TEST_STATUS_EMOJI_FAILED + " " + scenarioTitle + ": " + scenarioState);
-				}
-				if (failedScenarioLines.length === 0 && (testStatus === "passed" || testStatus === "no-scenarios")) {
-					continue;
-				}
-				lines.push("## " + testPath);
-				if (failedScenarioLines.length === 0) {
-					if (testFailureDetails.length > 0) {
-						lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded: " + testFailureDetails);
-					} else {
-						lines.push(TEST_STATUS_EMOJI_FAILED + " Test failed before any scenario results were recorded");
-					}
-				} else {
-					for (var k = 0; k < failedScenarioLines.length; k++) {
-						lines.push(failedScenarioLines[k]);
-					}
-				}
-				lines.push("");
-			}
-			lines.push("");
-			lines.push(allPassed ? "All client behavioral tests passed" : "some failed");
-			return lines.join("\n");
-		}
-
-		function buildTerminalReportJson(testReports, allPassed) {
-			var reports = Array.isArray(testReports) ? testReports : [];
-			var passedScenarios = 0;
-			var failedScenarios = 0;
-			for (var i = 0; i < reports.length; i++) {
-				var scenarioResults = Array.isArray(reports[i] && reports[i].scenarioResults) ? reports[i].scenarioResults : [];
-				for (var j = 0; j < scenarioResults.length; j++) {
-					var scenarioState = String((scenarioResults[j] && scenarioResults[j].state) || "failed");
-					if (scenarioState === "passed") {
-						passedScenarios++;
-					} else if (scenarioState === "failed") {
-						failedScenarios++;
-					}
-				}
-			}
-			return {
-				status: allPassed ? "passed" : "failed",
-				summary: {
-					totalTests: reports.length,
-					passedScenarios: passedScenarios,
-					failedScenarios: failedScenarios
-				},
-				tests: reports
-			};
-		}
-
-		function clearActiveBehavioralPreview(runContext) {
-			if (!runContext) {
-				return;
-			}
-			if (runContext.activePreviewElement && runContext.activePreviewElement.parentNode) {
-				runContext.activePreviewElement.parentNode.removeChild(runContext.activePreviewElement);
-			}
-			runContext.activePreviewElement = null;
-			runContext.activePreviewSubject = null;
-			clearRenderHost(popupRenderHost);
-		}
-
-		function createBehavioralSubjectFactory(runContext) {
-			var cachedSubject = null;
-			return async function () {
-				if (cachedSubject !== null) {
-					return cachedSubject;
-				}
-				if (!runContext.activeHostClass) {
-					throw new Error("Paired host class is still loading.");
-				}
-				var mounted = await mountBehavioralSubject(popupRenderHost, runContext.activeHostClass);
-				runContext.activePreviewElement = mounted.element;
-				runContext.activePreviewSubject = mounted.subject;
-				cachedSubject = mounted.subject;
-				return cachedSubject;
-			};
-		}
-
-		async function executeScenario(runContext, scenario) {
-			if (runContext.loadToken !== loadTokenCounter) {
-				return "stale";
-			}
-			if (!runContext.activeTestClass) {
-				setStatus(popupStatus, "Test is still loading. Please wait.", false);
-				return "failed";
-			}
-			setFixedRunProgress({
-				phase: "scenario",
-				testPath: String((runContext && runContext.selectedPath) || ""),
-				scenarioName: String((scenario && scenario.title) || ""),
-				scenarioMethodName: String((scenario && scenario.methodName) || "")
-			});
-			scenarioApi.markScenarioSelection(popupScenariosList, scenario.methodName);
-			scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "idle");
-			setStatus(popupStatus, "Running scenario: " + scenario.title, false);
-			try {
-				var scenarioOptions = {
-					input: {
-						testPath: runContext.selectedPath,
-						document: document,
-						window: window
-					}
-				};
-				if (runContext.activeTestType === "behavioral") {
-					clearActiveBehavioralPreview(runContext);
-					scenarioOptions.subjectFactory = createBehavioralSubjectFactory(runContext);
-				}
-				await runWithTimeout(function () {
-					return scenarioApi.runScenarioMethod(runContext.activeTestClass, scenario.methodName, {
-						input: scenarioOptions.input,
-						subjectFactory: scenarioOptions.subjectFactory
-					});
-				}, runContext.stepTimeoutMs, "Scenario \"" + String(scenario.title || scenario.methodName || "scenario") + "\" in test " + String(runContext.selectedPath || "unknown-test") + " timed out after " + String(runContext.stepTimeoutMs) + "ms.")
-				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "success");
-				storeScenarioResult(runContext, scenario, "passed", "");
-				setStatus(popupStatus, "Scenario passed: " + scenario.title, false);
-				return "passed";
-			} catch (scenarioError) {
-				var scenarioErrorText = errorMessage(scenarioError);
-				scenarioApi.setScenarioState(popupScenariosList, scenario.methodName, "error");
-				storeScenarioResult(runContext, scenario, "failed", scenarioErrorText);
-				setStatus(popupStatus, scenarioErrorText, true);
-				return "failed";
-			}
-		}
-
-		async function runPlayAllScenarios(runContext) {
-			if (runContext.loadToken !== loadTokenCounter) {
-				return {
-					status: "stale",
-					scenarioResults: []
-				};
-			}
-			if (runContext.selectedScenarios.length === 0) {
-				scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
-				setStatus(popupStatus, "No scenarios were discovered for this test.", false);
-				return {
-					status: "no-scenarios",
-					scenarioResults: []
-				};
-			}
-			if (!runContext.activeTestClass) {
-				setStatus(popupStatus, "Test is still loading. Please wait.", false);
-				return {
-					status: "failed",
-					scenarioResults: collectScenarioResults(runContext)
-				};
-			}
-
-			runContext.scenarioResultByMethod = {};
-			scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
-			setScenarioButtonsEnabled(false);
-			scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
-			scenarioApi.setAllScenarioStates(popupScenariosList, "idle");
-			scenarioApi.markScenarioSelection(popupScenariosList, "");
-			try {
-				var hasFailures = false;
-				for (var i = 0; i < runContext.selectedScenarios.length; i++) {
-					var result = await executeScenario(runContext, runContext.selectedScenarios[i]);
-					if (result === "stale") {
-						return {
-							status: "stale",
-							scenarioResults: collectScenarioResults(runContext)
-						};
-					}
-					if (result === "failed") {
-						hasFailures = true;
-					}
-				}
-
-				if (hasFailures) {
-					scenarioApi.setPlayAllState(popupScenariosPlayAll, "error");
-					setStatus(popupStatus, "Play All finished: at least one scenario failed.", true);
-					return {
-						status: "failed",
-						scenarioResults: collectScenarioResults(runContext)
-					};
-				}
-
-				scenarioApi.setPlayAllState(popupScenariosPlayAll, "success");
-				setStatus(popupStatus, "Play All finished: all scenarios passed.", false);
-				return {
-					status: "passed",
-					scenarioResults: collectScenarioResults(runContext)
-				};
-			} finally {
-				setScenarioButtonsEnabled(true);
-				scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
-			}
-		}
-
-		async function loadTestPreview(testPath, shouldRunPlayAll) {
-			var selectedPath = String(testPath || "");
-			var runContext = {
-				selectedPath: selectedPath,
-				selectedScenarios: scenarioApi.getScenariosForTest(config, selectedPath),
-				stepTimeoutMs: getAutomaticStepTimeoutMs(),
-				loadToken: 0,
-				activeTestClass: null,
-				activeHostClass: null,
-				activeTestType: null,
-				activePreviewElement: null,
-				activePreviewSubject: null,
-				scenarioResultByMethod: {}
-			};
-			setFixedRunProgress({
-				phase: "test",
-				testPath: selectedPath
-			});
-			loadTokenCounter++;
-			runContext.loadToken = loadTokenCounter;
-
-			scenarioApi.renderScenarioButtons(popupScenariosList, popupScenariosEmpty, runContext.selectedScenarios, async function (scenario) {
-				scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
-				await executeScenario(runContext, scenario);
-			});
-			scenarioApi.markScenarioSelection(popupScenariosList, "");
-			scenarioApi.setPlayAllState(popupScenariosPlayAll, "idle");
-			scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
-
-			popupScenariosPlayAll.onclick = async function () {
-				await runPlayAllScenarios(runContext);
-			};
-
-			openPopup();
-			popupBody.textContent = "Loading test preview...";
-			popupLink.textContent = selectedPath;
-			setStatus(popupStatus, "", false);
-			clearActiveBehavioralPreview(runContext);
-
-			try {
-				var detectedT = detectPageModuleTParam();
-				var testModuleUrl = buildImportUrl(selectedPath, detectedT);
-				var hostModuleUrl = buildPairedHostImportUrl(testModuleUrl, selectedPath);
-				setStatus(popupStatus, "Importing " + testModuleUrl, false);
-				var loadedModules = await runWithTimeout(function () {
-					return Promise.all([
-						import(testModuleUrl),
-						import(hostModuleUrl)
-					]);
-				}, runContext.stepTimeoutMs, "Test setup for " + selectedPath + " timed out after " + String(runContext.stepTimeoutMs) + "ms while importing modules.");
-				var moduleObject = loadedModules[0];
-				var hostModuleObject = loadedModules[1];
-				if (runContext.loadToken !== loadTokenCounter) {
-					return {
-						status: "stale",
-						scenarioResults: []
-					};
-				}
-				var TestClass = resolveTestClass(moduleObject);
-				if (!TestClass) {
-					throw new Error("No exported '*Test' class (or default class/function) was found.");
-				}
-				runContext.activeTestClass = TestClass;
-				var HostClass = resolveHostClass(hostModuleObject, selectedPath);
-				runContext.activeHostClass = HostClass;
-				var testInstance = new TestClass();
-				var testType = testInstance ? testInstance.testType : undefined;
-				runContext.activeTestType = testType;
-				if (testType === "unit") {
-					popupBody.textContent = "Please choose a scenario to run this unit test.";
-					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
-					if (runContext.selectedScenarios.length > 0) {
-						setStatus(popupStatus, "Choose a scenario from the left panel.", false);
-					} else {
-						setStatus(popupStatus, "No scenarios were discovered for this unit test.", false);
-					}
-				} else if (testType === "behavioral") {
-					if (!HostClass) {
-						throw new Error("No paired production class was found for this behavioral companion.");
-					}
-					popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself.";
-					var preview = await runWithTimeout(function () {
-						return mountBehavioralSubject(popupRenderHost, HostClass);
-					}, runContext.stepTimeoutMs, "Test setup for " + selectedPath + " timed out after " + String(runContext.stepTimeoutMs) + "ms while mounting the behavioral subject.");
-					runContext.activePreviewElement = preview.element;
-					runContext.activePreviewSubject = preview.subject;
-					scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
-					if (runContext.selectedScenarios.length > 0) {
-						setStatus(popupStatus, "Choose a scenario from the left panel.", false);
-					} else {
-						setStatus(popupStatus, "Behavioral preview is ready. No scenarios were discovered.", false);
-					}
-				} else {
-					throw new Error("Unsupported testType '" + String(testType) + "'. Expected 'unit' or 'behavioral'.");
-				}
-			} catch (error) {
-				if (runContext.loadToken !== loadTokenCounter) {
-					return {
-						status: "stale",
-						scenarioResults: []
-					};
-				}
-				scenarioApi.setPlayAllEnabled(popupScenariosPlayAll, false);
-				popupBody.textContent = "Unable to preview this test.";
-				setStatus(popupStatus, errorMessage(error), true);
-				return {
-					status: "failed",
-					failureDetails: errorMessage(error),
-					scenarioResults: []
-				};
-			}
-
-			if (!shouldRunPlayAll) {
-				return {
-					status: "loaded",
-					scenarioResults: []
-				};
-			}
-			return await runPlayAllScenarios(runContext);
-		}
-
-		if (openByDefault) {
-			panel.classList.add("lllts-open");
-		}
-		popupClose.addEventListener("click", closePopup);
-		terminalPopupClose.addEventListener("click", closeTerminalPopup);
-		setPanelResult("", "");
-		syncBackdropState();
-		clearFixedLastRunReport();
-		clearFixedRunProgress();
-
-		if (tests.length === 0) {
-			emptyState.hidden = false;
-			setPanelPlayAllEnabled(false);
-			var emptyReportText = buildTerminalReport([], true);
-			setFixedLastRunReport(emptyReportText, buildTerminalReportJson([], true));
-			return;
-		}
-		emptyState.hidden = true;
-		setPanelPlayAllEnabled(true);
-		list.textContent = "";
-
-		tests.forEach(function (testPath) {
-			var item = document.createElement("li");
-			var button = document.createElement("button");
-			button.type = "button";
-			button.textContent = String(testPath);
-			button.setAttribute("data-test-path", String(testPath || ""));
-			button.addEventListener("click", async function () {
-				if (isRunningAllTests) {
-					return;
-				}
-				await loadTestPreview(testPath, false);
-			});
-			item.appendChild(button);
-			list.appendChild(item);
-		});
-
-		async function runPanelPlayAllSequence(_isAutoRun) {
-			if (isRunningAllTests || tests.length === 0) {
-				return;
-			}
-			clearFixedLastRunReport();
-			clearFixedRunProgress();
-			isRunningAllTests = true;
-			setPanelPlayAllEnabled(false);
-			setListButtonsEnabled(false);
-
-			var hasFailures = false;
-			var testReports = [];
-			try {
-				for (var i = 0; i < tests.length; i++) {
-					setPanelResult("running", String(i + 1) + "/" + String(tests.length));
-					var testPath = String(tests[i] || "");
-					setFixedRunProgress({
-						phase: "test",
-						testPath: testPath
-					});
-					var testResult = await loadTestPreview(testPath, true);
-					var status = testResult && testResult.status ? String(testResult.status) : "failed";
-					var failureDetails = String((testResult && testResult.failureDetails) || "");
-					var scenarioResults = testResult && Array.isArray(testResult.scenarioResults) ? testResult.scenarioResults : [];
-					testReports.push({
-						testPath: testPath,
-						status: status,
-						failureDetails: failureDetails,
-						scenarioResults: scenarioResults
-					});
-					if (status !== "passed" && status !== "no-scenarios") {
-						hasFailures = true;
-					}
-				}
-			} catch (runError) {
-				hasFailures = true;
-				testReports.push({
-					testPath: "<overlay-runner>",
-					status: "failed",
-					scenarioResults: [
-						{
-							title: "Play All runtime",
-							state: "failed",
-							details: errorMessage(runError)
-						}
-					]
-				});
-			} finally {
-				isRunningAllTests = false;
-				setPanelPlayAllEnabled(true);
-				setListButtonsEnabled(true);
-			}
-
-			var reportText = buildTerminalReport(testReports, !hasFailures);
-			var reportJson = buildTerminalReportJson(testReports, !hasFailures);
-			openTerminalPopup(reportText);
-			setFixedLastRunReport(reportText, reportJson);
-			clearFixedRunProgress();
-
-			if (hasFailures) {
-				setPanelResult("error", "Failed");
-				return;
-			}
-			setPanelResult("success", "Passed");
-		}
-
-		panelPlayAll.addEventListener("click", async function () {
-			await runPanelPlayAllSequence(false);
-		});
-
-		if (shouldAutoRunFromQuery()) {
-			setTimeout(function () {
-				void runPanelPlayAllSequence(true);
-			}, 0);
-		}
-	}
-
-	async function init() {
-		var config = parseConfig();
-		var assetsBasePath = getAssetsBasePath(config);
-		var templateHtml = await loadOverlayTemplate(assetsBasePath);
-		ensureOverlayMarkup(templateHtml);
-		wireOverlay(config);
-	}
-
-	init().catch(function (error) {
-		console.error("[LLLTS overlay] Failed to initialize overlay.", error);
-	});
+// Generated by `pnpm -C lllts run build:overlay-runtime`. Do not edit this file directly.
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // src/server/overlay-runtime/OverlayModuleRuntime.lll.ts
+  var OverlayModuleRuntime = class {
+    static detectPageModuleTParam() {
+      const moduleScripts = document.querySelectorAll('script[type="module"][src]');
+      for (const script of moduleScripts) {
+        const src = script.getAttribute("src");
+        if (!src) {
+          continue;
+        }
+        try {
+          const srcUrl = new URL(src, window.location.href);
+          const tValue = srcUrl.searchParams.get("t");
+          if (tValue) {
+            return tValue;
+          }
+        } catch {
+        }
+      }
+      return "";
+    }
+    static installIdempotentCustomElementDefineGuard() {
+      if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
+        return;
+      }
+      const registry = window.customElements;
+      if (registry.__llltsDuplicateDefineGuardInstalled === true) {
+        return;
+      }
+      const originalDefine = registry.define.bind(registry);
+      registry.define = function(name, constructor, options) {
+        const normalizedName = String(name ?? "");
+        const existingConstructor = typeof registry.get === "function" ? registry.get(normalizedName) : void 0;
+        if (existingConstructor) {
+          const existingName = String(existingConstructor.name ?? "");
+          const incomingName = constructor && typeof constructor === "function" ? String(constructor.name ?? "") : "";
+          if (existingConstructor === constructor || existingName.length > 0 && existingName === incomingName) {
+            return;
+          }
+        }
+        originalDefine(name, constructor, options);
+      };
+      registry.__llltsDuplicateDefineGuardInstalled = true;
+    }
+    static buildImportUrl(testPath, tParam) {
+      const normalizedPath = String(testPath ?? "").replace(/^\/+/, "");
+      const basePath = `/${normalizedPath}`;
+      if (!tParam) {
+        return basePath;
+      }
+      const separator = basePath.includes("?") ? "&" : "?";
+      return `${basePath}${separator}t=${encodeURIComponent(String(tParam))}`;
+    }
+    static buildPairedHostImportUrl(testModuleUrl, testPath) {
+      const hostClassName = this.resolveHostClassNameFromTestPath(testPath);
+      const absoluteTestModuleUrl = new URL(String(testModuleUrl ?? ""), document.baseURI).toString();
+      if (!hostClassName) {
+        return new URL(this.buildImportUrl(this.resolveHostPathFromTestPath(testPath), ""), document.baseURI).toString();
+      }
+      return new URL(`./${hostClassName}.lll.ts`, absoluteTestModuleUrl).toString();
+    }
+    static resolveTestClass(moduleObject) {
+      if (!moduleObject || typeof moduleObject !== "object") {
+        return null;
+      }
+      const exportKeys = Object.keys(moduleObject);
+      for (const exportKey of exportKeys) {
+        const candidate = moduleObject[exportKey];
+        if (!this.isFunction(candidate)) {
+          continue;
+        }
+        const candidateName = String(candidate.name ?? "");
+        if (candidateName.endsWith("Test")) {
+          return candidate;
+        }
+      }
+      const defaultExport = moduleObject.default;
+      if (this.isFunction(defaultExport)) {
+        return defaultExport;
+      }
+      return null;
+    }
+    static resolveHostPathFromTestPath(testPath) {
+      return String(testPath ?? "").replace(/\.test2?\.lll\.ts$/, ".lll.ts");
+    }
+    static resolveHostClassNameFromTestPath(testPath) {
+      const rawPath = String(testPath ?? "");
+      const fileName = rawPath.split("/").pop() ?? rawPath;
+      const match = /^(.*)\.test2?\.lll\.ts$/.exec(fileName);
+      return match ? match[1] : "";
+    }
+    static resolveHostClass(moduleObject, testPath) {
+      if (!moduleObject || typeof moduleObject !== "object") {
+        return null;
+      }
+      const expectedName = this.resolveHostClassNameFromTestPath(testPath);
+      if (expectedName && this.isFunction(moduleObject[expectedName])) {
+        return moduleObject[expectedName];
+      }
+      const defaultExport = moduleObject.default;
+      if (this.isFunction(defaultExport)) {
+        return defaultExport;
+      }
+      return null;
+    }
+    static isHTMLElementSubclass(TestClass) {
+      return typeof HTMLElement !== "undefined" && !!TestClass && typeof TestClass === "function" && !!TestClass.prototype && TestClass.prototype instanceof HTMLElement;
+    }
+    static async settleRenderedSubject(subject) {
+      const typedSubject = subject;
+      if (typedSubject && typeof typedSubject.updateComplete === "object" && typeof typedSubject.updateComplete?.then === "function") {
+        await typedSubject.updateComplete;
+      }
+    }
+    static clearRenderHost(popupRenderHost) {
+      while (popupRenderHost.firstChild) {
+        popupRenderHost.removeChild(popupRenderHost.firstChild);
+      }
+    }
+    static async mountBehavioralSubject(popupRenderHost, HostClass) {
+      this.clearRenderHost(popupRenderHost);
+      const subject = new HostClass();
+      let element = null;
+      if (this.isHTMLElementSubclass(HostClass) && subject instanceof HTMLElement) {
+        element = subject;
+        popupRenderHost.appendChild(element);
+      }
+      await this.settleRenderedSubject(subject);
+      return {
+        subject,
+        element
+      };
+    }
+    static isFunction(value) {
+      return typeof value === "function";
+    }
+  };
+
+  // src/server/overlay-runtime/OverlayReportRuntime.lll.ts
+  var OverlayReportRuntime = class {
+    static clearFixedLastRunReport() {
+      const globalScope = this.getGlobalScope();
+      globalScope[this.fixedLastRunReportKey] = void 0;
+      globalScope[this.fixedLastRunReportJsonKey] = void 0;
+    }
+    static setFixedLastRunReport(reportText, reportJson) {
+      const globalScope = this.getGlobalScope();
+      globalScope[this.fixedLastRunReportKey] = String(reportText ?? "");
+      globalScope[this.fixedLastRunReportJsonKey] = reportJson === void 0 ? void 0 : reportJson;
+    }
+    static clearFixedRunProgress() {
+      const globalScope = this.getGlobalScope();
+      globalScope[this.fixedRunProgressJsonKey] = void 0;
+    }
+    static setFixedRunProgress(progress) {
+      const globalScope = this.getGlobalScope();
+      globalScope[this.fixedRunProgressJsonKey] = progress && typeof progress === "object" ? progress : void 0;
+    }
+    static buildTerminalReport(testReports, allPassed) {
+      const lines = [];
+      const reports = Array.isArray(testReports) ? testReports : [];
+      for (const report of reports) {
+        const testPath = String(report?.testPath ?? "unknown-test");
+        const testStatus = String(report?.status ?? "failed");
+        const testFailureDetails = String(report?.failureDetails ?? "").trim();
+        const scenarioResults = Array.isArray(report?.scenarioResults) ? report.scenarioResults : [];
+        const failedScenarioLines = [];
+        for (const scenarioResult of scenarioResults) {
+          const scenarioTitle = String(scenarioResult?.title ?? "scenario");
+          const scenarioState = String(scenarioResult?.state ?? "failed");
+          const scenarioDetails = String(scenarioResult?.details ?? "").trim();
+          if (scenarioState === "passed") {
+            continue;
+          }
+          if (scenarioState === "failed" && scenarioDetails.length > 0) {
+            failedScenarioLines.push(`${this.testStatusEmojiFailed} ${scenarioTitle}: failed: ${scenarioDetails}`);
+            continue;
+          }
+          failedScenarioLines.push(`${this.testStatusEmojiFailed} ${scenarioTitle}: ${scenarioState}`);
+        }
+        if (failedScenarioLines.length === 0 && (testStatus === "passed" || testStatus === "no-scenarios")) {
+          continue;
+        }
+        lines.push(`## ${testPath}`);
+        if (failedScenarioLines.length === 0) {
+          if (testFailureDetails.length > 0) {
+            lines.push(`${this.testStatusEmojiFailed} Test failed before any scenario results were recorded: ${testFailureDetails}`);
+          } else {
+            lines.push(`${this.testStatusEmojiFailed} Test failed before any scenario results were recorded`);
+          }
+        } else {
+          for (const failedScenarioLine of failedScenarioLines) {
+            lines.push(failedScenarioLine);
+          }
+        }
+        lines.push("");
+      }
+      lines.push("");
+      lines.push(allPassed ? "All client behavioral tests passed" : "some failed");
+      return lines.join("\n");
+    }
+    static buildTerminalReportJson(testReports, allPassed) {
+      const reports = Array.isArray(testReports) ? testReports : [];
+      let passedScenarios = 0;
+      let failedScenarios = 0;
+      for (const report of reports) {
+        const scenarioResults = Array.isArray(report?.scenarioResults) ? report.scenarioResults : [];
+        for (const scenarioResult of scenarioResults) {
+          const scenarioState = String(scenarioResult?.state ?? "failed");
+          if (scenarioState === "passed") {
+            passedScenarios++;
+          } else if (scenarioState === "failed") {
+            failedScenarios++;
+          }
+        }
+      }
+      return {
+        status: allPassed ? "passed" : "failed",
+        summary: {
+          totalTests: reports.length,
+          passedScenarios,
+          failedScenarios
+        },
+        tests: reports
+      };
+    }
+    static getGlobalScope() {
+      return globalThis;
+    }
+  };
+  __publicField(OverlayReportRuntime, "testStatusEmojiPassed", "\u{1F7E2}");
+  __publicField(OverlayReportRuntime, "testStatusEmojiFailed", "\u26D4\uFE0F");
+  __publicField(OverlayReportRuntime, "fixedLastRunReportKey", "FIXED_llltsLastRunReport");
+  __publicField(OverlayReportRuntime, "fixedLastRunReportJsonKey", "FIXED_llltsLastRunReportJson");
+  __publicField(OverlayReportRuntime, "fixedRunProgressJsonKey", "FIXED_llltsRunProgressJson");
+
+  // src/server/overlay-runtime/OverlayScenarioRuntime.lll.ts
+  var _OverlayScenarioRuntime = class _OverlayScenarioRuntime {
+    static installGlobalApi(globalScope = globalThis) {
+      const installedApi = {
+        getScenariosForTest(config, testPath) {
+          return _OverlayScenarioRuntime.getScenariosForTest(config, testPath);
+        },
+        renderScenarioButtons(listElement, emptyElement, scenarios, onScenarioClick) {
+          _OverlayScenarioRuntime.renderScenarioButtons(listElement, emptyElement, scenarios, onScenarioClick);
+        },
+        setScenarioState(listElement, methodName, state) {
+          _OverlayScenarioRuntime.setScenarioState(listElement, methodName, state);
+        },
+        setAllScenarioStates(listElement, state) {
+          _OverlayScenarioRuntime.setAllScenarioStates(listElement, state);
+        },
+        setPlayAllState(playAllButton, state) {
+          _OverlayScenarioRuntime.setPlayAllState(playAllButton, state);
+        },
+        setPlayAllEnabled(playAllButton, isEnabled) {
+          _OverlayScenarioRuntime.setPlayAllEnabled(playAllButton, isEnabled);
+        },
+        markScenarioSelection(listElement, methodName) {
+          _OverlayScenarioRuntime.markScenarioSelection(listElement, methodName);
+        },
+        async runScenarioMethod(TestClass, methodName, options) {
+          await _OverlayScenarioRuntime.runScenarioMethod(TestClass, methodName, options);
+        }
+      };
+      globalScope.llltsOverlayScenarios = installedApi;
+      return installedApi;
+    }
+    static getGlobalApi(globalScope = globalThis) {
+      const existingApi = globalScope.llltsOverlayScenarios;
+      if (existingApi) {
+        return existingApi;
+      }
+      return this.installGlobalApi(globalScope);
+    }
+    static getScenariosForTest(config, testPath) {
+      if (!config || typeof config !== "object") {
+        return [];
+      }
+      const scenariosByTest = config.testScenarios;
+      if (!scenariosByTest || typeof scenariosByTest !== "object") {
+        return [];
+      }
+      const rawEntries = scenariosByTest[String(testPath ?? "")];
+      if (!Array.isArray(rawEntries)) {
+        return [];
+      }
+      const normalized = [];
+      for (const rawEntry of rawEntries) {
+        const entry = this.normalizeScenarioEntry(rawEntry);
+        if (!entry) {
+          continue;
+        }
+        normalized.push(entry);
+      }
+      return normalized;
+    }
+    static renderScenarioButtons(listElement, emptyElement, scenarios, onScenarioClick) {
+      if (!listElement || !emptyElement) {
+        return;
+      }
+      listElement.textContent = "";
+      if (!Array.isArray(scenarios) || scenarios.length === 0) {
+        emptyElement.hidden = false;
+        return;
+      }
+      emptyElement.hidden = true;
+      for (const scenario of scenarios) {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = scenario.title;
+        button.setAttribute("data-scenario-method", scenario.methodName);
+        button.setAttribute("data-scenario-state", "idle");
+        button.addEventListener("click", () => {
+          if (typeof onScenarioClick === "function") {
+            onScenarioClick(scenario);
+          }
+        });
+        item.appendChild(button);
+        listElement.appendChild(item);
+      }
+    }
+    static setScenarioState(listElement, methodName, state) {
+      if (!listElement) {
+        return;
+      }
+      const normalizedMethodName = String(methodName ?? "");
+      const targetState = String(state ?? "idle");
+      const targetButton = listElement.querySelector(`button[data-scenario-method="${normalizedMethodName}"]`);
+      if (!targetButton) {
+        return;
+      }
+      targetButton.setAttribute("data-scenario-state", targetState);
+    }
+    static setAllScenarioStates(listElement, state) {
+      if (!listElement) {
+        return;
+      }
+      const targetState = String(state ?? "idle");
+      const allButtons = listElement.querySelectorAll("button[data-scenario-method]");
+      for (const button of allButtons) {
+        button.setAttribute("data-scenario-state", targetState);
+      }
+    }
+    static setPlayAllState(playAllButton, state) {
+      if (!playAllButton) {
+        return;
+      }
+      playAllButton.setAttribute("data-state", String(state ?? "idle"));
+    }
+    static setPlayAllEnabled(playAllButton, isEnabled) {
+      if (!playAllButton) {
+        return;
+      }
+      playAllButton.disabled = !isEnabled;
+    }
+    static markScenarioSelection(listElement, methodName) {
+      if (!listElement) {
+        return;
+      }
+      const normalizedMethodName = String(methodName ?? "");
+      const allButtons = listElement.querySelectorAll("button[data-scenario-method]");
+      for (const button of allButtons) {
+        if (button.getAttribute("data-scenario-method") === normalizedMethodName) {
+          button.setAttribute("data-active", "true");
+        } else {
+          button.removeAttribute("data-active");
+        }
+      }
+    }
+    static async runScenarioMethod(TestClass, methodName, options) {
+      const scenarioMethodName = String(methodName ?? "").trim();
+      if (scenarioMethodName.length === 0) {
+        throw new Error("Scenario method name is required.");
+      }
+      const scenarioFn = TestClass ? TestClass[scenarioMethodName] : void 0;
+      if (typeof scenarioFn !== "function") {
+        throw new Error(`Scenario method '${scenarioMethodName}' is not available on this test class.`);
+      }
+      const normalizedOptions = options && typeof options === "object" ? options : {};
+      const scenarioParameter = {
+        input: normalizedOptions.input && typeof normalizedOptions.input === "object" ? normalizedOptions.input : {},
+        assert: this.createScenarioAssert(),
+        waitFor: this.createScenarioWaitFor()
+      };
+      if (typeof normalizedOptions.subjectFactory === "function" && scenarioFn.length >= 2) {
+        await scenarioFn.call(TestClass, normalizedOptions.subjectFactory, scenarioParameter);
+        return;
+      }
+      await scenarioFn.call(TestClass, scenarioParameter);
+    }
+    static normalizeScenarioEntry(rawEntry) {
+      if (!rawEntry || typeof rawEntry !== "object") {
+        return null;
+      }
+      const methodName = String(rawEntry.methodName ?? "").trim();
+      if (methodName.length === 0) {
+        return null;
+      }
+      return {
+        methodName,
+        title: this.toScenarioTitle(rawEntry.title, methodName)
+      };
+    }
+    static toScenarioTitle(rawTitle, methodName) {
+      const title = String(rawTitle ?? "").trim();
+      if (title.length > 0) {
+        return title;
+      }
+      return String(methodName ?? "scenario");
+    }
+    static createScenarioAssert() {
+      return (condition, message) => {
+        if (condition) {
+          return;
+        }
+        throw new Error(String(message ?? "Scenario assertion failed."));
+      };
+    }
+    static createScenarioWaitFor() {
+      return async (predicate, message, timeoutMs, intervalMs) => {
+        const effectiveTimeoutMs = typeof timeoutMs === "number" ? timeoutMs : 1200;
+        const effectiveIntervalMs = typeof intervalMs === "number" ? intervalMs : 20;
+        const startTime = Date.now();
+        while (Date.now() - startTime < effectiveTimeoutMs) {
+          if (await predicate()) {
+            return;
+          }
+          await new Promise((resolve) => {
+            setTimeout(resolve, effectiveIntervalMs);
+          });
+        }
+        throw new Error(`Condition was not met within ${String(effectiveTimeoutMs)}ms: ${String(message)}`);
+      };
+    }
+  };
+  __publicField(_OverlayScenarioRuntime, "globalKey", "llltsOverlayScenarios");
+  var OverlayScenarioRuntime = _OverlayScenarioRuntime;
+
+  // src/server/overlay-runtime/OverlayController.lll.ts
+  var OverlayController = class {
+    constructor(config) {
+      this.config = config;
+      __publicField(this, "tests");
+      __publicField(this, "openByDefault");
+      __publicField(this, "scenarioApi", OverlayScenarioRuntime.getGlobalApi());
+      __publicField(this, "loadTokenCounter", 0);
+      __publicField(this, "isRunningAllTests", false);
+      __publicField(this, "backdrop", null);
+      __publicField(this, "panel", null);
+      __publicField(this, "list", null);
+      __publicField(this, "emptyState", null);
+      __publicField(this, "panelPlayAll", null);
+      __publicField(this, "panelResult", null);
+      __publicField(this, "popup", null);
+      __publicField(this, "popupBody", null);
+      __publicField(this, "popupLink", null);
+      __publicField(this, "popupStatus", null);
+      __publicField(this, "popupRenderHost", null);
+      __publicField(this, "popupClose", null);
+      __publicField(this, "popupScenariosList", null);
+      __publicField(this, "popupScenariosEmpty", null);
+      __publicField(this, "popupScenariosPlayAll", null);
+      __publicField(this, "terminalPopup", null);
+      __publicField(this, "terminalPopupBody", null);
+      __publicField(this, "terminalPopupClose", null);
+      this.tests = Array.isArray(config.tests) ? config.tests.map((testPath) => String(testPath ?? "")) : [];
+      this.openByDefault = !!config.openByDefault;
+    }
+    wireOverlay() {
+      OverlayModuleRuntime.installIdempotentCustomElementDefineGuard();
+      if (!this.captureElements()) {
+        return;
+      }
+      if (this.panel?.getAttribute("data-lllts-wired") === "true") {
+        return;
+      }
+      this.panel?.setAttribute("data-lllts-wired", "true");
+      if (this.openByDefault) {
+        this.panel?.classList.add("lllts-open");
+      }
+      this.popupClose?.addEventListener("click", () => this.closePopup());
+      this.terminalPopupClose?.addEventListener("click", () => this.closeTerminalPopup());
+      this.panelPlayAll?.addEventListener("click", async () => {
+        await this.runPanelPlayAllSequence(false);
+      });
+      this.setPanelResult("", "");
+      this.syncBackdropState();
+      OverlayReportRuntime.clearFixedLastRunReport();
+      OverlayReportRuntime.clearFixedRunProgress();
+      if (this.tests.length === 0) {
+        if (this.emptyState) {
+          this.emptyState.hidden = false;
+        }
+        this.setPanelPlayAllEnabled(false);
+        const emptyReportText = OverlayReportRuntime.buildTerminalReport([], true);
+        OverlayReportRuntime.setFixedLastRunReport(emptyReportText, OverlayReportRuntime.buildTerminalReportJson([], true));
+        return;
+      }
+      if (this.emptyState) {
+        this.emptyState.hidden = true;
+      }
+      this.setPanelPlayAllEnabled(true);
+      if (this.list) {
+        this.list.textContent = "";
+      }
+      for (const testPath of this.tests) {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = testPath;
+        button.setAttribute("data-test-path", testPath);
+        button.addEventListener("click", async () => {
+          if (this.isRunningAllTests) {
+            return;
+          }
+          await this.loadTestPreview(testPath, false);
+        });
+        item.appendChild(button);
+        this.list?.appendChild(item);
+      }
+      if (this.shouldAutoRunFromQuery()) {
+        setTimeout(() => {
+          void this.runPanelPlayAllSequence(true);
+        }, 0);
+      }
+    }
+    captureElements() {
+      this.backdrop = document.getElementById("lllts-overlay-backdrop");
+      this.panel = document.getElementById("lllts-test-panel");
+      this.list = document.getElementById("lllts-test-list");
+      this.emptyState = document.getElementById("lllts-test-empty");
+      this.panelPlayAll = document.getElementById("lllts-test-panel-play-all");
+      this.panelResult = document.getElementById("lllts-test-panel-result");
+      this.popup = document.getElementById("lllts-test-popup");
+      this.popupBody = document.getElementById("lllts-test-popup-body");
+      this.popupLink = document.getElementById("lllts-test-popup-link");
+      this.popupStatus = document.getElementById("lllts-test-popup-status");
+      this.popupRenderHost = document.getElementById("lllts-test-popup-render");
+      this.popupClose = document.getElementById("lllts-test-popup-close");
+      this.popupScenariosList = document.getElementById("lllts-test-popup-scenarios-list");
+      this.popupScenariosEmpty = document.getElementById("lllts-test-popup-scenarios-empty");
+      this.popupScenariosPlayAll = document.getElementById("lllts-test-popup-scenarios-play-all");
+      this.terminalPopup = document.getElementById("lllts-terminal-popup");
+      this.terminalPopupBody = document.getElementById("lllts-terminal-popup-body");
+      this.terminalPopupClose = document.getElementById("lllts-terminal-popup-close");
+      return !!(this.backdrop && this.panel && this.list && this.emptyState && this.panelPlayAll && this.panelResult && this.popup && this.popupBody && this.popupLink && this.popupStatus && this.popupRenderHost && this.popupClose && this.popupScenariosList && this.popupScenariosEmpty && this.popupScenariosPlayAll && this.terminalPopup && this.terminalPopupBody && this.terminalPopupClose);
+    }
+    setStatus(message, isError) {
+      if (!this.popupStatus) {
+        return;
+      }
+      this.popupStatus.textContent = String(message ?? "");
+      if (isError) {
+        this.popupStatus.setAttribute("data-state", "error");
+        return;
+      }
+      this.popupStatus.removeAttribute("data-state");
+    }
+    errorMessage(error) {
+      if (error && typeof error === "object" && "message" in error) {
+        const message = String(error.message ?? "");
+        if (message.length > 0) {
+          return message;
+        }
+      }
+      return String(error ?? "Unknown error");
+    }
+    async runWithTimeout(promiseFactory, timeoutMs, timeoutMessage) {
+      if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+        return await promiseFactory();
+      }
+      return await Promise.race([
+        Promise.resolve().then(() => promiseFactory()),
+        new Promise((_resolve, reject) => {
+          setTimeout(() => {
+            reject(new Error(timeoutMessage));
+          }, timeoutMs);
+        })
+      ]);
+    }
+    shouldAutoRunFromQuery() {
+      try {
+        const currentUrl = new URL(window.location.href);
+        return currentUrl.searchParams.get("automatic") === "true";
+      } catch {
+        return false;
+      }
+    }
+    getAutomaticStepTimeoutMs() {
+      try {
+        const currentUrl = new URL(window.location.href);
+        const rawValue = currentUrl.searchParams.get("stepTimeoutMs");
+        if (!rawValue) {
+          return null;
+        }
+        const parsed = Number(rawValue);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          return null;
+        }
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+    openPopup() {
+      this.closeTerminalPopup();
+      this.popup?.classList.add("lllts-open");
+      this.syncBackdropState();
+    }
+    closePopup() {
+      this.popup?.classList.remove("lllts-open");
+      this.syncBackdropState();
+    }
+    openTerminalPopup(reportText) {
+      this.closePopup();
+      if (this.terminalPopupBody) {
+        this.terminalPopupBody.textContent = String(reportText ?? "");
+      }
+      this.terminalPopup?.classList.add("lllts-open");
+      this.syncBackdropState();
+    }
+    closeTerminalPopup() {
+      this.terminalPopup?.classList.remove("lllts-open");
+      this.syncBackdropState();
+    }
+    syncBackdropState() {
+      this.backdrop?.classList.add("lllts-open");
+    }
+    setPanelResult(state, message) {
+      if (!this.panelResult) {
+        return;
+      }
+      this.panelResult.textContent = String(message ?? "");
+      if (!state) {
+        this.panelResult.removeAttribute("data-state");
+        return;
+      }
+      this.panelResult.setAttribute("data-state", String(state));
+    }
+    setPanelPlayAllEnabled(isEnabled) {
+      if (this.panelPlayAll) {
+        this.panelPlayAll.disabled = !isEnabled;
+      }
+    }
+    setListButtonsEnabled(isEnabled) {
+      const listButtons = this.list?.querySelectorAll("button[data-test-path]") ?? [];
+      for (const button of listButtons) {
+        button.disabled = !isEnabled;
+      }
+    }
+    setScenarioButtonsEnabled(isEnabled) {
+      const scenarioButtons = this.popupScenariosList?.querySelectorAll("button[data-scenario-method]") ?? [];
+      for (const button of scenarioButtons) {
+        button.disabled = !isEnabled;
+      }
+    }
+    storeScenarioResult(runContext, scenario, state, details) {
+      if (!runContext || !scenario) {
+        return;
+      }
+      const methodName = String(scenario.methodName ?? "");
+      if (methodName.length === 0) {
+        return;
+      }
+      runContext.scenarioResultByMethod[methodName] = {
+        title: String(scenario.title ?? methodName),
+        state: String(state ?? "failed"),
+        details: String(details ?? "")
+      };
+    }
+    collectScenarioResults(runContext) {
+      const results = [];
+      const scenarios = Array.isArray(runContext?.selectedScenarios) ? runContext.selectedScenarios : [];
+      for (const scenario of scenarios) {
+        const methodName = String(scenario.methodName ?? "");
+        const resolvedResult = runContext.scenarioResultByMethod[methodName];
+        if (resolvedResult) {
+          results.push({
+            title: resolvedResult.title,
+            state: resolvedResult.state,
+            details: String(resolvedResult.details ?? "")
+          });
+          continue;
+        }
+        results.push({
+          title: String(scenario.title ?? methodName ?? "scenario"),
+          state: "failed",
+          details: ""
+        });
+      }
+      return results;
+    }
+    clearActiveBehavioralPreview(runContext) {
+      if (runContext.activePreviewElement?.parentNode) {
+        runContext.activePreviewElement.parentNode.removeChild(runContext.activePreviewElement);
+      }
+      runContext.activePreviewElement = null;
+      runContext.activePreviewSubject = null;
+      if (this.popupRenderHost) {
+        OverlayModuleRuntime.clearRenderHost(this.popupRenderHost);
+      }
+    }
+    createBehavioralSubjectFactory(runContext) {
+      let cachedSubject = null;
+      return async () => {
+        if (cachedSubject !== null) {
+          return cachedSubject;
+        }
+        if (!runContext.activeHostClass || !this.popupRenderHost) {
+          throw new Error("Paired host class is still loading.");
+        }
+        const mounted = await OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost, runContext.activeHostClass);
+        runContext.activePreviewElement = mounted.element;
+        runContext.activePreviewSubject = mounted.subject;
+        cachedSubject = mounted.subject;
+        return cachedSubject;
+      };
+    }
+    async executeScenario(runContext, scenario) {
+      if (runContext.loadToken !== this.loadTokenCounter) {
+        return "stale";
+      }
+      if (!runContext.activeTestClass) {
+        this.setStatus("Test is still loading. Please wait.", false);
+        return "failed";
+      }
+      OverlayReportRuntime.setFixedRunProgress({
+        phase: "scenario",
+        testPath: String(runContext.selectedPath ?? ""),
+        scenarioName: String(scenario.title ?? ""),
+        scenarioMethodName: String(scenario.methodName ?? "")
+      });
+      this.scenarioApi.markScenarioSelection(this.popupScenariosList, scenario.methodName);
+      this.scenarioApi.setScenarioState(this.popupScenariosList, scenario.methodName, "idle");
+      this.setStatus(`Running scenario: ${scenario.title}`, false);
+      try {
+        const scenarioOptions = {
+          input: {
+            testPath: runContext.selectedPath,
+            document,
+            window
+          }
+        };
+        if (runContext.activeTestType === "behavioral") {
+          this.clearActiveBehavioralPreview(runContext);
+          scenarioOptions.subjectFactory = this.createBehavioralSubjectFactory(runContext);
+        }
+        await this.runWithTimeout(
+          () => this.scenarioApi.runScenarioMethod(runContext.activeTestClass, scenario.methodName, {
+            input: scenarioOptions.input,
+            subjectFactory: scenarioOptions.subjectFactory
+          }),
+          runContext.stepTimeoutMs,
+          `Scenario "${String(scenario.title ?? scenario.methodName ?? "scenario")}" in test ${String(runContext.selectedPath ?? "unknown-test")} timed out after ${String(runContext.stepTimeoutMs)}ms.`
+        );
+        this.scenarioApi.setScenarioState(this.popupScenariosList, scenario.methodName, "success");
+        this.storeScenarioResult(runContext, scenario, "passed", "");
+        this.setStatus(`Scenario passed: ${scenario.title}`, false);
+        return "passed";
+      } catch (scenarioError) {
+        const scenarioErrorText = this.errorMessage(scenarioError);
+        this.scenarioApi.setScenarioState(this.popupScenariosList, scenario.methodName, "error");
+        this.storeScenarioResult(runContext, scenario, "failed", scenarioErrorText);
+        this.setStatus(scenarioErrorText, true);
+        return "failed";
+      }
+    }
+    async runPlayAllScenarios(runContext) {
+      if (runContext.loadToken !== this.loadTokenCounter) {
+        return {
+          status: "stale",
+          scenarioResults: []
+        };
+      }
+      if (runContext.selectedScenarios.length === 0) {
+        this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "idle");
+        this.setStatus("No scenarios were discovered for this test.", false);
+        return {
+          status: "no-scenarios",
+          scenarioResults: []
+        };
+      }
+      if (!runContext.activeTestClass) {
+        this.setStatus("Test is still loading. Please wait.", false);
+        return {
+          status: "failed",
+          scenarioResults: this.collectScenarioResults(runContext)
+        };
+      }
+      runContext.scenarioResultByMethod = {};
+      this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, false);
+      this.setScenarioButtonsEnabled(false);
+      this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "idle");
+      this.scenarioApi.setAllScenarioStates(this.popupScenariosList, "idle");
+      this.scenarioApi.markScenarioSelection(this.popupScenariosList, "");
+      try {
+        let hasFailures = false;
+        for (const scenario of runContext.selectedScenarios) {
+          const result = await this.executeScenario(runContext, scenario);
+          if (result === "stale") {
+            return {
+              status: "stale",
+              scenarioResults: this.collectScenarioResults(runContext)
+            };
+          }
+          if (result === "failed") {
+            hasFailures = true;
+          }
+        }
+        if (hasFailures) {
+          this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "error");
+          this.setStatus("Play All finished: at least one scenario failed.", true);
+          return {
+            status: "failed",
+            scenarioResults: this.collectScenarioResults(runContext)
+          };
+        }
+        this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "success");
+        this.setStatus("Play All finished: all scenarios passed.", false);
+        return {
+          status: "passed",
+          scenarioResults: this.collectScenarioResults(runContext)
+        };
+      } finally {
+        this.setScenarioButtonsEnabled(true);
+        this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
+      }
+    }
+    async loadTestPreview(testPath, shouldRunPlayAll) {
+      const selectedPath = String(testPath ?? "");
+      const runContext = {
+        selectedPath,
+        selectedScenarios: this.scenarioApi.getScenariosForTest(this.config, selectedPath),
+        stepTimeoutMs: this.getAutomaticStepTimeoutMs(),
+        loadToken: 0,
+        activeTestClass: null,
+        activeHostClass: null,
+        activeTestType: null,
+        activePreviewElement: null,
+        activePreviewSubject: null,
+        scenarioResultByMethod: {}
+      };
+      OverlayReportRuntime.setFixedRunProgress({
+        phase: "test",
+        testPath: selectedPath
+      });
+      this.loadTokenCounter++;
+      runContext.loadToken = this.loadTokenCounter;
+      this.scenarioApi.renderScenarioButtons(this.popupScenariosList, this.popupScenariosEmpty, runContext.selectedScenarios, async (scenario) => {
+        this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "idle");
+        await this.executeScenario(runContext, scenario);
+      });
+      this.scenarioApi.markScenarioSelection(this.popupScenariosList, "");
+      this.scenarioApi.setPlayAllState(this.popupScenariosPlayAll, "idle");
+      this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, false);
+      if (this.popupScenariosPlayAll) {
+        this.popupScenariosPlayAll.onclick = async () => {
+          await this.runPlayAllScenarios(runContext);
+        };
+      }
+      this.openPopup();
+      if (this.popupBody) {
+        this.popupBody.textContent = "Loading test preview...";
+      }
+      if (this.popupLink) {
+        this.popupLink.textContent = selectedPath;
+      }
+      this.setStatus("", false);
+      this.clearActiveBehavioralPreview(runContext);
+      try {
+        const detectedT = OverlayModuleRuntime.detectPageModuleTParam();
+        const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT);
+        const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath);
+        this.setStatus(`Importing ${testModuleUrl}`, false);
+        const loadedModules = await this.runWithTimeout(
+          () => Promise.all([
+            import(testModuleUrl),
+            import(hostModuleUrl)
+          ]),
+          runContext.stepTimeoutMs,
+          `Test setup for ${selectedPath} timed out after ${String(runContext.stepTimeoutMs)}ms while importing modules.`
+        );
+        if (runContext.loadToken !== this.loadTokenCounter) {
+          return {
+            status: "stale",
+            scenarioResults: []
+          };
+        }
+        const moduleObject = loadedModules[0];
+        const hostModuleObject = loadedModules[1];
+        const TestClass = OverlayModuleRuntime.resolveTestClass(moduleObject);
+        if (!TestClass) {
+          throw new Error("No exported '*Test' class (or default class/function) was found.");
+        }
+        runContext.activeTestClass = TestClass;
+        const HostClass = OverlayModuleRuntime.resolveHostClass(hostModuleObject, selectedPath);
+        runContext.activeHostClass = HostClass;
+        const testInstance = new TestClass();
+        const testType = testInstance ? testInstance.testType : void 0;
+        runContext.activeTestType = typeof testType === "string" ? testType : null;
+        if (testType === "unit") {
+          if (this.popupBody) {
+            this.popupBody.textContent = "Please choose a scenario to run this unit test.";
+          }
+          this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
+          if (runContext.selectedScenarios.length > 0) {
+            this.setStatus("Choose a scenario from the left panel.", false);
+          } else {
+            this.setStatus("No scenarios were discovered for this unit test.", false);
+          }
+        } else if (testType === "behavioral") {
+          if (!HostClass || !this.popupRenderHost) {
+            throw new Error("No paired production class was found for this behavioral companion.");
+          }
+          if (this.popupBody) {
+            this.popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself.";
+          }
+          const preview = await this.runWithTimeout(
+            () => OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost, HostClass),
+            runContext.stepTimeoutMs,
+            `Test setup for ${selectedPath} timed out after ${String(runContext.stepTimeoutMs)}ms while mounting the behavioral subject.`
+          );
+          runContext.activePreviewElement = preview.element;
+          runContext.activePreviewSubject = preview.subject;
+          this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
+          if (runContext.selectedScenarios.length > 0) {
+            this.setStatus("Choose a scenario from the left panel.", false);
+          } else {
+            this.setStatus("Behavioral preview is ready. No scenarios were discovered.", false);
+          }
+        } else {
+          throw new Error(`Unsupported testType '${String(testType)}'. Expected 'unit' or 'behavioral'.`);
+        }
+      } catch (error) {
+        if (runContext.loadToken !== this.loadTokenCounter) {
+          return {
+            status: "stale",
+            scenarioResults: []
+          };
+        }
+        this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, false);
+        if (this.popupBody) {
+          this.popupBody.textContent = "Unable to preview this test.";
+        }
+        this.setStatus(this.errorMessage(error), true);
+        return {
+          status: "failed",
+          failureDetails: this.errorMessage(error),
+          scenarioResults: []
+        };
+      }
+      if (!shouldRunPlayAll) {
+        return {
+          status: "loaded",
+          scenarioResults: []
+        };
+      }
+      return await this.runPlayAllScenarios(runContext);
+    }
+    async runPanelPlayAllSequence(_isAutoRun) {
+      if (this.isRunningAllTests || this.tests.length === 0) {
+        return;
+      }
+      OverlayReportRuntime.clearFixedLastRunReport();
+      OverlayReportRuntime.clearFixedRunProgress();
+      this.isRunningAllTests = true;
+      this.setPanelPlayAllEnabled(false);
+      this.setListButtonsEnabled(false);
+      let hasFailures = false;
+      const testReports = [];
+      try {
+        for (let index = 0; index < this.tests.length; index++) {
+          this.setPanelResult("running", `${String(index + 1)}/${String(this.tests.length)}`);
+          const testPath = String(this.tests[index] ?? "");
+          OverlayReportRuntime.setFixedRunProgress({
+            phase: "test",
+            testPath
+          });
+          const testResult = await this.loadTestPreview(testPath, true);
+          const status = testResult?.status ? String(testResult.status) : "failed";
+          const failureDetails = String(testResult?.failureDetails ?? "");
+          const scenarioResults = Array.isArray(testResult?.scenarioResults) ? testResult.scenarioResults : [];
+          testReports.push({
+            testPath,
+            status,
+            failureDetails,
+            scenarioResults
+          });
+          if (status !== "passed" && status !== "no-scenarios") {
+            hasFailures = true;
+          }
+        }
+      } catch (runError) {
+        hasFailures = true;
+        testReports.push({
+          testPath: "<overlay-runner>",
+          status: "failed",
+          scenarioResults: [
+            {
+              title: "Play All runtime",
+              state: "failed",
+              details: this.errorMessage(runError)
+            }
+          ]
+        });
+      } finally {
+        this.isRunningAllTests = false;
+        this.setPanelPlayAllEnabled(true);
+        this.setListButtonsEnabled(true);
+      }
+      const reportText = OverlayReportRuntime.buildTerminalReport(testReports, !hasFailures);
+      const reportJson = OverlayReportRuntime.buildTerminalReportJson(testReports, !hasFailures);
+      this.openTerminalPopup(reportText);
+      OverlayReportRuntime.setFixedLastRunReport(reportText, reportJson);
+      OverlayReportRuntime.clearFixedRunProgress();
+      if (hasFailures) {
+        this.setPanelResult("error", "Failed");
+        return;
+      }
+      this.setPanelResult("success", "Passed");
+    }
+  };
+
+  // src/server/overlay-runtime/OverlayRuntimeBootstrap.lll.ts
+  var OverlayRuntimeBootstrap = class {
+    static async start() {
+      OverlayScenarioRuntime.installGlobalApi();
+      const config = this.parseConfig();
+      const assetsBasePath = this.getAssetsBasePath(config);
+      const templateHtml = await this.loadOverlayTemplate(assetsBasePath);
+      this.ensureOverlayMarkup(templateHtml);
+      new OverlayController(config).wireOverlay();
+    }
+    static parseConfig() {
+      const configElement = document.getElementById(this.configElementId);
+      if (!configElement) {
+        return {};
+      }
+      try {
+        return JSON.parse(configElement.textContent ?? "{}");
+      } catch {
+        return {};
+      }
+    }
+    static getAssetsBasePath(config) {
+      if (!config || typeof config.assetsBasePath !== "string") {
+        return this.fallbackAssetsBasePath;
+      }
+      const trimmed = config.assetsBasePath.trim();
+      return trimmed.length > 0 ? trimmed : this.fallbackAssetsBasePath;
+    }
+    static async loadOverlayTemplate(assetsBasePath) {
+      const templateResponse = await fetch(`${assetsBasePath}/index.html`, { credentials: "same-origin" });
+      if (!templateResponse.ok) {
+        throw new Error(`Overlay template request failed with status ${String(templateResponse.status)}.`);
+      }
+      return await templateResponse.text();
+    }
+    static ensureOverlayMarkup(templateHtml) {
+      if (document.getElementById("lllts-test-panel")) {
+        return;
+      }
+      const container = document.createElement("div");
+      container.innerHTML = String(templateHtml ?? "");
+      while (container.firstChild) {
+        document.body.appendChild(container.firstChild);
+      }
+    }
+  };
+  __publicField(OverlayRuntimeBootstrap, "configElementId", "lllts-overlay-config");
+  __publicField(OverlayRuntimeBootstrap, "fallbackAssetsBasePath", "/__lllts-overlay");
+  void OverlayRuntimeBootstrap.start().catch((error) => {
+    console.error("[LLLTS overlay] Failed to initialize overlay.", error);
+  });
 })();
