@@ -149,8 +149,12 @@ export class LlltsServerTest {
 			const app = server.createApp(config)
 			const response = await this.request(app, "/")
 			assert(response.status === 502, "Unreachable client link should return HTTP 502")
+			assert(response.contentType.includes("text/html"), "Unreachable client link should return HTML retry page")
 			assert(response.body.includes("Project client link is unavailable."), "Response should explain unavailable client link")
-			assert(response.body.includes("- src/Alpha.test.lll.ts"), "Response should preserve discovered test listing")
+			assert(response.body.includes("The tests page will retry automatically every 2 seconds."), "Response should explain automatic retry")
+			assert(response.body.includes("http-equiv=\"refresh\""), "Response should include a meta refresh retry")
+			assert(response.body.includes("Retrying in <span id=\"lllts-retry-seconds\">2.0</span>s"), "Response should render retry countdown")
+			assert(response.body.includes("<li>src/Alpha.test.lll.ts</li>"), "Response should preserve discovered test listing")
 		} finally {
 			fs.rmSync(tempRoot, { recursive: true, force: true })
 		}
