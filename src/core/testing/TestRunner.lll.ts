@@ -7,14 +7,14 @@ import { Spec } from "../../public/lll.lll"
 import { BaseRule } from "../BaseRule.lll"
 import { DiagnosticObject } from "../DiagnosticObject"
 import { FileVariantSupport } from "../FileVariantSupport.lll"
-import type { Phase } from "../Phase"
+import type { Phase } from "../rulesEngine/Phase"
 import { ProjectInitiator } from "../ProjectInitiator.lll"
 import { RuleCode } from "../rulesEngine/RuleCode"
 import type { ScenarioContext } from "../scenario/ScenarioContext"
 import type { ScenarioEntry } from "../scenario/ScenarioEntry"
 import type { ScenarioMetadata } from "../scenario/ScenarioMetadata"
 import { PairedHostSupport } from "./PairedHostSupport.lll"
-import type { PairedHostKind } from "./PairedHostSupport.lll"
+import type { PairedHostKind } from "./PairedHostKind"
 import type { BehavioralTestReference } from "./BehavioralTestReference"
 import type { TestClassRecord } from "./TestClassRecord"
 import type { TestInventorySummary } from "./TestInventorySummary"
@@ -510,7 +510,7 @@ export class TestRunner {
 	}
 
 	@Spec("Creates an assertion helper used inside scenarios.")
-	private createAssert(): (condition:boolean,message?:string)=>void {
+	private createAssert(): (condition: boolean, message?: string) => void {
 		return (condition: boolean, message = "Assertion failed"): asserts condition => {
 			if (!condition) {
 				throw new Error(message)

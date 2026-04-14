@@ -3,8 +3,7 @@ import { Node } from "ts-morph"
 import { BaseRule } from "../BaseRule.lll"
 import { FileVariantSupport } from "../FileVariantSupport.lll"
 import { Spec } from "../../public/lll.lll"
-
-export type PairedHostKind = "instantiable" | "static-only"
+import { PairedHostKind } from "./PairedHostKind"
 
 @Spec("Provides deterministic paired-host lookup and classification for companion test files.")
 export class PairedHostSupport {
