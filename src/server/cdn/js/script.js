@@ -8,11 +8,8 @@
   // src/server/overlay-runtime/OverlayModuleRuntime.lll.ts
   var _OverlayModuleRuntime = class _OverlayModuleRuntime {
     static debug(message, details) {
-      if (details === void 0) {
-        console.log(`${this.debugPrefix} ${message}`);
-        return;
-      }
-      console.log(`${this.debugPrefix} ${message}`, details);
+      void message;
+      void details;
     }
     static debugError(message, error, details) {
       if (details === void 0) {

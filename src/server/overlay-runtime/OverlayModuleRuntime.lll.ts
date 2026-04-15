@@ -6,11 +6,8 @@ export class OverlayModuleRuntime {
 	private static readonly constructorAliasMap = new Map<Function, Function>()
 
 	public static debug(message: string, details?: unknown): void {
-		if (details === undefined) {
-			console.log(`${this.debugPrefix} ${message}`)
-			return
-		}
-		console.log(`${this.debugPrefix} ${message}`, details)
+		void message
+		void details
 	}
 
 	public static debugError(message: string, error: unknown, details?: unknown): void {
