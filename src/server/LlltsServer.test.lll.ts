@@ -2,6 +2,7 @@ import * as fs from "fs"
 import * as http from "http"
 import * as os from "os"
 import * as path from "path"
+import packageJson from "../../package.json"
 import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter, SubjectFactory } from "../public/lll.lll.js"
 import "./LlltsServer.lll"
 import { LlltsServer } from "./LlltsServer.lll.js"
@@ -210,7 +211,7 @@ export class LlltsServerTest {
 			assert(!response.body.includes("scenariosScript.src=assetsBasePath+\"/js/scenarios.js\""), "Loader should not reference removed scenario helper script")
 			assert(!response.body.includes("lllts-overlay-scenarios-script"), "Loader should not create removed scenario helper element")
 			assert(response.body.includes("\"assetsBasePath\":\"/__lllts-overlay\""), "Overlay config should include CDN base path")
-			assert(response.body.includes("\"version\":\"0.1.21\""), "Overlay config should include the current package version")
+			assert(response.body.includes(`"version":"${packageJson.version}"`), "Overlay config should include the current package version")
 			assert(response.body.includes("tests/Alpha.test.lll.ts"), "Overlay should include top-level test path")
 			assert(response.body.includes("tests/nested/Beta.test.lll.ts"), "Overlay should include nested test path")
 			assert(response.body.includes("\"testScenarios\""), "Overlay config should include test scenario metadata map")
