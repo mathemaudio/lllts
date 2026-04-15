@@ -70,14 +70,6 @@ export class OverlayModuleRuntime {
 		return ""
 	}
 
-	public static detectPageCacheBuster(): string {
-		try {
-			return new URL(window.location.href).searchParams.get(this.cacheBusterQueryParam) ?? ""
-		} catch {
-			return ""
-		}
-	}
-
 	public static installIdempotentCustomElementDefineGuard(): void {
 		if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
 			return
@@ -124,6 +116,13 @@ export class OverlayModuleRuntime {
 			parsedUrl.searchParams.set(this.cacheBusterQueryParam, String(cacheBuster))
 		}
 		return `${parsedUrl.pathname}${parsedUrl.search}`
+	}
+
+	public static createImportCacheBuster(): string {
+		if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+			return crypto.randomUUID()
+		}
+		return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 	}
 
 	public static buildPairedHostImportUrl(testModuleUrl: unknown, testPath: unknown, tParam: unknown, cacheBuster?: unknown): string {

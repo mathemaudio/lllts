@@ -61,13 +61,6 @@
       }
       return "";
     }
-    static detectPageCacheBuster() {
-      try {
-        return new URL(window.location.href).searchParams.get(this.cacheBusterQueryParam) ?? "";
-      } catch {
-        return "";
-      }
-    }
     static installIdempotentCustomElementDefineGuard() {
       if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
         return;
@@ -111,6 +104,12 @@
         parsedUrl.searchParams.set(this.cacheBusterQueryParam, String(cacheBuster));
       }
       return `${parsedUrl.pathname}${parsedUrl.search}`;
+    }
+    static createImportCacheBuster() {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+      }
+      return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
     static buildPairedHostImportUrl(testModuleUrl, testPath, tParam, cacheBuster) {
       void testModuleUrl;
@@ -1071,7 +1070,7 @@
       });
       try {
         const detectedT = OverlayModuleRuntime.detectPageModuleTParam();
-        const detectedCacheBuster = OverlayModuleRuntime.detectPageCacheBuster();
+        const detectedCacheBuster = OverlayModuleRuntime.createImportCacheBuster();
         const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, detectedCacheBuster);
         const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, detectedCacheBuster);
         this.debug("loadTestPreview:resolved urls", {
