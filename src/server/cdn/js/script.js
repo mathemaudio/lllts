@@ -6,7 +6,43 @@
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
   // src/server/overlay-runtime/OverlayModuleRuntime.lll.ts
-  var OverlayModuleRuntime = class {
+  var _OverlayModuleRuntime = class _OverlayModuleRuntime {
+    static debug(message, details) {
+      if (details === void 0) {
+        console.log(`${this.debugPrefix} ${message}`);
+        return;
+      }
+      console.log(`${this.debugPrefix} ${message}`, details);
+    }
+    static debugError(message, error, details) {
+      if (details === void 0) {
+        console.error(`${this.debugPrefix} ${message}`, error);
+        return;
+      }
+      console.error(`${this.debugPrefix} ${message}`, error, details);
+    }
+    static describeValue(value) {
+      const ctor = value && typeof value === "object" && "constructor" in value ? value.constructor : void 0;
+      return {
+        type: typeof value,
+        constructorName: ctor && typeof ctor === "object" ? String(ctor.name ?? "") : ctor && typeof ctor === "function" ? String(ctor.name ?? "") : "",
+        stringValue: this.safeString(value)
+      };
+    }
+    static describeClass(ClassValue) {
+      const classFn = typeof ClassValue === "function" ? ClassValue : null;
+      const proto = classFn?.prototype;
+      const protoCtor = proto && "constructor" in proto ? proto.constructor : void 0;
+      return {
+        type: typeof ClassValue,
+        name: classFn ? String(classFn.name ?? "") : "",
+        prototypeConstructorName: protoCtor ? String(protoCtor.name ?? "") : "",
+        isHTMLElementSubclass: this.isHTMLElementSubclass(ClassValue),
+        customElementTag: this.findRegisteredTagForConstructor(ClassValue),
+        prototypeChain: this.describePrototypeChain(proto),
+        hasPrototype: !!proto
+      };
+    }
     static detectPageModuleTParam() {
       const moduleScripts = document.querySelectorAll('script[type="module"][src]');
       for (const script of moduleScripts) {
@@ -25,6 +61,13 @@
       }
       return "";
     }
+    static detectPageCacheBuster() {
+      try {
+        return new URL(window.location.href).searchParams.get(this.cacheBusterQueryParam) ?? "";
+      } catch {
+        return "";
+      }
+    }
     static installIdempotentCustomElementDefineGuard() {
       if (typeof window === "undefined" || !window.customElements || typeof window.customElements.define !== "function") {
         return;
@@ -37,7 +80,14 @@
       registry.define = function(name, constructor, options) {
         const normalizedName = String(name ?? "");
         const existingConstructor = typeof registry.get === "function" ? registry.get(normalizedName) : void 0;
+        if (typeof constructor === "function" && normalizedName.length > 0) {
+          _OverlayModuleRuntime.constructorTagMap.set(constructor, normalizedName);
+        }
         if (existingConstructor) {
+          if (typeof constructor === "function" && typeof existingConstructor === "function") {
+            _OverlayModuleRuntime.constructorAliasMap.set(constructor, existingConstructor);
+            _OverlayModuleRuntime.constructorTagMap.set(existingConstructor, normalizedName);
+          }
           const existingName = String(existingConstructor.name ?? "");
           const incomingName = constructor && typeof constructor === "function" ? String(constructor.name ?? "") : "";
           if (existingConstructor === constructor || existingName.length > 0 && existingName === incomingName) {
@@ -45,25 +95,39 @@
           }
         }
         originalDefine(name, constructor, options);
+        if (typeof constructor === "function" && normalizedName.length > 0) {
+          _OverlayModuleRuntime.constructorTagMap.set(constructor, normalizedName);
+        }
       };
       registry.__llltsDuplicateDefineGuardInstalled = true;
     }
-    static buildImportUrl(testPath, tParam) {
+    static buildImportUrl(testPath, tParam, cacheBuster) {
       const normalizedPath = String(testPath ?? "").replace(/^\/+/, "");
-      const basePath = `/${normalizedPath}`;
-      if (!tParam) {
-        return basePath;
+      const parsedUrl = new URL(`/${normalizedPath}`, document.baseURI);
+      if (tParam) {
+        parsedUrl.searchParams.set("t", String(tParam));
       }
-      const separator = basePath.includes("?") ? "&" : "?";
-      return `${basePath}${separator}t=${encodeURIComponent(String(tParam))}`;
+      if (cacheBuster) {
+        parsedUrl.searchParams.set(this.cacheBusterQueryParam, String(cacheBuster));
+      }
+      return `${parsedUrl.pathname}${parsedUrl.search}`;
     }
-    static buildPairedHostImportUrl(testModuleUrl, testPath) {
+    static buildPairedHostImportUrl(testModuleUrl, testPath, tParam, cacheBuster) {
+      void testModuleUrl;
+      void tParam;
+      void cacheBuster;
       const hostClassName = this.resolveHostClassNameFromTestPath(testPath);
-      const absoluteTestModuleUrl = new URL(String(testModuleUrl ?? ""), document.baseURI).toString();
       if (!hostClassName) {
-        return new URL(this.buildImportUrl(this.resolveHostPathFromTestPath(testPath), ""), document.baseURI).toString();
+        const fallbackHostPath = this.resolveHostPathFromTestPath(testPath);
+        return fallbackHostPath.startsWith("/") ? fallbackHostPath : `/${fallbackHostPath}`;
       }
-      return new URL(`./${hostClassName}.lll.ts`, absoluteTestModuleUrl).toString();
+      const normalizedTestPath = String(testPath ?? "");
+      const lastSlashIndex = normalizedTestPath.lastIndexOf("/");
+      if (lastSlashIndex < 0) {
+        return `/${hostClassName}.lll.ts`;
+      }
+      const relativeHostPath = `${normalizedTestPath.slice(0, lastSlashIndex + 1)}${hostClassName}.lll.ts`;
+      return relativeHostPath.startsWith("/") ? relativeHostPath : `/${relativeHostPath}`;
     }
     static resolveTestClass(moduleObject) {
       if (!moduleObject || typeof moduleObject !== "object") {
@@ -129,14 +193,51 @@
       }
     }
     static async mountBehavioralSubject(popupRenderHost, HostClass) {
+      const effectiveHostClass = this.resolveEffectiveConstructor(HostClass);
+      const registeredTag = this.findRegisteredTagForConstructor(HostClass) ?? this.findRegisteredTagForConstructor(effectiveHostClass);
+      this.debug("mountBehavioralSubject:start", {
+        hostClass: this.describeClass(HostClass),
+        effectiveHostClass: this.describeClass(effectiveHostClass),
+        registeredTag,
+        renderHostChildCount: popupRenderHost.childElementCount,
+        nativeHTMLElement: this.describeClass(this.nativeHTMLElementConstructor)
+      });
       this.clearRenderHost(popupRenderHost);
-      const subject = new HostClass();
+      let subject;
+      try {
+        if (registeredTag && this.isHTMLElementSubclass(effectiveHostClass)) {
+          subject = document.createElement(registeredTag);
+        } else {
+          subject = new effectiveHostClass();
+        }
+        this.debug("mountBehavioralSubject:constructed", {
+          subject: this.describeValue(subject),
+          subjectPrototypeChain: this.describePrototypeChain(Object.getPrototypeOf(subject))
+        });
+      } catch (error) {
+        this.debugError("mountBehavioralSubject:constructor failed", error, {
+          hostClass: this.describeClass(HostClass),
+          effectiveHostClass: this.describeClass(effectiveHostClass),
+          nativeHTMLElement: this.describeClass(this.nativeHTMLElementConstructor),
+          globalHTMLElement: this.describeClass(globalThis.HTMLElement),
+          registeredTag
+        });
+        throw error;
+      }
       let element = null;
-      if (this.isHTMLElementSubclass(HostClass) && this.isNativeHTMLElementInstance(subject)) {
+      if (this.isHTMLElementSubclass(effectiveHostClass) && this.isNativeHTMLElementInstance(subject)) {
         element = subject;
+        this.debug("mountBehavioralSubject:append", {
+          element: this.describeValue(element),
+          registeredTag
+        });
         popupRenderHost.appendChild(element);
       }
       await this.settleRenderedSubject(subject);
+      this.debug("mountBehavioralSubject:done", {
+        element: this.describeValue(element),
+        renderHostChildCount: popupRenderHost.childElementCount
+      });
       return {
         subject,
         element
@@ -145,8 +246,49 @@
     static isFunction(value) {
       return typeof value === "function";
     }
+    static safeString(value) {
+      try {
+        return String(value);
+      } catch {
+        return "<unstringifiable>";
+      }
+    }
+    static describePrototypeChain(startPrototype) {
+      const chain = [];
+      let current = startPrototype;
+      let depth = 0;
+      while (current && depth < 8) {
+        const ctor = current.constructor;
+        chain.push(String(ctor?.name ?? "<anonymous>"));
+        current = Object.getPrototypeOf(current);
+        depth += 1;
+      }
+      return chain;
+    }
+    static findRegisteredTagForConstructor(ClassValue) {
+      if (typeof ClassValue !== "function") {
+        return null;
+      }
+      const directTag = this.constructorTagMap.get(ClassValue);
+      if (directTag) {
+        return directTag;
+      }
+      const aliasedConstructor = this.constructorAliasMap.get(ClassValue);
+      return aliasedConstructor ? this.constructorTagMap.get(aliasedConstructor) ?? null : null;
+    }
+    static resolveEffectiveConstructor(ClassValue) {
+      if (typeof ClassValue !== "function") {
+        return ClassValue;
+      }
+      return this.constructorAliasMap.get(ClassValue) ?? ClassValue;
+    }
   };
-  __publicField(OverlayModuleRuntime, "nativeHTMLElementConstructor", typeof HTMLElement === "function" ? HTMLElement : null);
+  __publicField(_OverlayModuleRuntime, "nativeHTMLElementConstructor", typeof HTMLElement === "function" ? HTMLElement : null);
+  __publicField(_OverlayModuleRuntime, "cacheBusterQueryParam", "__lllts_cb");
+  __publicField(_OverlayModuleRuntime, "debugPrefix", "[LLLTS overlay]");
+  __publicField(_OverlayModuleRuntime, "constructorTagMap", /* @__PURE__ */ new Map());
+  __publicField(_OverlayModuleRuntime, "constructorAliasMap", /* @__PURE__ */ new Map());
+  var OverlayModuleRuntime = _OverlayModuleRuntime;
 
   // src/server/overlay-runtime/OverlayReportRuntime.lll.ts
   var OverlayReportRuntime = class {
@@ -463,6 +605,7 @@
       __publicField(this, "panel", null);
       __publicField(this, "list", null);
       __publicField(this, "emptyState", null);
+      __publicField(this, "panelVersion", null);
       __publicField(this, "panelPlayAll", null);
       __publicField(this, "panelResult", null);
       __publicField(this, "popup", null);
@@ -479,6 +622,19 @@
       __publicField(this, "terminalPopupClose", null);
       this.tests = Array.isArray(config.tests) ? config.tests.map((testPath) => String(testPath ?? "")) : [];
       this.openByDefault = !!config.openByDefault;
+    }
+    getVersionLabel() {
+      if (typeof this.config.version !== "string") {
+        return "LLL";
+      }
+      const trimmed = this.config.version.trim();
+      return trimmed.length > 0 ? `LLL ${trimmed}` : "LLL";
+    }
+    debug(message, details) {
+      OverlayModuleRuntime.debug(`OverlayController ${message}`, details);
+    }
+    debugError(message, error, details) {
+      OverlayModuleRuntime.debugError(`OverlayController ${message}`, error, details);
     }
     wireOverlay() {
       OverlayModuleRuntime.installIdempotentCustomElementDefineGuard();
@@ -498,6 +654,9 @@
         await this.runPanelPlayAllSequence(false);
       });
       this.setPanelResult("", "");
+      if (this.panelVersion) {
+        this.panelVersion.textContent = this.getVersionLabel();
+      }
       this.syncBackdropState();
       OverlayReportRuntime.clearFixedLastRunReport();
       OverlayReportRuntime.clearFixedRunProgress();
@@ -543,6 +702,7 @@
       this.panel = document.getElementById("lllts-test-panel");
       this.list = document.getElementById("lllts-test-list");
       this.emptyState = document.getElementById("lllts-test-empty");
+      this.panelVersion = document.getElementById("lllts-test-panel-version");
       this.panelPlayAll = document.getElementById("lllts-test-panel-play-all");
       this.panelResult = document.getElementById("lllts-test-panel-result");
       this.popup = document.getElementById("lllts-test-popup");
@@ -557,7 +717,7 @@
       this.terminalPopup = document.getElementById("lllts-terminal-popup");
       this.terminalPopupBody = document.getElementById("lllts-terminal-popup-body");
       this.terminalPopupClose = document.getElementById("lllts-terminal-popup-close");
-      return !!(this.backdrop && this.panel && this.list && this.emptyState && this.panelPlayAll && this.panelResult && this.popup && this.popupBody && this.popupLink && this.popupStatus && this.popupRenderHost && this.popupClose && this.popupScenariosList && this.popupScenariosEmpty && this.popupScenariosPlayAll && this.terminalPopup && this.terminalPopupBody && this.terminalPopupClose);
+      return !!(this.backdrop && this.panel && this.list && this.emptyState && this.panelVersion && this.panelPlayAll && this.panelResult && this.popup && this.popupBody && this.popupLink && this.popupStatus && this.popupRenderHost && this.popupClose && this.popupScenariosList && this.popupScenariosEmpty && this.popupScenariosPlayAll && this.terminalPopup && this.terminalPopupBody && this.terminalPopupClose);
     }
     setStatus(message, isError) {
       if (!this.popupStatus) {
@@ -708,6 +868,11 @@
       return results;
     }
     clearActiveBehavioralPreview(runContext) {
+      this.debug("clearActiveBehavioralPreview", {
+        selectedPath: runContext.selectedPath,
+        hasPreviewElement: !!runContext.activePreviewElement,
+        hasPreviewSubject: runContext.activePreviewSubject !== null && runContext.activePreviewSubject !== void 0
+      });
       if (runContext.activePreviewElement?.parentNode) {
         runContext.activePreviewElement.parentNode.removeChild(runContext.activePreviewElement);
       }
@@ -721,15 +886,28 @@
       let cachedSubject = null;
       return async () => {
         if (cachedSubject !== null) {
+          this.debug("createBehavioralSubjectFactory:return cached subject", {
+            selectedPath: runContext.selectedPath,
+            subject: OverlayModuleRuntime.describeValue(cachedSubject)
+          });
           return cachedSubject;
         }
         if (!runContext.activeHostClass || !this.popupRenderHost) {
           throw new Error("Paired host class is still loading.");
         }
+        this.debug("createBehavioralSubjectFactory:mount", {
+          selectedPath: runContext.selectedPath,
+          hostClass: OverlayModuleRuntime.describeClass(runContext.activeHostClass)
+        });
         const mounted = await OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost, runContext.activeHostClass);
         runContext.activePreviewElement = mounted.element;
         runContext.activePreviewSubject = mounted.subject;
         cachedSubject = mounted.subject;
+        this.debug("createBehavioralSubjectFactory:mounted", {
+          selectedPath: runContext.selectedPath,
+          subject: OverlayModuleRuntime.describeValue(mounted.subject),
+          element: OverlayModuleRuntime.describeValue(mounted.element)
+        });
         return cachedSubject;
       };
     }
@@ -884,10 +1062,25 @@
       }
       this.setStatus("", false);
       this.clearActiveBehavioralPreview(runContext);
+      this.debug("loadTestPreview:start", {
+        selectedPath,
+        shouldRunPlayAll,
+        scenarioCount: runContext.selectedScenarios.length,
+        stepTimeoutMs: runContext.stepTimeoutMs,
+        loadToken: runContext.loadToken
+      });
       try {
         const detectedT = OverlayModuleRuntime.detectPageModuleTParam();
-        const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT);
-        const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath);
+        const detectedCacheBuster = OverlayModuleRuntime.detectPageCacheBuster();
+        const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, detectedCacheBuster);
+        const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, detectedCacheBuster);
+        this.debug("loadTestPreview:resolved urls", {
+          selectedPath,
+          detectedT,
+          detectedCacheBuster,
+          testModuleUrl,
+          hostModuleUrl
+        });
         this.setStatus(`Importing ${testModuleUrl}`, false);
         const loadedModules = await this.runWithTimeout(
           () => Promise.all([
@@ -905,6 +1098,10 @@
         }
         const moduleObject = loadedModules[0];
         const hostModuleObject = loadedModules[1];
+        this.debug("loadTestPreview:modules imported", {
+          testExports: Object.keys(moduleObject),
+          hostExports: Object.keys(hostModuleObject)
+        });
         const TestClass = OverlayModuleRuntime.resolveTestClass(moduleObject);
         if (!TestClass) {
           throw new Error("No exported '*Test' class (or default class/function) was found.");
@@ -912,9 +1109,17 @@
         runContext.activeTestClass = TestClass;
         const HostClass = OverlayModuleRuntime.resolveHostClass(hostModuleObject, selectedPath);
         runContext.activeHostClass = HostClass;
+        this.debug("loadTestPreview:resolved classes", {
+          testClass: OverlayModuleRuntime.describeClass(TestClass),
+          hostClass: OverlayModuleRuntime.describeClass(HostClass)
+        });
         const testInstance = new TestClass();
         const testType = testInstance ? testInstance.testType : void 0;
         runContext.activeTestType = typeof testType === "string" ? testType : null;
+        this.debug("loadTestPreview:test instance", {
+          testType,
+          testInstance: OverlayModuleRuntime.describeValue(testInstance)
+        });
         if (testType === "unit") {
           if (this.popupBody) {
             this.popupBody.textContent = "Please choose a scenario to run this unit test.";
@@ -932,6 +1137,10 @@
           if (this.popupBody) {
             this.popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself.";
           }
+          this.debug("loadTestPreview:mount behavioral preview", {
+            selectedPath,
+            hostClass: OverlayModuleRuntime.describeClass(HostClass)
+          });
           const preview = await this.runWithTimeout(
             () => OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost, HostClass),
             runContext.stepTimeoutMs,
@@ -939,6 +1148,11 @@
           );
           runContext.activePreviewElement = preview.element;
           runContext.activePreviewSubject = preview.subject;
+          this.debug("loadTestPreview:behavioral preview mounted", {
+            selectedPath,
+            subject: OverlayModuleRuntime.describeValue(preview.subject),
+            element: OverlayModuleRuntime.describeValue(preview.element)
+          });
           this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, runContext.selectedScenarios.length > 0);
           if (runContext.selectedScenarios.length > 0) {
             this.setStatus("Choose a scenario from the left panel.", false);
@@ -955,6 +1169,15 @@
             scenarioResults: []
           };
         }
+        this.debugError("loadTestPreview:failed", error, {
+          selectedPath,
+          loadToken: runContext.loadToken,
+          activeTestType: runContext.activeTestType,
+          activeTestClass: OverlayModuleRuntime.describeClass(runContext.activeTestClass),
+          activeHostClass: OverlayModuleRuntime.describeClass(runContext.activeHostClass),
+          globalHTMLElement: OverlayModuleRuntime.describeClass(globalThis.HTMLElement),
+          customElementsAppRoot: OverlayModuleRuntime.describeClass(customElements.get("app-root"))
+        });
         this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, false);
         if (this.popupBody) {
           this.popupBody.textContent = "Unable to preview this test.";

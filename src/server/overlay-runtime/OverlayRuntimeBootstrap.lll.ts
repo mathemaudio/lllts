@@ -6,6 +6,7 @@ type OverlayConfig = {
 	testScenarios?: Record<string, unknown>
 	openByDefault?: boolean
 	assetsBasePath?: string
+	version?: string
 }
 
 export class OverlayRuntimeBootstrap {

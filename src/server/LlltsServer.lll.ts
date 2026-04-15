@@ -3,6 +3,7 @@ import * as fs from "fs"
 import * as path from "path"
 import type { MethodDeclaration } from "ts-morph"
 import { Project } from "ts-morph"
+import packageJson from "../../package.json"
 import { FileVariantSupport } from "../core/FileVariantSupport.lll"
 import { Spec } from "../public/lll.lll"
 import type { ProjectReport } from "./ProjectReport"
@@ -482,7 +483,8 @@ export class LlltsServer {
 			tests: testFiles,
 			testScenarios,
 			openByDefault: LlltsServer.testPanelOpenByDefault,
-			assetsBasePath: LlltsServer.overlayAssetsBasePath
+			assetsBasePath: LlltsServer.overlayAssetsBasePath,
+			version: packageJson.version
 		}).replace(/</g, "\\u003c")
 		return /*html*/`
 <!-- LLLTS_TEST_OVERLAY -->

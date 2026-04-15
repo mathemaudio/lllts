@@ -32,6 +32,7 @@ export class OverlayController {
 	private panel: HTMLElement | null = null
 	private list: HTMLElement | null = null
 	private emptyState: HTMLElement | null = null
+	private panelVersion: HTMLElement | null = null
 	private panelPlayAll: HTMLButtonElement | null = null
 	private panelResult: HTMLElement | null = null
 	private popup: HTMLElement | null = null
@@ -50,6 +51,22 @@ export class OverlayController {
 	public constructor(private readonly config: Record<string, unknown>) {
 		this.tests = Array.isArray(config.tests) ? config.tests.map(testPath => String(testPath ?? "")) : []
 		this.openByDefault = !!config.openByDefault
+	}
+
+	private getVersionLabel(): string {
+		if (typeof this.config.version !== "string") {
+			return "LLL"
+		}
+		const trimmed = this.config.version.trim()
+		return trimmed.length > 0 ? `LLL ${trimmed}` : "LLL"
+	}
+
+	private debug(message: string, details?: unknown): void {
+		OverlayModuleRuntime.debug(`OverlayController ${message}`, details)
+	}
+
+	private debugError(message: string, error: unknown, details?: unknown): void {
+		OverlayModuleRuntime.debugError(`OverlayController ${message}`, error, details)
 	}
 
 	public wireOverlay(): void {
@@ -73,6 +90,9 @@ export class OverlayController {
 		})
 
 		this.setPanelResult("", "")
+		if (this.panelVersion) {
+			this.panelVersion.textContent = this.getVersionLabel()
+		}
 		this.syncBackdropState()
 		OverlayReportRuntime.clearFixedLastRunReport()
 		OverlayReportRuntime.clearFixedRunProgress()
@@ -123,6 +143,7 @@ export class OverlayController {
 		this.panel = document.getElementById("lllts-test-panel")
 		this.list = document.getElementById("lllts-test-list")
 		this.emptyState = document.getElementById("lllts-test-empty")
+		this.panelVersion = document.getElementById("lllts-test-panel-version")
 		this.panelPlayAll = document.getElementById("lllts-test-panel-play-all") as HTMLButtonElement | null
 		this.panelResult = document.getElementById("lllts-test-panel-result")
 		this.popup = document.getElementById("lllts-test-popup")
@@ -143,6 +164,7 @@ export class OverlayController {
 			&& this.panel
 			&& this.list
 			&& this.emptyState
+			&& this.panelVersion
 			&& this.panelPlayAll
 			&& this.panelResult
 			&& this.popup
@@ -326,6 +348,11 @@ export class OverlayController {
 	}
 
 	private clearActiveBehavioralPreview(runContext: OverlayRunContext): void {
+		this.debug("clearActiveBehavioralPreview", {
+			selectedPath: runContext.selectedPath,
+			hasPreviewElement: !!runContext.activePreviewElement,
+			hasPreviewSubject: runContext.activePreviewSubject !== null && runContext.activePreviewSubject !== undefined
+		})
 		if (runContext.activePreviewElement?.parentNode) {
 			runContext.activePreviewElement.parentNode.removeChild(runContext.activePreviewElement)
 		}
@@ -340,15 +367,28 @@ export class OverlayController {
 		let cachedSubject: unknown = null
 		return async () => {
 			if (cachedSubject !== null) {
+				this.debug("createBehavioralSubjectFactory:return cached subject", {
+					selectedPath: runContext.selectedPath,
+					subject: OverlayModuleRuntime.describeValue(cachedSubject)
+				})
 				return cachedSubject
 			}
 			if (!runContext.activeHostClass || !this.popupRenderHost) {
 				throw new Error("Paired host class is still loading.")
 			}
+			this.debug("createBehavioralSubjectFactory:mount", {
+				selectedPath: runContext.selectedPath,
+				hostClass: OverlayModuleRuntime.describeClass(runContext.activeHostClass)
+			})
 			const mounted = await OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost, runContext.activeHostClass)
 			runContext.activePreviewElement = mounted.element
 			runContext.activePreviewSubject = mounted.subject
 			cachedSubject = mounted.subject
+			this.debug("createBehavioralSubjectFactory:mounted", {
+				selectedPath: runContext.selectedPath,
+				subject: OverlayModuleRuntime.describeValue(mounted.subject),
+				element: OverlayModuleRuntime.describeValue(mounted.element)
+			})
 			return cachedSubject
 		}
 	}
@@ -512,11 +552,26 @@ export class OverlayController {
 		}
 		this.setStatus("", false)
 		this.clearActiveBehavioralPreview(runContext)
+		this.debug("loadTestPreview:start", {
+			selectedPath,
+			shouldRunPlayAll,
+			scenarioCount: runContext.selectedScenarios.length,
+			stepTimeoutMs: runContext.stepTimeoutMs,
+			loadToken: runContext.loadToken
+		})
 
 		try {
 			const detectedT = OverlayModuleRuntime.detectPageModuleTParam()
-			const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT)
-			const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath)
+			const detectedCacheBuster = OverlayModuleRuntime.detectPageCacheBuster()
+			const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, detectedCacheBuster)
+			const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, detectedCacheBuster)
+			this.debug("loadTestPreview:resolved urls", {
+				selectedPath,
+				detectedT,
+				detectedCacheBuster,
+				testModuleUrl,
+				hostModuleUrl
+			})
 			this.setStatus(`Importing ${testModuleUrl}`, false)
 			const loadedModules = await this.runWithTimeout(
 				() => Promise.all([
@@ -534,6 +589,10 @@ export class OverlayController {
 			}
 			const moduleObject = loadedModules[0] as Record<string, unknown>
 			const hostModuleObject = loadedModules[1] as Record<string, unknown>
+			this.debug("loadTestPreview:modules imported", {
+				testExports: Object.keys(moduleObject),
+				hostExports: Object.keys(hostModuleObject)
+			})
 			const TestClass = OverlayModuleRuntime.resolveTestClass(moduleObject)
 			if (!TestClass) {
 				throw new Error("No exported '*Test' class (or default class/function) was found.")
@@ -541,9 +600,17 @@ export class OverlayController {
 			runContext.activeTestClass = TestClass as unknown as Record<string, unknown>
 			const HostClass = OverlayModuleRuntime.resolveHostClass(hostModuleObject, selectedPath)
 			runContext.activeHostClass = HostClass as (new () => unknown) | null
+			this.debug("loadTestPreview:resolved classes", {
+				testClass: OverlayModuleRuntime.describeClass(TestClass),
+				hostClass: OverlayModuleRuntime.describeClass(HostClass)
+			})
 			const testInstance = new (TestClass as unknown as new () => { testType?: unknown })()
 			const testType = testInstance ? testInstance.testType : undefined
 			runContext.activeTestType = typeof testType === "string" ? testType : null
+			this.debug("loadTestPreview:test instance", {
+				testType,
+				testInstance: OverlayModuleRuntime.describeValue(testInstance)
+			})
 
 			if (testType === "unit") {
 				if (this.popupBody) {
@@ -562,6 +629,10 @@ export class OverlayController {
 				if (this.popupBody) {
 					this.popupBody.textContent = "Please choose a scenario or play with the paired host subject yourself."
 				}
+				this.debug("loadTestPreview:mount behavioral preview", {
+					selectedPath,
+					hostClass: OverlayModuleRuntime.describeClass(HostClass)
+				})
 				const preview = await this.runWithTimeout(
 					() => OverlayModuleRuntime.mountBehavioralSubject(this.popupRenderHost as HTMLElement, HostClass as unknown as new () => unknown),
 					runContext.stepTimeoutMs,
@@ -569,6 +640,11 @@ export class OverlayController {
 				)
 				runContext.activePreviewElement = preview.element
 				runContext.activePreviewSubject = preview.subject
+				this.debug("loadTestPreview:behavioral preview mounted", {
+					selectedPath,
+					subject: OverlayModuleRuntime.describeValue(preview.subject),
+					element: OverlayModuleRuntime.describeValue(preview.element)
+				})
 				this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, runContext.selectedScenarios.length > 0)
 				if (runContext.selectedScenarios.length > 0) {
 					this.setStatus("Choose a scenario from the left panel.", false)
@@ -585,6 +661,15 @@ export class OverlayController {
 					scenarioResults: []
 				}
 			}
+			this.debugError("loadTestPreview:failed", error, {
+				selectedPath,
+				loadToken: runContext.loadToken,
+				activeTestType: runContext.activeTestType,
+				activeTestClass: OverlayModuleRuntime.describeClass(runContext.activeTestClass),
+				activeHostClass: OverlayModuleRuntime.describeClass(runContext.activeHostClass),
+				globalHTMLElement: OverlayModuleRuntime.describeClass((globalThis as { HTMLElement?: unknown }).HTMLElement),
+				customElementsAppRoot: OverlayModuleRuntime.describeClass(customElements.get("app-root"))
+			})
 			this.scenarioApi.setPlayAllEnabled(this.popupScenariosPlayAll, false)
 			if (this.popupBody) {
 				this.popupBody.textContent = "Unable to preview this test."

@@ -210,6 +210,7 @@ export class LlltsServerTest {
 			assert(!response.body.includes("scenariosScript.src=assetsBasePath+\"/js/scenarios.js\""), "Loader should not reference removed scenario helper script")
 			assert(!response.body.includes("lllts-overlay-scenarios-script"), "Loader should not create removed scenario helper element")
 			assert(response.body.includes("\"assetsBasePath\":\"/__lllts-overlay\""), "Overlay config should include CDN base path")
+			assert(response.body.includes("\"version\":\"0.1.21\""), "Overlay config should include the current package version")
 			assert(response.body.includes("tests/Alpha.test.lll.ts"), "Overlay should include top-level test path")
 			assert(response.body.includes("tests/nested/Beta.test.lll.ts"), "Overlay should include nested test path")
 			assert(response.body.includes("\"testScenarios\""), "Overlay config should include test scenario metadata map")
@@ -248,6 +249,7 @@ export class LlltsServerTest {
 			assert(templateResponse.headers["pragma"] === "no-cache", "Overlay template route should send pragma no-cache")
 			assert(templateResponse.headers["expires"] === "0", "Overlay template route should expire immediately")
 			assert(templateResponse.body.includes("Project Tests"), "Overlay template should include test panel markup")
+			assert(templateResponse.body.includes("lllts-test-panel-version"), "Overlay template should include the version label slot")
 			assert(!templateResponse.body.includes("lllts-test-toggle"), "Overlay template should not include toggle markup")
 
 			const scriptResponse = await this.request(app, "/__lllts-overlay/js/script.js")
