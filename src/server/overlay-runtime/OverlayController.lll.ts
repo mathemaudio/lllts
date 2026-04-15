@@ -562,13 +562,12 @@ export class OverlayController {
 
 		try {
 			const detectedT = OverlayModuleRuntime.detectPageModuleTParam()
-			const detectedCacheBuster = OverlayModuleRuntime.createImportCacheBuster()
-			const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, detectedCacheBuster)
-			const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, detectedCacheBuster)
+			const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, null)
+			const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, null)
 			this.debug("loadTestPreview:resolved urls", {
 				selectedPath,
 				detectedT,
-				detectedCacheBuster,
+				detectedCacheBuster: null,
 				testModuleUrl,
 				hostModuleUrl
 			})

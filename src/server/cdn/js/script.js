@@ -8,8 +8,11 @@
   // src/server/overlay-runtime/OverlayModuleRuntime.lll.ts
   var _OverlayModuleRuntime = class _OverlayModuleRuntime {
     static debug(message, details) {
-      void message;
-      void details;
+      if (details === void 0) {
+        console.log(`${this.debugPrefix} ${message}`);
+        return;
+      }
+      console.log(`${this.debugPrefix} ${message}`, details);
     }
     static debugError(message, error, details) {
       if (details === void 0) {
@@ -17,6 +20,9 @@
         return;
       }
       console.error(`${this.debugPrefix} ${message}`, error, details);
+    }
+    static identityProbe(message, details) {
+      console.log(`${this.identityProbePrefix} ${message} ${JSON.stringify(details)}`);
     }
     static describeValue(value) {
       const ctor = value && typeof value === "object" && "constructor" in value ? value.constructor : void 0;
@@ -110,20 +116,19 @@
     }
     static buildPairedHostImportUrl(testModuleUrl, testPath, tParam, cacheBuster) {
       void testModuleUrl;
-      void tParam;
       void cacheBuster;
       const hostClassName = this.resolveHostClassNameFromTestPath(testPath);
       if (!hostClassName) {
         const fallbackHostPath = this.resolveHostPathFromTestPath(testPath);
-        return fallbackHostPath.startsWith("/") ? fallbackHostPath : `/${fallbackHostPath}`;
+        return this.buildImportUrl(fallbackHostPath, tParam, null);
       }
       const normalizedTestPath = String(testPath ?? "");
       const lastSlashIndex = normalizedTestPath.lastIndexOf("/");
       if (lastSlashIndex < 0) {
-        return `/${hostClassName}.lll.ts`;
+        return this.buildImportUrl(`/${hostClassName}.lll.ts`, tParam, null);
       }
       const relativeHostPath = `${normalizedTestPath.slice(0, lastSlashIndex + 1)}${hostClassName}.lll.ts`;
-      return relativeHostPath.startsWith("/") ? relativeHostPath : `/${relativeHostPath}`;
+      return this.buildImportUrl(relativeHostPath, tParam, null);
     }
     static resolveTestClass(moduleObject) {
       if (!moduleObject || typeof moduleObject !== "object") {
@@ -206,6 +211,18 @@
         } else {
           subject = new effectiveHostClass();
         }
+        this.identityProbe("mountBehavioralSubject:constructed", {
+          hostClassName: typeof HostClass === "function" ? HostClass.name : "",
+          hostClassId: this.getFunctionIdentityId(HostClass),
+          effectiveHostClassName: typeof effectiveHostClass === "function" ? effectiveHostClass.name : "",
+          effectiveHostClassId: this.getFunctionIdentityId(effectiveHostClass),
+          subjectType: typeof subject,
+          subjectConstructorName: this.getConstructorName(subject),
+          subjectConstructorId: this.getFunctionIdentityId(this.getConstructorValue(subject)),
+          subjectInstanceofHostClass: typeof HostClass === "function" && subject instanceof HostClass,
+          subjectInstanceofEffectiveHostClass: typeof effectiveHostClass === "function" && subject instanceof effectiveHostClass,
+          registeredTag
+        });
         this.debug("mountBehavioralSubject:constructed", {
           subject: this.describeValue(subject),
           subjectPrototypeChain: this.describePrototypeChain(Object.getPrototypeOf(subject))
@@ -278,10 +295,38 @@
       }
       return this.constructorAliasMap.get(ClassValue) ?? ClassValue;
     }
+    static getConstructorValue(value) {
+      if (!value || typeof value !== "object" && typeof value !== "function") {
+        return null;
+      }
+      return value.constructor ?? null;
+    }
+    static getConstructorName(value) {
+      const ctor = this.getConstructorValue(value);
+      return typeof ctor === "function" ? String(ctor.name ?? "") : "";
+    }
+    static getFunctionIdentityId(value) {
+      if (typeof value !== "function") {
+        return "";
+      }
+      const globalScope = globalThis;
+      const ids = globalScope.__llltsIdentityProbeIds ?? /* @__PURE__ */ new WeakMap();
+      globalScope.__llltsIdentityProbeIds = ids;
+      const existing = ids.get(value);
+      if (existing) {
+        return existing;
+      }
+      const nextCounter = (globalScope.__llltsIdentityProbeCounter ?? 0) + 1;
+      globalScope.__llltsIdentityProbeCounter = nextCounter;
+      const nextId = `fn-${String(nextCounter)}`;
+      ids.set(value, nextId);
+      return nextId;
+    }
   };
   __publicField(_OverlayModuleRuntime, "nativeHTMLElementConstructor", typeof HTMLElement === "function" ? HTMLElement : null);
   __publicField(_OverlayModuleRuntime, "cacheBusterQueryParam", "__lllts_cb");
   __publicField(_OverlayModuleRuntime, "debugPrefix", "[LLLTS overlay]");
+  __publicField(_OverlayModuleRuntime, "identityProbePrefix", "[LLLTS identity probe]");
   __publicField(_OverlayModuleRuntime, "constructorTagMap", /* @__PURE__ */ new Map());
   __publicField(_OverlayModuleRuntime, "constructorAliasMap", /* @__PURE__ */ new Map());
   var OverlayModuleRuntime = _OverlayModuleRuntime;
@@ -1067,13 +1112,12 @@
       });
       try {
         const detectedT = OverlayModuleRuntime.detectPageModuleTParam();
-        const detectedCacheBuster = OverlayModuleRuntime.createImportCacheBuster();
-        const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, detectedCacheBuster);
-        const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, detectedCacheBuster);
+        const testModuleUrl = OverlayModuleRuntime.buildImportUrl(selectedPath, detectedT, null);
+        const hostModuleUrl = OverlayModuleRuntime.buildPairedHostImportUrl(testModuleUrl, selectedPath, detectedT, null);
         this.debug("loadTestPreview:resolved urls", {
           selectedPath,
           detectedT,
-          detectedCacheBuster,
+          detectedCacheBuster: null,
           testModuleUrl,
           hostModuleUrl
         });

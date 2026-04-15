@@ -2,12 +2,16 @@ export class OverlayModuleRuntime {
 	private static readonly nativeHTMLElementConstructor = typeof HTMLElement === "function" ? HTMLElement : null
 	private static readonly cacheBusterQueryParam = "__lllts_cb"
 	private static readonly debugPrefix = "[LLLTS overlay]"
+	private static readonly identityProbePrefix = "[LLLTS identity probe]"
 	private static readonly constructorTagMap = new Map<Function, string>()
 	private static readonly constructorAliasMap = new Map<Function, Function>()
 
 	public static debug(message: string, details?: unknown): void {
-		void message
-		void details
+		if (details === undefined) {
+			console.log(`${this.debugPrefix} ${message}`)
+			return
+		}
+		console.log(`${this.debugPrefix} ${message}`, details)
 	}
 
 	public static debugError(message: string, error: unknown, details?: unknown): void {
@@ -16,6 +20,10 @@ export class OverlayModuleRuntime {
 			return
 		}
 		console.error(`${this.debugPrefix} ${message}`, error, details)
+	}
+
+	public static identityProbe(message: string, details: Record<string, unknown>): void {
+		console.log(`${this.identityProbePrefix} ${message} ${JSON.stringify(details)}`)
 	}
 
 	public static describeValue(value: unknown): Record<string, unknown> {
@@ -124,20 +132,19 @@ export class OverlayModuleRuntime {
 
 	public static buildPairedHostImportUrl(testModuleUrl: unknown, testPath: unknown, tParam: unknown, cacheBuster?: unknown): string {
 		void testModuleUrl
-		void tParam
 		void cacheBuster
 		const hostClassName = this.resolveHostClassNameFromTestPath(testPath)
 		if (!hostClassName) {
 			const fallbackHostPath = this.resolveHostPathFromTestPath(testPath)
-			return fallbackHostPath.startsWith("/") ? fallbackHostPath : `/${fallbackHostPath}`
+			return this.buildImportUrl(fallbackHostPath, tParam, null)
 		}
 		const normalizedTestPath = String(testPath ?? "")
 		const lastSlashIndex = normalizedTestPath.lastIndexOf("/")
 		if (lastSlashIndex < 0) {
-			return `/${hostClassName}.lll.ts`
+			return this.buildImportUrl(`/${hostClassName}.lll.ts`, tParam, null)
 		}
 		const relativeHostPath = `${normalizedTestPath.slice(0, lastSlashIndex + 1)}${hostClassName}.lll.ts`
-		return relativeHostPath.startsWith("/") ? relativeHostPath : `/${relativeHostPath}`
+		return this.buildImportUrl(relativeHostPath, tParam, null)
 	}
 
 	public static resolveTestClass(moduleObject: Record<string, unknown> | null): ((...args: unknown[]) => unknown) | null {
@@ -236,6 +243,18 @@ export class OverlayModuleRuntime {
 			} else {
 				subject = new effectiveHostClass()
 			}
+			this.identityProbe("mountBehavioralSubject:constructed", {
+				hostClassName: typeof HostClass === "function" ? HostClass.name : "",
+				hostClassId: this.getFunctionIdentityId(HostClass),
+				effectiveHostClassName: typeof effectiveHostClass === "function" ? effectiveHostClass.name : "",
+				effectiveHostClassId: this.getFunctionIdentityId(effectiveHostClass),
+				subjectType: typeof subject,
+				subjectConstructorName: this.getConstructorName(subject),
+				subjectConstructorId: this.getFunctionIdentityId(this.getConstructorValue(subject)),
+				subjectInstanceofHostClass: typeof HostClass === "function" && subject instanceof HostClass,
+				subjectInstanceofEffectiveHostClass: typeof effectiveHostClass === "function" && subject instanceof effectiveHostClass,
+				registeredTag
+			})
 			this.debug("mountBehavioralSubject:constructed", {
 				subject: this.describeValue(subject),
 				subjectPrototypeChain: this.describePrototypeChain(Object.getPrototypeOf(subject))
@@ -312,5 +331,38 @@ export class OverlayModuleRuntime {
 			return ClassValue
 		}
 		return this.constructorAliasMap.get(ClassValue) ?? ClassValue
+	}
+
+	private static getConstructorValue(value: unknown): unknown {
+		if (!value || (typeof value !== "object" && typeof value !== "function")) {
+			return null
+		}
+		return (value as { constructor?: unknown }).constructor ?? null
+	}
+
+	private static getConstructorName(value: unknown): string {
+		const ctor = this.getConstructorValue(value)
+		return typeof ctor === "function" ? String(ctor.name ?? "") : ""
+	}
+
+	private static getFunctionIdentityId(value: unknown): string {
+		if (typeof value !== "function") {
+			return ""
+		}
+		const globalScope = globalThis as typeof globalThis & {
+			__llltsIdentityProbeIds?: WeakMap<Function, string>
+			__llltsIdentityProbeCounter?: number
+		}
+		const ids = globalScope.__llltsIdentityProbeIds ?? new WeakMap<Function, string>()
+		globalScope.__llltsIdentityProbeIds = ids
+		const existing = ids.get(value)
+		if (existing) {
+			return existing
+		}
+		const nextCounter = (globalScope.__llltsIdentityProbeCounter ?? 0) + 1
+		globalScope.__llltsIdentityProbeCounter = nextCounter
+		const nextId = `fn-${String(nextCounter)}`
+		ids.set(value, nextId)
+		return nextId
 	}
 }
