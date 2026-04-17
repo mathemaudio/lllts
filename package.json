@@ -11,7 +11,7 @@
 	"scripts": {
 		"watch": "node scripts/watch.mjs",
 		"watch:overlay-runtime": "node scripts/build-overlay-runtime.mjs --watch",
-		"🪽lll-check": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
+		"lll-check": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
 		"lll-server": "./bin/lllts --server start --port 54300 --projectPath . --projectClientLink http://localhost:1",
