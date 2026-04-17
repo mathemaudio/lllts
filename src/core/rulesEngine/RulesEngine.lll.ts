@@ -25,6 +25,7 @@ import { DiagnosticObject } from "../DiagnosticObject"
 import { FileVariantSupport } from "../FileVariantSupport.lll"
 import { ProjectInitiator } from "../ProjectInitiator.lll"
 import { RuleCode } from "./RuleCode"
+import type { RuleContext } from "./RuleContext"
 
 @Spec("Loads and executes all rules against project files.")
 export class RulesEngine {
@@ -38,6 +39,11 @@ export class RulesEngine {
 		const skipTestCoverageDebt = options.skipTestCoverageDebt === true
 		const failSafeMode = options.failSafeMode === true
 		const files = this.loader.getFiles()
+		const context: RuleContext = {
+			projectRootDir: this.loader.getProjectRootDir(),
+			entryFilePath: this.loader.getEntryFilePath(),
+			entrySourceRootDir: this.loader.getEntrySourceRootDir()
+		}
 		const rules = [
 			OneClassPerFileRule.getRule(),
 			NoRogueTopLevelRule.getRule(),
@@ -70,7 +76,7 @@ export class RulesEngine {
 			}
 			for (const rule of rules) {
 				try {
-					all.push(...rule.run(file))
+					all.push(...rule.run(file, context))
 				} catch (err) {
 					all.push({
 						file: file.getBaseName(),

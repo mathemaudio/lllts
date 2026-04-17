@@ -12,15 +12,22 @@ import type { tsconfig_type } from "./tsconfig_type"
 export class ProjectInitiator {
 	private project: Project
 	private config: tsconfig_type
+	private projectRootDir: string
+	private entryFilePath: string | null = null
+	private entrySourceRootDir: string | null = null
 
 	constructor(private tsconfigPath: string, strategy: LoadStrategy = "from_imports", private entryFile?: string) {
 		Spec("Initializes project graph loading based on the provided strategy.")
-		this.config = this.loadTsConfig(tsconfigPath)
+		this.tsconfigPath = path.resolve(tsconfigPath)
+		this.projectRootDir = path.dirname(this.tsconfigPath)
+		this.config = this.loadTsConfig(this.tsconfigPath)
+		this.entryFilePath = entryFile !== undefined ? this.resolveEntryFilePath(entryFile) : null
+		this.entrySourceRootDir = entryFile !== undefined ? this.resolveEntrySourceRootDir(entryFile, this.entryFilePath) : null
 
 		// When using from_imports strategy, don't auto-load files from tsconfig
 		if (strategy === "from_imports") {
 			this.project = new Project({
-				tsConfigFilePath: tsconfigPath,
+				tsConfigFilePath: this.tsconfigPath,
 				skipAddingFilesFromTsConfig: true
 			})
 			if (!entryFile) {
@@ -28,7 +35,7 @@ export class ProjectInitiator {
 			}
 			this.addSourceFilesFromImports(entryFile)
 		} else {
-			this.project = new Project({ tsConfigFilePath: tsconfigPath })
+			this.project = new Project({ tsConfigFilePath: this.tsconfigPath })
 			this.addSourceFilesFromFolder()
 		}
 		console.log(`Verifying ${this.project.getSourceFiles().length} source files...`)//, strategy: ${strategy}`)
@@ -61,8 +68,7 @@ export class ProjectInitiator {
 
 	private addSourceFilesFromImports(entryFile: string) {
 		const visited = new Set<string>()
-		const configDir = path.dirname(this.tsconfigPath)
-		const absoluteEntryPath = path.resolve(configDir, entryFile)
+		const absoluteEntryPath = this.resolveEntryFilePath(entryFile)
 
 		// Validate that entry file exists before proceeding
 		if (!fs.existsSync(absoluteEntryPath)) {
@@ -201,5 +207,39 @@ export class ProjectInitiator {
 	@Spec("Returns all source files matching the include/exclude patterns from tsconfig.")
 	public getFiles(): SourceFile[] {
 		return this.project.getSourceFiles()
+	}
+
+	@Spec("Returns the package directory containing the tsconfig file.")
+	public getProjectRootDir(): string {
+		return this.projectRootDir
+	}
+
+	@Spec("Returns the resolved CLI entry file path when one was provided.")
+	public getEntryFilePath(): string | null {
+		return this.entryFilePath
+	}
+
+	@Spec("Returns the source root derived from the first segment of the CLI entry path.")
+	public getEntrySourceRootDir(): string | null {
+		return this.entrySourceRootDir
+	}
+
+	@Spec("Resolves the CLI entry path relative to the package directory.")
+	private resolveEntryFilePath(entryFile: string): string {
+		return path.resolve(this.projectRootDir, entryFile)
+	}
+
+	@Spec("Derives the source root from the first entry path segment relative to the package directory.")
+	private resolveEntrySourceRootDir(entryFile: string, resolvedEntryPath: string | null): string {
+		const relativeEntry = path.isAbsolute(entryFile)
+			? path.relative(this.projectRootDir, resolvedEntryPath ?? entryFile)
+			: entryFile
+		const normalized = relativeEntry.split(path.sep).join("/")
+		const segments = normalized.split("/").filter(segment => segment.length > 0 && segment !== ".")
+		const firstSegment = segments.length > 0 ? segments[0] : ""
+		if (firstSegment === "" || firstSegment === "..") {
+			return this.projectRootDir
+		}
+		return path.resolve(this.projectRootDir, firstSegment)
 	}
 }
