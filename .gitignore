@@ -20,3 +20,11 @@ Thumbs.db
 .env.local
 
 links/
+
+llm-raw-stream.txt
+
+.lll/vendor/
+.lll/prompts/
+
+
+.lll/snapshots

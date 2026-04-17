@@ -1,6 +1,6 @@
 {
 	"name": "lllts",
-	"version": "0.1.31",
+	"version": "0.1.32",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
 	"main": "dist/LLLTS.lll.js",
 	"bin": {

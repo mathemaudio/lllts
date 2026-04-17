@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"platform": "LLL (Large Language Language)",
+	"projectType": "cli",
+	"templateSource": "none",
+	"createdAt": "2026-04-15T19:20:37.532Z",
+	"serverName": "project-thriving-gorilla-x6-server",
+	"clientPort": 0,
+	"serverPort": 0,
+	"tunnelPort": 0,
+	"initialPrompt": ".",
+	"initialComposerAttachments": [],
+	"promptProgressState": ""
+}
