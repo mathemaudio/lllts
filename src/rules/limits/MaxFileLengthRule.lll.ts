@@ -2,10 +2,13 @@ import { BaseRule } from "../../core/BaseRule.lll"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
+import { BreadthRuleLimits } from "./BreadthRuleLimits"
 
 @Spec("Enforces a maximum file length in lines for non-test LLLTS files.")
 export class MaxFileLengthRule {
-	static readonly MAX_LINES = 800
+	static get MAX_LINES(): number {
+		return BreadthRuleLimits.getConfig().maxFileLines
+	}
 
 	@Spec("Returns the rule configuration object.")
 	public static getRule(): Rule {
@@ -28,11 +31,12 @@ export class MaxFileLengthRule {
 
 				const lineCount = sourceFile.getEndLineNumber()
 
-				if (lineCount > MaxFileLengthRule.MAX_LINES) {
+				const maxLines = MaxFileLengthRule.MAX_LINES
+				if (lineCount > maxLines) {
 					return [
 						BaseRule.createError(
 							filePath,
-							`Found ${lineCount} lines.`,
+							`Found ${lineCount} lines (max allowed: ${maxLines}).`,
 							"file-too-long",
 							1
 						)

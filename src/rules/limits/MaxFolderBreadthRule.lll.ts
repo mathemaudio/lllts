@@ -3,11 +3,17 @@ import { BaseRule } from "../../core/BaseRule.lll"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
+import { BreadthRuleLimits } from "./BreadthRuleLimits"
 
 @Spec("Enforces maximum counts of source files and subfolders per directory in the loaded source tree.")
 export class MaxFolderBreadthRule {
-	static readonly MAX_FILES = 12
-	static readonly MAX_FOLDERS = 8
+	static get MAX_FILES(): number {
+		return BreadthRuleLimits.getConfig().maxFilesPerFolder
+	}
+
+	static get MAX_FOLDERS(): number {
+		return BreadthRuleLimits.getConfig().maxSubfoldersPerFolder
+	}
 
 	@Spec("Returns the rule configuration object.")
 	public static getRule(): Rule {
@@ -89,25 +95,28 @@ export class MaxFolderBreadthRule {
 
 				const diagnostics = [] as import("../../core/DiagnosticObject").DiagnosticObject[]
 
+				const maxFiles = MaxFolderBreadthRule.MAX_FILES
+				const maxFolders = MaxFolderBreadthRule.MAX_FOLDERS
+
 				for (const [dir, info] of folderInfo.entries()) {
 					const rel = path.relative(rootDir, dir) || "."
 
-					if (info.files > MaxFolderBreadthRule.MAX_FILES) {
+					if (info.files > maxFiles) {
 						diagnostics.push(
 							BaseRule.createError(
 								dir,
-								`Folder '${rel}' contains ${info.files} source files (max allowed: ${MaxFolderBreadthRule.MAX_FILES}).`,
+								`Folder '${rel}' contains ${info.files} source files (max allowed: ${maxFiles}).`,
 								"folder-too-many-files",
 								1
 							)
 						)
 					}
 
-					if (info.children.size > MaxFolderBreadthRule.MAX_FOLDERS) {
+					if (info.children.size > maxFolders) {
 						diagnostics.push(
 							BaseRule.createError(
 								dir,
-								`Folder '${rel}' contains ${info.children.size} subfolders (max allowed: ${MaxFolderBreadthRule.MAX_FOLDERS}).`,
+								`Folder '${rel}' contains ${info.children.size} subfolders (max allowed: ${maxFolders}).`,
 								"folder-too-many-folders",
 								1
 							)

@@ -3,10 +3,13 @@ import { DiagnosticObject } from "../../core/DiagnosticObject"
 import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
+import { BreadthRuleLimits } from "./BreadthRuleLimits"
 
 @Spec("Enforces a maximum method body length in lines for all methods in LLLTS classes.")
 export class MaxMethodLengthRule {
-	static readonly MAX_LINES = 200
+	static get MAX_LINES(): number {
+		return BreadthRuleLimits.getConfig().maxMethodBodyLines
+	}
 
 	@Spec("Returns the rule configuration object.")
 	public static getRule(): Rule {
@@ -44,11 +47,12 @@ export class MaxMethodLengthRule {
 							// Count lines in the method body
 							const lineCount = body.getEndLineNumber() - body.getStartLineNumber() + 1
 
-							if (lineCount > MaxMethodLengthRule.MAX_LINES) {
+							const maxLines = MaxMethodLengthRule.MAX_LINES
+							if (lineCount > maxLines) {
 								diagnostics.push(
 									BaseRule.createError(
 										filePath,
-										`Method '${method.getName()}' has ${lineCount} lines (max allowed: ${MaxMethodLengthRule.MAX_LINES}).`,
+										`Method '${method.getName()}' has ${lineCount} lines (max allowed: ${maxLines}).`,
 										"method-too-long",
 										body.getStartLineNumber()
 									)

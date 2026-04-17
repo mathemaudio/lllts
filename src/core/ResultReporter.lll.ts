@@ -1,8 +1,7 @@
 
 import * as path from "path"
 import { Spec } from "../public/lll.lll"
-import { MaxFileLengthRule } from "../rules/limits/MaxFileLengthRule.lll"
-import { MaxMethodLengthRule } from "../rules/limits/MaxMethodLengthRule.lll"
+import { BreadthRuleLimits } from "../rules/limits/BreadthRuleLimits"
 import { DiagnosticObject } from "./DiagnosticObject"
 import { Severity } from "./Severity"
 import { RuleCode } from "./rulesEngine/RuleCode"
@@ -29,8 +28,8 @@ export class ResultReporter {
 		"missing-explicit-return-type": "Value-returning declarations must declare explicit return types",
 		"test-coverage": "Test coverage debt",
 		"test-failure": "Test scenario failed",
-		"file-too-long": `File allowed maximum line limit is ${MaxFileLengthRule.MAX_LINES} lines. Consider splitting into smaller modules`,
-		"method-too-long": `Method body allowed maximum line limit is ${MaxMethodLengthRule.MAX_LINES} lines. Consider refactoring into smaller methods`,
+		"file-too-long": `File allowed maximum line limit is ${BreadthRuleLimits.getConfig().maxFileLines} lines. Consider splitting into smaller modules`,
+		"method-too-long": `Method body allowed maximum line limit is ${BreadthRuleLimits.getConfig().maxMethodBodyLines} lines. Consider refactoring into smaller methods`,
 		"folder-too-many-files": "Folder contains too many source files",
 		"folder-too-many-folders": "Folder contains too many subfolders",
 		"assignment-in-conditions": "Assignments are forbidden inside conditions",

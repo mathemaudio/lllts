@@ -31,7 +31,7 @@ export class MaxFolderBreadthRuleTest {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
 		const project = new Project({ useInMemoryFileSystem: true })
-		for (let i = 1; i <= 13; i++) {
+		for (let i = 1; i <= MaxFolderBreadthRule.MAX_FILES + 1; i++) {
 			const name = `Rule${String(i).padStart(2, "0")}`
 			project.createSourceFile(
 				`/repo/src/rules/${name}.lll.ts`,
@@ -59,7 +59,7 @@ export class MaxFolderBreadthRuleTest {
 		const project = new Project({ useInMemoryFileSystem: true })
 		project.createSourceFile("/repo/src/core/Anchor.lll.ts", "export class Anchor {}")
 
-		for (let i = 1; i <= 12; i++) {
+		for (let i = 1; i <= MaxFolderBreadthRule.MAX_FILES; i++) {
 			project.createSourceFile(
 				`/repo/src/core/Helper${String(i).padStart(2, "0")}.ts`,
 				`export const helper${i} = ${i}`
@@ -67,7 +67,7 @@ export class MaxFolderBreadthRuleTest {
 		}
 
 		project.createSourceFile("/repo/src/core/Anchor.test.lll.ts", "export class AnchorTest {}")
-		project.createSourceFile("/repo/src/core/Helper13.test.ts", "export const helperTest = 13")
+		project.createSourceFile("/repo/src/core/HelperTest.test.ts", "export const helperTest = 13")
 
 		const rule = MaxFolderBreadthRule.getRule()
 		const anchorFile = project.getSourceFileOrThrow("/repo/src/core/Anchor.lll.ts")
@@ -75,6 +75,6 @@ export class MaxFolderBreadthRuleTest {
 
 		assert(diagnostics.length === 1, "Expected one folder breadth diagnostic for counted TypeScript files")
 		assert(diagnostics[0].ruleCode === "folder-too-many-files", "Diagnostic should target the file-count limit")
-		assert(diagnostics[0].message.includes("13 source files"), "Expected only non-test TypeScript files to be counted")
+		assert(diagnostics[0].message.includes(`${MaxFolderBreadthRule.MAX_FILES + 1} source files`), "Expected only non-test TypeScript files to be counted")
 	}
 }

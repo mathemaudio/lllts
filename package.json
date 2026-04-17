@@ -1,6 +1,6 @@
 {
 	"name": "lllts",
-	"version": "0.1.32",
+	"version": "0.1.33",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
 	"main": "dist/LLLTS.lll.js",
 	"bin": {
@@ -14,7 +14,6 @@
 		"lll-check": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts",
 		"lll-check-no-tests": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
 		"lll-check-verbose": "./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
-		"lll-server": "./bin/lllts --server start --port 54300 --projectPath . --projectClientLink http://localhost:1",
 		"lll-example-check-quick": "./bin/lllts --project tsconfig.json --entry src/examples/MathObject.lll.ts",
 		"lll-example-bad-many-functions": "./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
 		"lll-example-bad-rogue-top-level": "./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
@@ -48,7 +47,8 @@
 		"esbuild": "^0.25.12",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"lllts": "file:.lll/vendor/lllts"
 	},
 	"engines": {
 		"node": ">=18.0.0"
