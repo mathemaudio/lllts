@@ -37,4 +37,33 @@ export class ResultReporterTest {
 			"Reporter output should not contain ANSI escape sequences"
 		)
 	}
+
+	@Scenario("Print breadth markers")
+	static async printBreadthMarkers(subjectFactory: SubjectFactory<unknown>, scenario: ScenarioParameter) {
+		const assert: AssertFn = scenario.assert
+		const originalLog = console.log
+		const logLines: string[] = []
+		console.log = (...args: unknown[]) => {
+			logLines.push(args.map(arg => String(arg)).join(" "))
+		}
+
+		const reporter = new ResultReporter("./tsconfig.json")
+		const diagnostics: DiagnosticObject[] = [
+			{ file: "src/core", message: "Folder 'core' contains 12 source files (max allowed: 8).", severity: "error", line: 1, ruleCode: "folder-too-many-files" }
+		]
+		try {
+			reporter.print(diagnostics)
+		} finally {
+			console.log = originalLog
+		}
+
+		assert(
+			logLines.some(line => line.includes("❌ ERROR: Folder contains too many source files [breadthSummary]")),
+			"Reporter should mark breadth error summaries with a stable machine-readable tag"
+		)
+		assert(
+			logLines.some(line => line.includes("Folder 'core' contains 12 source files (max allowed: 8). [breadthDetail]")),
+			"Reporter should mark breadth error details with a stable machine-readable tag"
+		)
+	}
 }

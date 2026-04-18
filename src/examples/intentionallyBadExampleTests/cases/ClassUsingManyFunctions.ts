@@ -1,5 +1,5 @@
-import { Spec } from "../../public/lll.lll.js"
-import { firstFunction, secondFunction, thirdFunction } from "./manyFunctions"
+import { Spec } from "../../../public/lll.lll.js"
+import { firstFunction, secondFunction, thirdFunction } from "../helpers/manyFunctions.js"
 
 @Spec("Class using many functions.")
 export class ClassUsingManyFunctions {

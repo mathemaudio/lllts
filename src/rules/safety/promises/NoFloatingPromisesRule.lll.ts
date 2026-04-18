@@ -1,8 +1,8 @@
 import type { ArrayLiteralExpression, CallExpression, Expression, FunctionDeclaration, FunctionExpression, Identifier, MethodDeclaration, Node as MorphNode, SourceFile, Type } from "ts-morph"
 import { Node, SyntaxKind, ts } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids promise values created inside async functions from floating without await, return, or Promise combinator handling.")
 export class NoFloatingPromisesRule {
@@ -20,7 +20,7 @@ export class NoFloatingPromisesRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const asyncFunctions = NoFloatingPromisesRule.collectAsyncFunctions(sourceFile)
 
 				for (const asyncFunction of asyncFunctions) {
@@ -62,8 +62,8 @@ export class NoFloatingPromisesRule {
 	}
 
 	@Spec("Returns diagnostics for floating promise values declared inside an async function.")
-	private static validateAsyncFunction(filePath: string, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): import('../../core/DiagnosticObject').DiagnosticObject[] {
-		const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+	private static validateAsyncFunction(filePath: string, asyncFunction: MethodDeclaration | FunctionDeclaration | FunctionExpression | import("ts-morph").ArrowFunction): import('../../../core/DiagnosticObject').DiagnosticObject[] {
+		const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 		const trackedDeclarations = NoFloatingPromisesRule.collectTrackedDeclarations(asyncFunction)
 
 		for (const trackedDeclaration of trackedDeclarations) {

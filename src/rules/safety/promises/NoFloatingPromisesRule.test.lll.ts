@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../../public/lll.lll"
 import "./NoFloatingPromisesRule.lll"
 import { NoFloatingPromisesRule } from "./NoFloatingPromisesRule.lll"
 
@@ -8,7 +8,7 @@ export class NoFloatingPromisesRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoFloatingPromisesRule on an in-memory source file.")
-	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
+	private static runRuleOn(filePath: string, body: string): import('../../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({
 			useInMemoryFileSystem: true,
 			compilerOptions: {

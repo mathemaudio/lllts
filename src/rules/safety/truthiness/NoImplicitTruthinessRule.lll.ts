@@ -1,8 +1,8 @@
 import type { ConditionalExpression, DoStatement, Expression, IfStatement, SourceFile, Type, WhileStatement } from "ts-morph"
 import { Node, SyntaxKind } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids implicit truthiness in supported condition positions unless the expression resolves to boolean.")
 export class NoImplicitTruthinessRule {
@@ -19,7 +19,7 @@ export class NoImplicitTruthinessRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const conditionContexts = NoImplicitTruthinessRule.collectConditionContexts(sourceFile)
 
 				for (const conditionContext of conditionContexts) {

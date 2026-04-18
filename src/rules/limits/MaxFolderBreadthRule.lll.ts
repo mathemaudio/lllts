@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { BaseRule } from "../../core/BaseRule.lll"
-import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
+import { FileVariantSupport } from "../../core/variants/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import type { RuleContext } from "../../core/rulesEngine/RuleContext"
 import { Spec } from "../../public/lll.lll"

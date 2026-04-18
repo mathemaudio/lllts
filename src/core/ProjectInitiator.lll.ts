@@ -4,8 +4,8 @@ import * as path from "path"
 import { Project, SourceFile } from "ts-morph"
 import { LoadStrategy } from "../LoadStrategy"
 import { Spec } from "../public/lll.lll.js"
-import { FileVariantSupport } from "./FileVariantSupport.lll"
-import type { tsconfig_type } from "./tsconfig_type"
+import { FileVariantSupport } from "./variants/FileVariantSupport.lll"
+import type { tsconfig_type } from "./config/tsconfig_type"
 
 
 @Spec("Loads a TypeScript project using ts-morph and returns source files.")

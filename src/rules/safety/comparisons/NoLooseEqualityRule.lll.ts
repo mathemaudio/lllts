@@ -1,8 +1,8 @@
 import type { BinaryExpression } from "ts-morph"
 import { SyntaxKind } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids loose equality operators anywhere in supported source files.")
 export class NoLooseEqualityRule {
@@ -17,7 +17,7 @@ export class NoLooseEqualityRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const binaryExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.BinaryExpression)
 
 				for (const binaryExpression of binaryExpressions) {

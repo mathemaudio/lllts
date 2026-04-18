@@ -1,4 +1,4 @@
-import type { BehavioralTestReference } from "./BehavioralTestReference"
+import type { BehavioralTestReference } from "./references/BehavioralTestReference"
 
 export type TestInventorySummary = {
 	hasBehavioralTests: boolean

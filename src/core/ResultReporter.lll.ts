@@ -105,7 +105,10 @@ export class ResultReporter {
 			const coverageDebtMatch = ruleCode === "test-coverage"
 				? diagnostics[0]?.message.match(/^test coverage debt\s+([0-9]+(?:\.[0-9]+)?)%:/i)
 				: null
-			const description = coverageDebtMatch !== null ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
+			const descriptionBase = coverageDebtMatch !== null ? `${baseDescription} ${coverageDebtMatch[1]}%` : baseDescription
+			const description = ResultReporter.isBreadthOrSizeRuleCode(ruleCode)
+				? `${descriptionBase} [breadthSummary]`
+				: descriptionBase
 
 			console.log(`\n${this.getSeverityPrefix(severity)} ${severity.toUpperCase()}: ${description}`)
 
@@ -130,6 +133,9 @@ export class ResultReporter {
 					const displayMessage = ruleCode === "test-coverage"
 						? diag.message.replace(/^test coverage debt\s+[0-9]+(?:\.[0-9]+)?%:\s*/i, "")
 						: diag.message || ""
+					const markedDisplayMessage = ResultReporter.isBreadthOrSizeRuleCode(ruleCode)
+						? `${displayMessage} [breadthDetail]`
+						: displayMessage
 					const locationPrefix = diag.line !== undefined
 						? single
 							? `${indent}${relativePath}:${diag.line}`
@@ -137,10 +143,18 @@ export class ResultReporter {
 						: single
 							? (ruleCode === "test-coverage" && file === "project" ? `${indent}` : `${indent}${relativePath}`)
 							: `${indent}${indent}`
-					console.log(`${locationPrefix} ${displayMessage}`)
+					console.log(`${locationPrefix} ${markedDisplayMessage}`)
 				}
 			}
 		}
+	}
+
+	@Spec("Checks whether a rule code represents breadth or size limits that unlock refactor tools.")
+	private static isBreadthOrSizeRuleCode(ruleCode: RuleCode): boolean {
+		return ruleCode === "folder-too-many-files"
+			|| ruleCode === "folder-too-many-folders"
+			|| ruleCode === "file-too-long"
+			|| ruleCode === "method-too-long"
 	}
 
 	@Spec("Maps severities to plain-text emoji prefixes.")

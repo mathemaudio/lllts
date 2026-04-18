@@ -1,5 +1,5 @@
 import * as path from "path"
-import { Spec } from "../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 import type { VariantMatch } from "./VariantMatch"
 
 @Spec("Provides shared file variant helpers for primary/test file naming.")

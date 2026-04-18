@@ -1,8 +1,8 @@
 import type { CallExpression, Expression, ExpressionStatement, PropertyAccessExpression, Type } from "ts-morph"
 import { Node, SyntaxKind, ts } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids promise-valued expression statements whose result is silently ignored.")
 export class NoIgnoredPromisesRule {
@@ -17,7 +17,7 @@ export class NoIgnoredPromisesRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const expressionStatements = sourceFile.getDescendantsOfKind(SyntaxKind.ExpressionStatement)
 
 				for (const expressionStatement of expressionStatements) {

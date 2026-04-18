@@ -1,8 +1,8 @@
 import type { ClassDeclaration, SourceFile } from "ts-morph"
 import { Node } from "ts-morph"
-import { BaseRule } from "../BaseRule.lll"
-import { FileVariantSupport } from "../FileVariantSupport.lll"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../BaseRule.lll"
+import { FileVariantSupport } from "../../variants/FileVariantSupport.lll"
+import { Spec } from "../../../public/lll.lll"
 import { PairedHostKind } from "./PairedHostKind"
 
 @Spec("Provides deterministic paired-host lookup and classification for companion test files.")

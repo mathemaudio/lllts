@@ -1,6 +1,6 @@
 import { Statement, SyntaxKind } from "ts-morph"
 import { BaseRule } from "../../core/BaseRule.lll"
-import { FileVariantSupport } from "../../core/FileVariantSupport.lll"
+import { FileVariantSupport } from "../../core/variants/FileVariantSupport.lll"
 import { Rule } from "../../core/rulesEngine/Rule"
 import { Spec } from "../../public/lll.lll"
 

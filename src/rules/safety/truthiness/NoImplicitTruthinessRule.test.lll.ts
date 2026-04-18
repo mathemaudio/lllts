@@ -1,5 +1,5 @@
 import { Project } from "ts-morph"
-import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../public/lll.lll"
+import { AssertFn, Scenario, Spec, WaitForFn, ScenarioParameter } from "../../../public/lll.lll"
 import "./NoImplicitTruthinessRule.lll"
 import { NoImplicitTruthinessRule } from "./NoImplicitTruthinessRule.lll"
 
@@ -8,7 +8,7 @@ export class NoImplicitTruthinessRuleTest {
 	testType = "unit"
 
 	@Spec("Runs NoImplicitTruthinessRule on an in-memory source file.")
-	private static runRuleOn(filePath: string, body: string): import('../../core/DiagnosticObject').DiagnosticObject[] {
+	private static runRuleOn(filePath: string, body: string): import('../../../core/DiagnosticObject').DiagnosticObject[] {
 		const project = new Project({
 			useInMemoryFileSystem: true,
 			compilerOptions: {

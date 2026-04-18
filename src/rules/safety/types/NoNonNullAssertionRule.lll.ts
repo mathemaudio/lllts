@@ -1,8 +1,8 @@
 import type { NonNullExpression } from "ts-morph"
 import { SyntaxKind } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids postfix non-null assertions because they suppress unresolved nullability.")
 export class NoNonNullAssertionRule {
@@ -17,7 +17,7 @@ export class NoNonNullAssertionRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const nonNullExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.NonNullExpression)
 
 				for (const nonNullExpression of nonNullExpressions) {

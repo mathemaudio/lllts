@@ -1,7 +1,7 @@
 import "./BadTopLevelConstants"
 import "./BadTopLevelEnum"
 import "./BadTopLevelFunction"
-import "./BadTopLevelMultipleIf"
+import "./controlFlow/BadTopLevelMultipleIf"
 import "./BadTopLevelNamespaceOrDeclare"
 import "./BadTopLevelNonFinalIf"
 

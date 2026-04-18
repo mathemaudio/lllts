@@ -1,8 +1,8 @@
 import type { Node } from "ts-morph"
 import { SyntaxKind } from "ts-morph"
-import { BaseRule } from "../../core/BaseRule.lll"
-import { Rule } from "../../core/rulesEngine/Rule"
-import { Spec } from "../../public/lll.lll"
+import { BaseRule } from "../../../core/BaseRule.lll"
+import { Rule } from "../../../core/rulesEngine/Rule"
+import { Spec } from "../../../public/lll.lll"
 
 @Spec("Forbids explicit any type usage anywhere in supported source files.")
 export class NoAnyRule {
@@ -17,7 +17,7 @@ export class NoAnyRule {
 					return []
 				}
 
-				const diagnostics: import("../../core/DiagnosticObject").DiagnosticObject[] = []
+				const diagnostics: import("../../../core/DiagnosticObject").DiagnosticObject[] = []
 				const anyKeywords = sourceFile.getDescendantsOfKind(SyntaxKind.AnyKeyword)
 
 				for (const anyKeyword of anyKeywords) {

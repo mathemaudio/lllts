@@ -1,4 +1,4 @@
-import { Spec } from "../public/lll.lll"
+import { Spec } from "../../public/lll.lll"
 
 Spec("Mutable state captured by the mocked tunnel runner during unit tests.")
 export type FakeRunnerState = {
