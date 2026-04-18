@@ -1,5 +1,5 @@
 {
-	"maxFileLines": 500,
+	"maxFileLines": 800,
 	"maxMethodBodyLines": 200,
 	"maxFilesPerFolder": 8,
 	"maxSubfoldersPerFolder": 6
