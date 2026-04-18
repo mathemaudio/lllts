@@ -136,7 +136,8 @@ export class ResultReporter {
 					const markedDisplayMessage = ResultReporter.isBreadthOrSizeRuleCode(ruleCode)
 						? `${displayMessage} [breadthDetail]`
 						: displayMessage
-					const locationPrefix = diag.line !== undefined
+					const shouldPrintLine = diag.line !== undefined && !ResultReporter.shouldHideDiagnosticLine(ruleCode, diag.line)
+					const locationPrefix = shouldPrintLine
 						? single
 							? `${indent}${relativePath}:${diag.line}`
 							: `${indent}${indent}line ${diag.line}`
@@ -155,6 +156,11 @@ export class ResultReporter {
 			|| ruleCode === "folder-too-many-folders"
 			|| ruleCode === "file-too-long"
 			|| ruleCode === "method-too-long"
+	}
+
+	@Spec("Hides synthetic line numbers from breadth and size diagnostics.")
+	private static shouldHideDiagnosticLine(ruleCode: RuleCode, line: number): boolean {
+		return ResultReporter.isBreadthOrSizeRuleCode(ruleCode) && line === 1
 	}
 
 	@Spec("Maps severities to plain-text emoji prefixes.")

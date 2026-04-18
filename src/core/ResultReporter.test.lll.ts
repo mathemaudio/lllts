@@ -62,8 +62,12 @@ export class ResultReporterTest {
 			"Reporter should mark breadth error summaries with a stable machine-readable tag"
 		)
 		assert(
-			logLines.some(line => line.includes("Folder 'core' contains 12 source files (max allowed: 8). [breadthDetail]")),
-			"Reporter should mark breadth error details with a stable machine-readable tag"
+			logLines.some(line => line.includes("src/core Folder 'core' contains 12 source files (max allowed: 8). [breadthDetail]")),
+			"Reporter should still print the file path for breadth details"
+		)
+		assert(
+			logLines.every(line => !line.includes("src/core:1 Found") && !line.includes("src/core:1 Folder")),
+			"Reporter should hide synthetic line 1 prefixes for breadth diagnostics"
 		)
 	}
 }
