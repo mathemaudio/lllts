@@ -39,7 +39,7 @@ export class LLLTS {
 		}
 		const clientTunnelConfig = clientTunnelConfigResult.config
 
-		console.log(`LLLTS Compiler v${packageJson.version}`)
+		console.log(`LLLTS Compiler ${packageJson.version}`)
 		// console.log(`Project: ${projectPath}`)
 		console.log(`Entry: ${entryFile}`)
 

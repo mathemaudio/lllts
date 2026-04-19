@@ -175,6 +175,13 @@ export class LlltsServer {
 
 	@Spec("Builds an HTML retry page when configured client link cannot be reached.")
 	public buildProjectClientLinkUnavailableResponse(report: ProjectReport, projectClientLink: string, reason: string, retryPath: string): string {
+		const diagnosticsMarkup = this.buildUnavailableDiagnosticsMarkup(report, projectClientLink, reason, retryPath)
+		const testsMarkup = this.buildUnavailableTestsMarkup(report)
+		return this.buildUnavailableHtmlDocument(reason, retryPath, diagnosticsMarkup, testsMarkup)
+	}
+
+	@Spec("Builds the diagnostics list markup for the unavailable client page.")
+	private buildUnavailableDiagnosticsMarkup(report: ProjectReport, projectClientLink: string, reason: string, retryPath: string): string {
 		const diagnostics = [
 			["Reason", reason],
 			["Project Name", report.projectName],
@@ -184,17 +191,25 @@ export class LlltsServer {
 			["Project Client Link", projectClientLink.trim()],
 			["Retry Path", retryPath]
 		]
-		const escapedRetryPath = this.escapeHtmlAttribute(retryPath)
-		const escapedReason = this.escapeHtmlText(reason)
-		const diagnosticsMarkup = diagnostics
+		return diagnostics
 			.map(([label, value]) => `<li><strong>${this.escapeHtmlText(label)}:</strong> ${this.escapeHtmlText(value)}</li>`)
 			.join("")
-		const testsMarkup = report.testFiles.length === 0
-			? "<li>(none found)</li>"
-			: report.testFiles
-				.map(testFile => `<li>${this.escapeHtmlText(testFile)}</li>`)
-				.join("")
+	}
 
+	@Spec("Builds the discovered tests list markup for the unavailable client page.")
+	private buildUnavailableTestsMarkup(report: ProjectReport): string {
+		if (report.testFiles.length === 0) {
+			return "<li>(none found)</li>"
+		}
+		return report.testFiles
+			.map(testFile => `<li>${this.escapeHtmlText(testFile)}</li>`)
+			.join("")
+	}
+
+	@Spec("Builds the full unavailable client HTML document.")
+	private buildUnavailableHtmlDocument(reason: string, retryPath: string, diagnosticsMarkup: string, testsMarkup: string): string {
+		const escapedRetryPath = this.escapeHtmlAttribute(retryPath)
+		const escapedReason = this.escapeHtmlText(reason)
 		return /*html*/`<!doctype html>
 <html lang="en">
 <head>
@@ -311,7 +326,15 @@ export class LlltsServer {
     </section>
   </main>
   <script>
-    (function () {
+    ${this.buildUnavailableRetryScript(retryPath)}
+  </script>
+</body>
+</html>`
+	}
+
+	@Spec("Builds the retry countdown script for the unavailable client page.")
+	private buildUnavailableRetryScript(retryPath: string): string {
+		return `(function () {
       var retryDelayMs = ${LlltsServer.projectClientRetryIntervalMs};
       var retryAt = Date.now() + retryDelayMs;
       var retryPath = ${JSON.stringify(retryPath)};
@@ -336,10 +359,7 @@ export class LlltsServer {
         window.clearInterval(intervalId);
         reload();
       }, retryDelayMs);
-    })();
-  </script>
-</body>
-</html>`
+    })();`
 	}
 
 	@Spec("Escapes HTML text content.")
