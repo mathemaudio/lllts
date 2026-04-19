@@ -65,7 +65,7 @@ export class MaxFileLengthRule {
 		for (const candidate of candidates) {
 			lines.push(`- ${candidate}`)
 		}
-		lines.push("Prefer static methods first; for instance methods, move their member dependencies in the same batch or let move_members create a focused destination class.")
+		lines.push("Prefer static members first; static properties and static methods are movable. For instance methods, move their member dependencies in the same batch or let move_members create a focused destination class.")
 		return lines.join("\n")
 	}
 
