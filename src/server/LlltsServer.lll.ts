@@ -210,6 +210,7 @@ export class LlltsServer {
 	private buildUnavailableHtmlDocument(reason: string, retryPath: string, diagnosticsMarkup: string, testsMarkup: string): string {
 		const escapedRetryPath = this.escapeHtmlAttribute(retryPath)
 		const escapedReason = this.escapeHtmlText(reason)
+		const bodyMarkup = this.buildUnavailableHtmlBody(escapedReason, escapedRetryPath, diagnosticsMarkup, testsMarkup)
 		return /*html*/`<!doctype html>
 <html lang="en">
 <head>
@@ -218,7 +219,21 @@ export class LlltsServer {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Project client link is unavailable</title>
   <style>
-    :root {
+${this.buildUnavailableHtmlStyles()}
+  </style>
+</head>
+<body>
+${bodyMarkup}
+  <script>
+    ${this.buildUnavailableRetryScript(retryPath)}
+  </script>
+</body>
+</html>`
+	}
+
+	@Spec("Builds the stylesheet for the unavailable client page.")
+	private buildUnavailableHtmlStyles(): string {
+		return `    :root {
       color-scheme: dark;
       font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       background: #111827;
@@ -303,11 +318,12 @@ export class LlltsServer {
     }
     code {
       color: #bfdbfe;
-    }
-  </style>
-</head>
-<body>
-  <main>
+    }`
+	}
+
+	@Spec("Builds the HTML body markup for the unavailable client page.")
+	private buildUnavailableHtmlBody(escapedReason: string, escapedRetryPath: string, diagnosticsMarkup: string, testsMarkup: string): string {
+		return `  <main>
     <div class="status">Retrying in <span id="lllts-retry-seconds">2.0</span>s</div>
     <h1>Project client link is unavailable.</h1>
     <p class="reason">${escapedReason}</p>
@@ -324,12 +340,7 @@ export class LlltsServer {
       <h2>Tests</h2>
       <ul>${testsMarkup}</ul>
     </section>
-  </main>
-  <script>
-    ${this.buildUnavailableRetryScript(retryPath)}
-  </script>
-</body>
-</html>`
+  </main>`
 	}
 
 	@Spec("Builds the retry countdown script for the unavailable client page.")
