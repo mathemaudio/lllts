@@ -40,18 +40,17 @@ export class MustHaveSpecHeaderRule {
 						const body = constructorDeclaration.getBody()
 						const statements = body !== undefined && Node.isBlock(body) ? body.getStatements() : []
 						const firstStatement = statements[0]
-						const hasParameters = constructorDeclaration.getParameters().length > 0
-						const hasBodyStatements = statements.length > 0
-						const requiresConstructorSpec = hasParameters || hasBodyStatements
-						const hasLeadingSpecCall = MustHaveSpecHeaderRule.isSpecCallStatement(firstStatement)
+						const firstNonLeadingSpecStatement = statements.find((statement, index) => {
+							return index > 0 && MustHaveSpecHeaderRule.isSpecCallStatement(statement)
+						})
 
-						if (requiresConstructorSpec && !hasLeadingSpecCall) {
+						if (firstNonLeadingSpecStatement !== undefined && !MustHaveSpecHeaderRule.isSpecCallStatement(firstStatement)) {
 							diagnostics.push(
 								BaseRule.createError(
 									sourceFile.getFilePath(),
-									"Constructor must call Spec(\"...\") as its first statement when it has parameters or executable body statements. All other methods must use @Spec as a decorator, but constructor is an exception.",
+									"Constructor Spec(\"...\") call is optional, but when present it must be the first constructor statement. All other methods must use @Spec as a decorator.",
 									"missing-spec-method",
-									constructorDeclaration.getStartLineNumber()
+									firstNonLeadingSpecStatement.getStartLineNumber()
 								)
 							)
 						}

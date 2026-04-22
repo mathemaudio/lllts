@@ -37,12 +37,12 @@ export class GoodCtor {
 		)
 
 		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
-		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor must call Spec"))
+		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor Spec"))
 		assert(ctorDiagnostics.length === 0, "Constructor with leading Spec call should pass")
 	}
 
-	@Scenario("Require constructor to begin with Spec call")
-	static async requireConstructorLeadingSpecCall(scenario: ScenarioParameter) {
+	@Scenario("Allow constructor without Spec call")
+	static async allowConstructorWithoutSpecCall(scenario: ScenarioParameter) {
 		const input = scenario.input
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
@@ -53,7 +53,6 @@ export class GoodCtor {
 export class BadCtor {
 	constructor(private value: number) {
 		this.value = value
-		Spec("constructor")
 	}
 	@Spec("method")
 	public getValue() { return this.value }
@@ -61,8 +60,8 @@ export class BadCtor {
 		)
 
 		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
-		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor must call Spec"))
-		assert(ctorDiagnostics.length === 1, "Constructor without leading Spec call should fail")
+		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor Spec"))
+		assert(ctorDiagnostics.length === 0, "Constructor without Spec call should pass")
 	}
 
 	@Scenario("Allow empty constructor with no params and no Spec call")
@@ -82,8 +81,32 @@ export class EmptyCtor {
 		)
 
 		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
-		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor must call Spec"))
+		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor Spec"))
 		assert(ctorDiagnostics.length === 0, "Empty constructor with no params should not require Spec call")
+	}
+
+	@Scenario("Require constructor Spec call to be first when present")
+	static async requireConstructorSpecCallToBeFirstWhenPresent(scenario: ScenarioParameter) {
+		const input = scenario.input
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		const project = new Project({ useInMemoryFileSystem: true })
+		const sourceFile = project.createSourceFile(
+			"/tmp/LateCtorSpec.lll.ts",
+			`@Spec("class")
+export class LateCtorSpec {
+	constructor(private value: number) {
+		this.value = value
+		Spec("constructor")
+	}
+	@Spec("method")
+	public getValue() { return this.value }
+}`
+		)
+
+		const diagnostics = MustHaveSpecHeaderRule.getRule().run(sourceFile)
+		const ctorDiagnostics = diagnostics.filter(diag => diag.message.includes("Constructor Spec"))
+		assert(ctorDiagnostics.length === 1, "Constructor Spec call should fail when it is not first")
 	}
 
 	@Scenario("Allow short exported type without leading Spec call")
