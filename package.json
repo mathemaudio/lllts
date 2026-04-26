@@ -2,7 +2,7 @@
 	"name": "lllts",
 	"version": "0.1.35",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
-	"main": "dist/LLLTS.lll.js",
+	"main": "dist/LLLTS.bundle.cjs",
 	"bin": {
 		"lllts": "./bin/lllts",
 		"lllts-server": "./bin/lllts-server"
@@ -20,7 +20,8 @@
 		"build:typescript": "tsc",
 		"typecheck:overlay-runtime": "tsc -p tsconfig.overlay-runtime.json --noEmit",
 		"build:overlay-runtime": "node scripts/build-overlay-runtime.mjs",
-		"build": "pnpm run build:typescript && pnpm run build:overlay-runtime",
+		"build:cli-bundle": "node scripts/build-cli-bundle.mjs",
+		"build": "pnpm run build:typescript && pnpm run build:overlay-runtime && pnpm run build:cli-bundle",
 		"ts-check": "tsc --noEmit",
 		"playwright-setup": "pnpm exec playwright install chromium",
 		"playwright-list": "pnpm exec playwright install --list",
@@ -39,16 +40,15 @@
 	"dependencies": {
 		"express": "^4.22.1",
 		"playwright": "^1.52.0",
-		"ts-morph": "^21.0.1"
+		"ts-morph": "^21.0.1",
+		"typescript": "^5.3.3"
 	},
 	"devDependencies": {
 		"@types/express": "^4.17.25",
 		"@types/node": "^20.10.6",
 		"esbuild": "^0.25.12",
 		"ts-node": "^10.9.2",
-		"tsconfig-paths": "^4.2.0",
-		"typescript": "^5.3.3",
-		"lllts": "file:.lll/vendor/lllts"
+		"tsconfig-paths": "^4.2.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"

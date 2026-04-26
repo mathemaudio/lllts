@@ -81,6 +81,7 @@ export class LlltsServer {
 	private resolveOverlayAssetsRootPath(): string | null {
 		const candidatePaths = [
 			path.resolve(__dirname, "cdn"),
+			path.resolve(__dirname, "../src/server/cdn"),
 			path.resolve(__dirname, "../../src/server/cdn")
 		]
 		for (const candidatePath of candidatePaths) {

@@ -4,13 +4,17 @@ const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
 
-const scriptPath = path.join(__dirname, '..', 'dist', 'LLLTS.lll.js')
+const scriptCandidates = [
+	path.join(__dirname, '..', 'dist', 'LLLTS.bundle.cjs'),
+	path.join(__dirname, '..', 'dist-many', 'LLLTS.lll.js')
+]
+const scriptPath = scriptCandidates.find((candidate) => fs.existsSync(candidate))
 const args = process.argv.slice(2)
 
-if (!fs.existsSync(scriptPath)) {
+if (!scriptPath) {
 	console.error(
-		`lll-ts: expected compiled entry at ${scriptPath}, but it was not found. ` +
-		'Run `npm run build` (or equivalent) to generate dist/LLLTS.lll.js before using this command.'
+		`lll-ts: expected compiled entry at one of:\n${scriptCandidates.map((candidate) => `  - ${candidate}`).join('\n')}\n` +
+		'Run `npm run build` (or equivalent) to generate the compiler before using this command.'
 	)
 	process.exit(1)
 }
