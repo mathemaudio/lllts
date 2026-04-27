@@ -50,14 +50,14 @@ Non-test source files are expected to have one primary top-level export:
 
 ```ts
 // Invoice.lll.ts
-import { Spec } from "./public/lll.lll"
+import { Spec } from './public/lll.lll';
 
-@Spec("Represents an invoice that can be issued to a customer.")
+@Spec('Represents an invoice that can be issued to a customer.')
 export class Invoice {
-	@Spec("Returns the invoice total in cents.")
-	public totalCents(): number {
-		return 1200
-	}
+  @Spec('Returns the invoice total in cents.')
+  public totalCents(): number {
+    return 1200;
+  }
 }
 ```
 
@@ -67,8 +67,8 @@ mechanically instead of guessing where a synonym might live.
 Pure barrel files are the intentional exception:
 
 ```ts
-export { Invoice } from "./Invoice.lll"
-export { InvoicePrinter } from "./InvoicePrinter.lll"
+export { Invoice } from './Invoice.lll';
+export { InvoicePrinter } from './InvoicePrinter.lll';
 ```
 
 ### Visible Intent
@@ -77,12 +77,12 @@ export { InvoicePrinter } from "./InvoicePrinter.lll"
 already know the code. It is a forcing function before the body starts improvising.
 
 ```ts
-@Spec("Calculates checkout totals using explicit line item prices.")
+@Spec('Calculates checkout totals using explicit line item prices.')
 export class CheckoutCalculator {
-	@Spec("Adds line item prices and returns the total in cents.")
-	public static totalCents(prices: number[]): number {
-		return prices.reduce((sum, price) => sum + price, 0)
-	}
+  @Spec('Adds line item prices and returns the total in cents.')
+  public static totalCents(prices: number[]): number {
+    return prices.reduce((sum, price) => sum + price, 0);
+  }
 }
 ```
 
@@ -104,15 +104,15 @@ Instead of this:
 
 ```ts
 if (userName) {
-	return userName
+  return userName;
 }
 ```
 
 write the condition explicitly:
 
 ```ts
-if (userName !== "") {
-	return userName
+if (userName !== '') {
+  return userName;
 }
 ```
 
@@ -131,19 +131,19 @@ Tests follow one canonical layout:
 
 ```ts
 // MathObject.test.lll.ts
-import "./MathObject.lll"
-import { Scenario, Spec, type ScenarioParameter } from "../public/lll.lll"
-import { MathObject } from "./MathObject.lll"
+import './MathObject.lll';
+import { Scenario, Spec, type ScenarioParameter } from '../public/lll.lll';
+import { MathObject } from './MathObject.lll';
 
-@Spec("Unit scenarios for MathObject.")
+@Spec('Unit scenarios for MathObject.')
 export class MathObjectTest {
-	testType = "unit"
+  testType = 'unit';
 
-	@Scenario("Default addition")
-	public static async defaultAddition(scenario: ScenarioParameter): Promise<void> {
-		const sum = MathObject.add(2, 3)
-		scenario.assert(sum === 5, "Expected 2 + 3 to equal 5")
-	}
+  @Scenario('Default addition')
+  public static async defaultAddition(scenario: ScenarioParameter): Promise<void> {
+    const sum = MathObject.add(2, 3);
+    scenario.assert(sum === 5, 'Expected 2 + 3 to equal 5');
+  }
 }
 ```
 
@@ -232,11 +232,3 @@ discipline; they are exercised daily by the compiler codebase itself.
 
 Some areas are implemented now, while others are documented as planned direction. The public
 language specification calls out that difference explicitly.
-
-## Read More
-
-- [Language specification](../documents/public-documents/lll-TS-languageSpecification.md)
-- [Minimal LLM generation rules](../documents/public-documents/lll-TS-minimal-llm-generation-rules.md)
-- [Minimal test generation rules](../documents/public-documents/lll-TS-minimal-test-generation-rules.md)
-- [Type organization](../documents/public-documents/lll-TS-type-organization.md)
-- [Test best practices](../documents/public-documents/lll-TS-tests-best-practices.md)
