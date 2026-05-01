@@ -2,6 +2,7 @@
 	"name": "lllts",
 	"version": "0.1.35",
 	"description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
+	"license": "GPL-3.0-or-later",
 	"main": "dist/LLLTS.bundle.cjs",
 	"bin": {
 		"lllts": "./bin/lllts",
@@ -35,8 +36,6 @@
 		"testing",
 		"llm"
 	],
-	"author": "",
-	"license": "LLL LICENSE",
 	"dependencies": {
 		"express": "^4.22.1",
 		"playwright": "^1.52.0",

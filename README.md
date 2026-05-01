@@ -187,28 +187,28 @@ Requirements:
 - Node.js 18 or newer
 - pnpm
 
-From this package:
+From this repository:
 
 ```bash
 pnpm install
 pnpm run build
-pnpm run lll-check
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts
 ```
 
-Run the compiler against a project:
+Run the package checks:
 
 ```bash
-lllts --project tsconfig.json --entry src/App.lll.ts
+pnpm run lll-check
 ```
 
 Common options:
 
 ```bash
-lllts --project tsconfig.json --entry src/App.lll.ts --verbose
-lllts --project tsconfig.json --entry src/App.lll.ts --noTests
-lllts --project tsconfig.json --entry src/App.lll.ts --fail-safe
-lllts --project tsconfig.json --entry src/App.lll.ts --clientTunnel http://localhost:54300
-lllts --project tsconfig.json --entry src/App.lll.ts --clientTunnel http://localhost:54300 --clientTunnelHeaded
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts --verbose
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts --noTests
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts --fail-safe
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts --clientTunnel http://localhost:54300
+pnpm exec lllts --project tsconfig.json --entry src/App.lll.ts --clientTunnel http://localhost:54300 --clientTunnelHeaded
 ```
 
 The package also exposes:
